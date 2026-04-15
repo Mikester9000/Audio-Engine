@@ -6,6 +6,10 @@ Inspired by cinematic RPG soundtracks (*Final Fantasy XV*-calibre output),
 it ships with a multi-layer synthesiser, an AI-assisted composer, a mastering
 pipeline, and a QA validation suite.  No cloud services required.
 
+Fully compatible with the
+[Game Engine for Teaching](https://github.com/Mikester9000/Game-Engine-for-Teaching-)
+— see the [Game Engine Integration](#game-engine-for-teaching-integration) section below.
+
 ---
 
 ## Features
@@ -22,7 +26,8 @@ pipeline, and a QA validation suite.  No cloud services required.
 | **Stem Renderer** | Export individual sequencer tracks as separate stems for adaptive/interactive audio. |
 | **QA Suite** | EBU R128 loudness meter, clipping detector, loop boundary click analyser. |
 | **Exporter** | Writes 16-bit or 32-bit WAV files (built-in) and OGG Vorbis (optional). Game-engine loop-point metadata (`smpl` chunk). |
-| **CLI** | `generate`, `generate-music`, `generate-sfx`, `generate-voice`, `qa`, `sfx`, `list-styles`, `list-instruments`. |
+| **CLI** | `generate`, `generate-music`, `generate-sfx`, `generate-voice`, `qa`, `sfx`, `list-styles`, `list-instruments`, `generate-game-assets`, `verify-game-assets`. |
+| **Game Engine Integration** | Pre-generates all audio assets for the [Game Engine for Teaching](https://github.com/Mikester9000/Game-Engine-for-Teaching-) with a single command.  Includes a drop-in C++ `AudioSystem.hpp` (miniaudio-based) and Lua hook integration. |
 
 ---
 
@@ -252,26 +257,143 @@ Recommended local models:
 
 ---
 
-## Game Engine Integration
+## Game Engine for Teaching Integration
 
-The exported WAV files are compatible with:
+The Audio Engine is designed to work seamlessly as the audio layer for the
+[Game Engine for Teaching](https://github.com/Mikester9000/Game-Engine-for-Teaching-) —
+a C++17 FFXV-style action RPG engine.
 
-- **Godot** – import as AudioStream; use `loop_begin`/`loop_end` from the `smpl` chunk.
-- **Unity** – import as AudioClip; enable "Loop" in the import settings.
-- **Unreal Engine** – import as Sound Wave; set loop region in the audio editor.
-- **GameMaker Studio** – import as audio asset; loop points are read automatically.
+### One-command asset generation
 
-### Setting Loop Points
+```bash
+# Generate the complete audio asset library (music + SFX + voice):
+audio-engine generate-game-assets --output-dir assets/audio
+
+# Check that all assets are present:
+audio-engine verify-game-assets --assets-dir assets/audio
+
+# Generate only SFX (faster iteration):
+audio-engine generate-game-assets --output-dir assets/audio --only sfx
+
+# Regenerate everything from scratch:
+audio-engine generate-game-assets --output-dir assets/audio --force
+```
+
+Output layout:
+
+```
+assets/audio/
+├── music/
+│   ├── music_main_menu.wav      ← GameState::MAIN_MENU
+│   ├── music_exploring.wav      ← GameState::EXPLORING
+│   ├── music_combat.wav         ← GameState::COMBAT
+│   ├── music_boss_combat.wav    ← boss encounters
+│   ├── music_dialogue.wav       ← GameState::DIALOGUE
+│   ├── music_vehicle.wav        ← GameState::VEHICLE
+│   ├── music_camping.wav        ← CAMPING state
+│   ├── music_inventory.wav      ← INVENTORY state
+│   ├── music_shopping.wav       ← SHOPPING state
+│   └── music_victory.wav        ← post-combat victory sting
+├── sfx/
+│   ├── sfx_combat_hit.wav       ← sword hit
+│   ├── sfx_spell_cast.wav       ← magic spell
+│   ├── sfx_level_up.wav         ← level-up fanfare
+│   ├── sfx_quest_complete.wav   ← quest reward
+│   └── … (30+ events — see game_state_map.py)
+├── voice/
+│   ├── voice_welcome.wav        ← narrator intro line
+│   ├── voice_level_up.wav       ← "You have grown stronger."
+│   ├── voice_boss_intro.wav     ← "A powerful enemy approaches!"
+│   └── … (9 narrator/character lines)
+└── manifest.json                ← asset inventory read by AudioSystem.hpp
+```
+
+### C++ integration (drop-in header)
+
+Copy the pre-built header into the game engine:
+
+```bash
+# 1. Download miniaudio (single-file, public domain)
+curl -o src/engine/audio/miniaudio.h \
+     https://raw.githubusercontent.com/mackron/miniaudio/master/miniaudio.h
+
+# 2. Copy the AudioSystem header
+cp $(python -c "import audio_engine; print(audio_engine.__file__)"/../integration/cpp/AudioSystem.hpp \
+   src/engine/audio/AudioSystem.hpp
+```
+
+Create `src/engine/audio/AudioSystem.cpp` (one line):
+```cpp
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+```
+
+Wire into `Game.hpp`:
+```cpp
+#include "engine/audio/AudioSystem.hpp"
+
+class Game {
+    …
+    std::unique_ptr<AudioSystem> m_audio;
+    …
+};
+```
+
+Wire into `Game.cpp`:
+```cpp
+// Game::Init()
+m_audio = std::make_unique<AudioSystem>("assets/audio");
+m_audio->Init();
+
+// Game::SetState()  — add one line:
+m_audio->OnStateChange(newState);
+
+// Game::Shutdown()
+m_audio->Shutdown();
+```
+
+Register Lua bindings (in `LuaEngine::RegisterEngineBindings()`):
+```cpp
+AudioSystem* audio = &Game::Instance().GetAudio();
+lua_pushlightuserdata(L, audio);
+lua_setglobal(L, "__audio_ptr");
+lua_register(L, "audio_play_sfx",   AudioSystem::Lua_PlaySFX);
+lua_register(L, "audio_play_music", AudioSystem::Lua_PlayMusic);
+lua_register(L, "audio_set_volume", AudioSystem::Lua_SetVolume);
+lua_register(L, "audio_play_voice", AudioSystem::Lua_PlayVoice);
+```
+
+### Lua integration
+
+Copy the Lua hook script into the game engine's `scripts/` directory:
+
+```bash
+cp $(python -c "import audio_engine; print(audio_engine.__file__)"/../integration/lua/audio.lua \
+   scripts/audio.lua
+```
+
+The script auto-wires into every existing Lua hook (`on_combat_start`,
+`on_camp_rest`, `on_level_up`, …) and adds new hooks (`on_quest_complete`,
+`on_spell_cast`, `on_warp_strike`, …).  No changes to existing `.lua` files
+are required.
+
+### Python API
 
 ```python
-from audio_engine.render import OfflineBounce
+from audio_engine.integration import AssetPipeline
 
-bounce = OfflineBounce(sample_rate=44100)
-n = len(audio)
-bounce.process_and_export(audio, "ambient_loop.wav", loop_start=0, loop_end=n - 1)
+# Generate all assets with progress reporting
+pipeline = AssetPipeline(sample_rate=44100, seed=42)
+manifest = pipeline.generate_all("assets/audio")
+print(manifest.summary())
+
+# Check what's present / missing
+report = pipeline.verify("assets/audio")
+print("Missing:", report["missing"])
 ```
 
 ---
+
 
 ## Architecture
 
@@ -313,8 +435,15 @@ audio_engine/
 │   ├── loudness_meter.py   # EBU R128 integrated loudness (LUFS / LRA)
 │   ├── clipping_detector.py # Digital over-threshold clipping detection
 │   └── loop_analyzer.py    # Loop boundary click / discontinuity detection
-└── export/
-    └── audio_exporter.py   # WAV (16/32-bit) & OGG export + loop metadata
+├── export/
+│   └── audio_exporter.py   # WAV (16/32-bit) & OGG export + loop metadata
+└── integration/            # Game Engine for Teaching compatibility layer
+    ├── game_state_map.py   # GameState → audio asset mapping
+    ├── asset_pipeline.py   # AssetPipeline – generate all game assets
+    ├── cpp/
+    │   └── AudioSystem.hpp # Drop-in C++ header (miniaudio-based)
+    └── lua/
+        └── audio.lua       # Lua hook integration for game engine scripts
 ```
 
 ---
@@ -327,7 +456,7 @@ pytest
 ```
 
 264 tests cover the synthesizer, composer, AI generators, DSP chain, render
-pipeline, QA suite, exporter, engine façade, and CLI.
+pipeline, QA suite, exporter, engine façade, CLI, and integration layer.
 
 ---
 

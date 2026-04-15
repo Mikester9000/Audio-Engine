@@ -18,6 +18,12 @@ Generate a voice line:
 Run quality assurance checks on a WAV file:
     audio-engine qa --input track.wav
 
+Generate ALL assets for the Game Engine for Teaching:
+    audio-engine generate-game-assets --output-dir ./assets/audio
+
+Verify that all game assets are present:
+    audio-engine verify-game-assets --assets-dir ./assets/audio
+
 List available styles and instruments:
     audio-engine list-styles
     audio-engine list-instruments
@@ -322,7 +328,108 @@ def build_parser() -> argparse.ArgumentParser:
     # --- list-instruments ---
     sub.add_parser("list-instruments", help="List available synthesised instruments.")
 
+    # --- generate-game-assets ---
+    gga = sub.add_parser(
+        "generate-game-assets",
+        help="Pre-generate ALL audio assets for the Game Engine for Teaching.",
+    )
+    gga.add_argument(
+        "--output-dir", "-o", default="assets/audio",
+        help="Root output directory (default: assets/audio).",
+    )
+    gga.add_argument(
+        "--only",
+        choices=["music", "sfx", "voice", "all"],
+        default="all",
+        help="Generate only a subset of assets (default: all).",
+    )
+    gga.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
+    gga.add_argument("--seed", type=int, default=None, help="Random seed.")
+    gga.add_argument(
+        "--force", action="store_true",
+        help="Regenerate assets even if they already exist.",
+    )
+    gga.add_argument(
+        "--quiet", action="store_true",
+        help="Suppress per-asset progress messages.",
+    )
+
+    # --- verify-game-assets ---
+    vga = sub.add_parser(
+        "verify-game-assets",
+        help="Check that all expected game audio assets are present on disk.",
+    )
+    vga.add_argument(
+        "--assets-dir", "-d", default="assets/audio",
+        help="Root audio assets directory to verify (default: assets/audio).",
+    )
+
     return parser
+
+
+def _cmd_generate_game_assets(args: argparse.Namespace) -> None:
+    """Generate the complete audio asset library for the Game Engine for Teaching."""
+    from audio_engine.integration.asset_pipeline import AssetPipeline
+
+    def _progress(msg: str) -> None:
+        if not args.quiet:
+            print(msg)
+
+    pipeline = AssetPipeline(
+        sample_rate=args.sample_rate,
+        seed=args.seed,
+        progress_callback=_progress,
+        skip_existing=not args.force,
+    )
+
+    print(f"Generating game audio assets → {args.output_dir}")
+
+    if args.only == "music":
+        manifest = pipeline.generate_music_only(args.output_dir)
+    elif args.only == "sfx":
+        manifest = pipeline.generate_sfx_only(args.output_dir)
+    elif args.only == "voice":
+        manifest = pipeline.generate_voice_only(args.output_dir)
+    else:
+        manifest = pipeline.generate_all(args.output_dir)
+
+    print()
+    print(manifest.summary())
+    if manifest.errors:
+        return  # errors already printed in summary
+
+
+def _cmd_verify_game_assets(args: argparse.Namespace) -> None:
+    """Verify that all required game audio assets are present."""
+    from audio_engine.integration.asset_pipeline import AssetPipeline
+    from pathlib import Path
+
+    assets_dir = Path(args.assets_dir)
+    if not assets_dir.exists():
+        raise FileNotFoundError(f"assets directory not found: {assets_dir}")
+
+    pipeline = AssetPipeline()
+    report = pipeline.verify(assets_dir)
+
+    n_present = len(report["present"])
+    n_missing = len(report["missing"])
+    n_total = n_present + n_missing
+
+    print(f"Verifying game assets: {assets_dir}")
+    print(f"  Present : {n_present}/{n_total}")
+    print(f"  Missing : {n_missing}/{n_total}")
+
+    if report["missing"]:
+        print("\n  Missing files:")
+        for f in report["missing"]:
+            print(f"    • {f}")
+        print(
+            "\n  Run:  audio-engine generate-game-assets"
+            f" --output-dir {args.assets_dir}"
+        )
+        raise FileNotFoundError(f"{n_missing} asset(s) missing")
+    else:
+        print("  ✓  All assets present.")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -338,6 +445,8 @@ def main(argv: list[str] | None = None) -> int:
         "sfx": _cmd_sfx,
         "list-styles": _cmd_list_styles,
         "list-instruments": _cmd_list_instruments,
+        "generate-game-assets": _cmd_generate_game_assets,
+        "verify-game-assets": _cmd_verify_game_assets,
     }
 
     handler = dispatch.get(args.command)

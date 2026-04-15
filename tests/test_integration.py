@@ -1,0 +1,432 @@
+"""
+Tests for the Game Engine for Teaching integration layer.
+
+These tests verify:
+  1. The asset manifest is complete and consistent.
+  2. AssetPipeline.generate_all() creates all expected files.
+  3. AssetPipeline.verify() correctly identifies present/missing assets.
+  4. The CLI commands generate-game-assets and verify-game-assets work.
+  5. GenerationManifest serialisation round-trips correctly.
+  6. The C++ AudioSystem.hpp and Lua audio.lua files are present and
+     syntactically valid (ASCII / non-empty).
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+from audio_engine.integration import (
+    AssetPipeline,
+    GenerationManifest,
+    MUSIC_MANIFEST,
+    SFX_MANIFEST,
+    VOICE_MANIFEST,
+    MusicAsset,
+    SFXAsset,
+    VoiceAsset,
+)
+from audio_engine.integration.game_state_map import (
+    MUSIC_MANIFEST,
+    SFX_MANIFEST,
+    VOICE_MANIFEST,
+)
+from audio_engine.cli import main
+
+# Absolute path to the integration package.
+INTEGRATION_DIR = Path(__file__).parent.parent / "audio_engine" / "integration"
+
+
+# ---------------------------------------------------------------------------
+# Manifest structure tests
+# ---------------------------------------------------------------------------
+
+class TestManifestStructure:
+    """Verify that the game-state-map manifests are internally consistent."""
+
+    def test_music_manifest_not_empty(self):
+        assert len(MUSIC_MANIFEST) > 0
+
+    def test_sfx_manifest_not_empty(self):
+        assert len(SFX_MANIFEST) > 0
+
+    def test_voice_manifest_not_empty(self):
+        assert len(VOICE_MANIFEST) > 0
+
+    def test_music_filenames_unique(self):
+        filenames = [a.filename for a in MUSIC_MANIFEST]
+        assert len(filenames) == len(set(filenames)), "Duplicate music filenames"
+
+    def test_sfx_filenames_unique(self):
+        filenames = [a.filename for a in SFX_MANIFEST]
+        assert len(filenames) == len(set(filenames)), "Duplicate SFX filenames"
+
+    def test_voice_filenames_unique(self):
+        filenames = [a.filename for a in VOICE_MANIFEST]
+        assert len(filenames) == len(set(filenames)), "Duplicate voice filenames"
+
+    def test_sfx_event_keys_unique(self):
+        keys = [a.event for a in SFX_MANIFEST]
+        assert len(keys) == len(set(keys)), "Duplicate SFX event keys"
+
+    def test_voice_keys_unique(self):
+        keys = [a.key for a in VOICE_MANIFEST]
+        assert len(keys) == len(set(keys)), "Duplicate voice keys"
+
+    def test_music_filenames_are_wav(self):
+        for a in MUSIC_MANIFEST:
+            assert a.filename.endswith(".wav"), f"{a.filename} should be .wav"
+
+    def test_sfx_filenames_are_wav(self):
+        for a in SFX_MANIFEST:
+            assert a.filename.endswith(".wav"), f"{a.filename} should be .wav"
+
+    def test_voice_filenames_are_wav(self):
+        for a in VOICE_MANIFEST:
+            assert a.filename.endswith(".wav"), f"{a.filename} should be .wav"
+
+    def test_music_durations_positive(self):
+        for a in MUSIC_MANIFEST:
+            assert a.duration > 0, f"{a.filename} has non-positive duration"
+
+    def test_sfx_durations_positive(self):
+        for a in SFX_MANIFEST:
+            assert a.duration > 0, f"{a.filename} has non-positive duration"
+
+    def test_music_prompts_non_empty(self):
+        for a in MUSIC_MANIFEST:
+            assert a.prompt.strip(), f"{a.filename} has empty prompt"
+
+    def test_sfx_prompts_non_empty(self):
+        for a in SFX_MANIFEST:
+            assert a.prompt.strip(), f"{a.filename} has empty prompt"
+
+    def test_voice_texts_non_empty(self):
+        for a in VOICE_MANIFEST:
+            assert a.text.strip(), f"{a.key} has empty text"
+
+    def test_voice_presets_valid(self):
+        valid = {"narrator", "hero", "villain", "announcer", "npc"}
+        for a in VOICE_MANIFEST:
+            assert a.voice in valid, f"{a.key} has invalid voice preset '{a.voice}'"
+
+    def test_sfx_filenames_have_sfx_prefix(self):
+        for a in SFX_MANIFEST:
+            assert a.filename.startswith("sfx_"), (
+                f"{a.filename} should start with 'sfx_'"
+            )
+
+    def test_music_filenames_have_music_prefix(self):
+        for a in MUSIC_MANIFEST:
+            assert a.filename.startswith("music_"), (
+                f"{a.filename} should start with 'music_'"
+            )
+
+    def test_voice_filenames_have_voice_prefix(self):
+        for a in VOICE_MANIFEST:
+            assert a.filename.startswith("voice_"), (
+                f"{a.filename} should start with 'voice_'"
+            )
+
+    def test_known_game_states_covered(self):
+        """All GameState values mentioned in Types.hpp must have a music track."""
+        states_with_music = {a.game_state for a in MUSIC_MANIFEST}
+        required = {"MAIN_MENU", "EXPLORING", "COMBAT", "DIALOGUE", "VEHICLE"}
+        missing = required - states_with_music
+        assert not missing, f"Missing music tracks for game states: {missing}"
+
+    def test_essential_sfx_events_present(self):
+        """Key SFX events must be present (used by AudioSystem.hpp spot check)."""
+        events = {a.event for a in SFX_MANIFEST}
+        essential = {"combat_hit", "spell_cast", "level_up", "ui_confirm"}
+        missing = essential - events
+        assert not missing, f"Missing essential SFX events: {missing}"
+
+
+# ---------------------------------------------------------------------------
+# GenerationManifest serialisation
+# ---------------------------------------------------------------------------
+
+class TestGenerationManifest:
+    def test_summary_not_empty(self):
+        m = GenerationManifest(output_dir="/tmp/test")
+        m.music.append({"game_state": "EXPLORING", "file": "x.wav", "status": "ok"})
+        summary = m.summary()
+        assert "Music" in summary
+        assert "1 assets" in summary
+
+    def test_json_round_trip(self):
+        m = GenerationManifest(
+            output_dir="/tmp/assets",
+            music=[{"game_state": "COMBAT", "file": "a.wav", "status": "ok"}],
+            sfx=[{"event": "hit", "file": "b.wav", "status": "ok"}],
+            voice=[{"key": "welcome", "file": "c.wav", "status": "ok"}],
+            errors=["something went wrong"],
+            total_duration_seconds=3.14,
+        )
+        restored = GenerationManifest.from_json(m.to_json())
+        assert restored.output_dir == m.output_dir
+        assert restored.music == m.music
+        assert restored.sfx == m.sfx
+        assert restored.voice == m.voice
+        assert restored.errors == m.errors
+        assert abs(restored.total_duration_seconds - m.total_duration_seconds) < 0.001
+
+    def test_to_json_is_valid_json(self):
+        m = GenerationManifest(output_dir="/tmp")
+        data = json.loads(m.to_json())  # should not raise
+        assert "output_dir" in data
+        assert "music" in data
+        assert "sfx" in data
+        assert "voice" in data
+
+    def test_errors_reported_in_summary(self):
+        m = GenerationManifest(output_dir="/tmp")
+        m.errors.append("sfx/missing.wav: some error")
+        assert "Errors" in m.summary()
+
+
+# ---------------------------------------------------------------------------
+# AssetPipeline.verify()
+# ---------------------------------------------------------------------------
+
+class TestAssetPipelineVerify:
+    def test_empty_dir_all_missing(self, tmp_path):
+        (tmp_path / "music").mkdir()
+        (tmp_path / "sfx").mkdir()
+        (tmp_path / "voice").mkdir()
+        pipeline = AssetPipeline()
+        report = pipeline.verify(tmp_path)
+        assert len(report["missing"]) > 0
+        assert len(report["present"]) == 0
+
+    def test_partial_assets_reported(self, tmp_path):
+        (tmp_path / "music").mkdir()
+        (tmp_path / "sfx").mkdir()
+        (tmp_path / "voice").mkdir()
+        # Create just one music file
+        (tmp_path / "music" / "music_main_menu.wav").touch()
+        pipeline = AssetPipeline()
+        report = pipeline.verify(tmp_path)
+        assert "music/music_main_menu.wav" in report["present"]
+        assert len(report["missing"]) > 0
+
+    def test_all_present(self, tmp_path):
+        """If every expected file is touched, verify should report all present."""
+        (tmp_path / "music").mkdir()
+        (tmp_path / "sfx").mkdir()
+        (tmp_path / "voice").mkdir()
+        for a in MUSIC_MANIFEST:
+            (tmp_path / "music" / a.filename).touch()
+        for a in SFX_MANIFEST:
+            (tmp_path / "sfx" / a.filename).touch()
+        for a in VOICE_MANIFEST:
+            (tmp_path / "voice" / a.filename).touch()
+        pipeline = AssetPipeline()
+        report = pipeline.verify(tmp_path)
+        assert len(report["missing"]) == 0
+        assert len(report["present"]) == (
+            len(MUSIC_MANIFEST) + len(SFX_MANIFEST) + len(VOICE_MANIFEST)
+        )
+
+
+# ---------------------------------------------------------------------------
+# AssetPipeline.generate_all() – smoke test (short duration)
+# ---------------------------------------------------------------------------
+
+class TestAssetPipelineGenerate:
+    """Smoke tests: generate a small subset of assets and verify output."""
+
+    def _fast_music(self, asset: MusicAsset, path: Path) -> None:
+        """Helper: generate 2 s of music instead of the full duration."""
+        from audio_engine.ai.music_gen import MusicGen
+        from audio_engine.export.audio_exporter import AudioExporter
+
+        gen = MusicGen(sample_rate=22050, seed=0)
+        audio = gen.generate(asset.prompt, duration=2.0, loopable=asset.loopable)
+        AudioExporter(22050, 16).export(audio, path, fmt="wav")
+
+    def test_generate_sfx_only(self, tmp_path, monkeypatch):
+        """generate_sfx_only should create all SFX WAV files."""
+        pipeline = AssetPipeline(sample_rate=22050, seed=0)
+        manifest = pipeline.generate_sfx_only(tmp_path)
+        assert len(manifest.errors) == 0, f"Errors: {manifest.errors}"
+        sfx_dir = tmp_path / "sfx"
+        for a in SFX_MANIFEST:
+            assert (sfx_dir / a.filename).exists(), f"Missing SFX: {a.filename}"
+
+    def test_generate_voice_only(self, tmp_path):
+        """generate_voice_only should create all voice WAV files."""
+        pipeline = AssetPipeline(sample_rate=22050, seed=0)
+        manifest = pipeline.generate_voice_only(tmp_path)
+        assert len(manifest.errors) == 0, f"Errors: {manifest.errors}"
+        voice_dir = tmp_path / "voice"
+        for a in VOICE_MANIFEST:
+            assert (voice_dir / a.filename).exists(), f"Missing voice: {a.filename}"
+
+    def test_skip_existing(self, tmp_path):
+        """skip_existing=True should not regenerate existing files."""
+        sfx_dir = tmp_path / "sfx"
+        sfx_dir.mkdir()
+        first_asset = SFX_MANIFEST[0]
+        existing = sfx_dir / first_asset.filename
+        existing.write_bytes(b"PLACEHOLDER")
+        mtime_before = existing.stat().st_mtime
+
+        pipeline = AssetPipeline(seed=0, skip_existing=True)
+        pipeline.generate_sfx_only(tmp_path)
+
+        mtime_after = existing.stat().st_mtime
+        assert mtime_before == mtime_after, "File was regenerated despite skip_existing=True"
+
+    def test_manifest_json_written(self, tmp_path):
+        """generate_all should write manifest.json."""
+        pipeline = AssetPipeline(sample_rate=22050, seed=0)
+        pipeline.generate_all(tmp_path)
+        manifest_path = tmp_path / "manifest.json"
+        assert manifest_path.exists()
+        data = json.loads(manifest_path.read_text())
+        assert "music" in data
+        assert "sfx" in data
+        assert "voice" in data
+
+    def test_progress_callback_called(self, tmp_path):
+        """progress_callback should be invoked at least once per category."""
+        messages: list[str] = []
+        pipeline = AssetPipeline(
+            sample_rate=22050, seed=0,
+            progress_callback=messages.append,
+        )
+        pipeline.generate_sfx_only(tmp_path)
+        assert len(messages) > 0
+
+
+# ---------------------------------------------------------------------------
+# CLI: generate-game-assets and verify-game-assets
+# ---------------------------------------------------------------------------
+
+class TestCLIIntegration:
+    def test_generate_game_assets_sfx_only(self, tmp_path, capsys):
+        rc = main([
+            "generate-game-assets",
+            "--output-dir", str(tmp_path),
+            "--only", "sfx",
+            "--sample-rate", "22050",
+            "--seed", "0",
+        ])
+        assert rc == 0
+        sfx_dir = tmp_path / "sfx"
+        assert sfx_dir.exists()
+        assert any(sfx_dir.iterdir())
+
+    def test_generate_game_assets_voice_only(self, tmp_path):
+        rc = main([
+            "generate-game-assets",
+            "--output-dir", str(tmp_path),
+            "--only", "voice",
+            "--sample-rate", "22050",
+            "--seed", "0",
+        ])
+        assert rc == 0
+        voice_dir = tmp_path / "voice"
+        assert voice_dir.exists()
+
+    def test_verify_game_assets_missing(self, tmp_path):
+        """verify-game-assets should return non-zero when assets are missing."""
+        rc = main(["verify-game-assets", "--assets-dir", str(tmp_path)])
+        assert rc != 0
+
+    def test_verify_game_assets_present(self, tmp_path, capsys):
+        """verify-game-assets should return 0 when all files are present."""
+        (tmp_path / "music").mkdir()
+        (tmp_path / "sfx").mkdir()
+        (tmp_path / "voice").mkdir()
+        for a in MUSIC_MANIFEST:
+            (tmp_path / "music" / a.filename).touch()
+        for a in SFX_MANIFEST:
+            (tmp_path / "sfx" / a.filename).touch()
+        for a in VOICE_MANIFEST:
+            (tmp_path / "voice" / a.filename).touch()
+        rc = main(["verify-game-assets", "--assets-dir", str(tmp_path)])
+        assert rc == 0
+        captured = capsys.readouterr()
+        assert "All assets present" in captured.out
+
+    def test_verify_nonexistent_dir(self, tmp_path):
+        rc = main(["verify-game-assets", "--assets-dir", str(tmp_path / "nonexistent")])
+        assert rc != 0
+
+    def test_generate_with_force_flag(self, tmp_path):
+        """--force should regenerate even when files exist."""
+        (tmp_path / "sfx").mkdir()
+        first = SFX_MANIFEST[0]
+        existing = tmp_path / "sfx" / first.filename
+        existing.write_bytes(b"STALE")
+        main([
+            "generate-game-assets", "--output-dir", str(tmp_path),
+            "--only", "sfx", "--sample-rate", "22050", "--seed", "0", "--force",
+        ])
+        assert existing.stat().st_size > 4  # was regenerated (WAV > 4 bytes)
+
+
+# ---------------------------------------------------------------------------
+# Integration artefact files – verify they exist and are non-empty
+# ---------------------------------------------------------------------------
+
+class TestIntegrationArtefacts:
+    def test_cpp_header_exists(self):
+        hpp = INTEGRATION_DIR / "cpp" / "AudioSystem.hpp"
+        assert hpp.exists(), f"AudioSystem.hpp not found at {hpp}"
+        content = hpp.read_text(encoding="utf-8")
+        assert len(content) > 1000, "AudioSystem.hpp appears truncated"
+
+    def test_cpp_header_contains_class(self):
+        hpp = (INTEGRATION_DIR / "cpp" / "AudioSystem.hpp").read_text(encoding="utf-8")
+        assert "class AudioSystem" in hpp
+
+    def test_cpp_header_contains_lua_bindings(self):
+        hpp = (INTEGRATION_DIR / "cpp" / "AudioSystem.hpp").read_text(encoding="utf-8")
+        assert "Lua_PlaySFX" in hpp
+        assert "Lua_PlayMusic" in hpp
+        assert "Lua_PlayVoice" in hpp
+
+    def test_cpp_header_contains_game_state_map(self):
+        hpp = (INTEGRATION_DIR / "cpp" / "AudioSystem.hpp").read_text(encoding="utf-8")
+        assert "MAIN_MENU" in hpp
+        assert "EXPLORING" in hpp
+        assert "COMBAT" in hpp
+
+    def test_lua_script_exists(self):
+        lua = INTEGRATION_DIR / "lua" / "audio.lua"
+        assert lua.exists(), f"audio.lua not found at {lua}"
+        content = lua.read_text(encoding="utf-8")
+        assert len(content) > 500, "audio.lua appears truncated"
+
+    def test_lua_script_hooks_all_events(self):
+        lua = (INTEGRATION_DIR / "lua" / "audio.lua").read_text(encoding="utf-8")
+        assert "on_combat_start" in lua
+        assert "on_camp_rest" in lua
+        assert "on_level_up" in lua
+        assert "Audio.PlaySFX" in lua
+        assert "Audio.PlayVoice" in lua
+
+    def test_lua_script_nil_safe(self):
+        """Lua bindings should be guarded with 'if audio_play_sfx then'."""
+        lua = (INTEGRATION_DIR / "lua" / "audio.lua").read_text(encoding="utf-8")
+        assert "if audio_play_sfx" in lua
+
+    def test_game_state_map_imports_cleanly(self):
+        """The game_state_map module should import without errors."""
+        from audio_engine.integration import game_state_map  # noqa: F401
+
+    def test_asset_pipeline_imports_cleanly(self):
+        from audio_engine.integration import AssetPipeline  # noqa: F401
+
+    def test_integration_init_exports(self):
+        from audio_engine import integration
+        assert hasattr(integration, "AssetPipeline")
+        assert hasattr(integration, "MUSIC_MANIFEST")
+        assert hasattr(integration, "SFX_MANIFEST")
+        assert hasattr(integration, "VOICE_MANIFEST")
