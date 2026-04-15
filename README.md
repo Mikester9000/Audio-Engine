@@ -460,6 +460,47 @@ pipeline, QA suite, exporter, engine façade, CLI, and integration layer.
 
 ---
 
+## Asset Manifest & Validator
+
+A shared asset manifest system (identical to the one in
+[Game Engine for Teaching](https://github.com/Mikester9000/Game-Engine-for-Teaching-))
+is included to validate all game assets before they ship.
+
+```
+assets/
+├── schema/
+│   └── asset-manifest.schema.json   ← canonical JSON Schema (draft-07)
+├── examples/
+│   ├── audio-manifest.json
+│   ├── texture-manifest.json
+│   ├── tilemap-manifest.json
+│   └── model-manifest.json
+tools/
+│   └── validate-assets.py           ← validator CLI
+docs/
+│   └── asset-manifest.md            ← full schema reference
+.github/workflows/
+    └── validate-assets.yml          ← CI gate (runs on asset changes)
+```
+
+### Quick Start
+
+```bash
+# Validate all example manifests (run from repo root)
+python3 tools/validate-assets.py
+
+# Optional: install jsonschema for full JSON Schema draft-07 validation
+pip install jsonschema
+
+# Verbose output — show field-level errors
+python3 tools/validate-assets.py assets/examples/ --verbose
+```
+
+See [`docs/asset-manifest.md`](docs/asset-manifest.md) for the full schema
+reference and integration guide.
+
+---
+
 ## License
 
 MIT
