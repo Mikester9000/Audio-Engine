@@ -6,6 +6,18 @@ Usage examples
 Generate a battle track (WAV):
     audio-engine generate --style battle --bars 8 --output battle.wav
 
+Generate music from a prompt:
+    audio-engine generate-music --prompt "dark ambient dungeon 90 BPM" --duration 60 --loop --output dungeon.wav
+
+Generate a sound effect from a prompt:
+    audio-engine generate-sfx --prompt "explosion impact" --duration 1.5 --output boom.wav
+
+Generate a voice line:
+    audio-engine generate-voice --text "Welcome, hero." --voice narrator --output hero_greeting.wav
+
+Run quality assurance checks on a WAV file:
+    audio-engine qa --input track.wav
+
 List available styles and instruments:
     audio-engine list-styles
     audio-engine list-instruments
@@ -54,6 +66,126 @@ def _cmd_sfx(args: argparse.Namespace) -> None:
     print(f"Done.  {len(audio)} samples written.")
 
 
+def _cmd_generate_music(args: argparse.Namespace) -> None:
+    """Generate music from a text prompt using the AI pipeline."""
+    from audio_engine.ai import MusicGen
+
+    gen = MusicGen(sample_rate=args.sample_rate, seed=args.seed)
+    print(f"Generating music: '{args.prompt}' → {args.output} …")
+    path = gen.generate_to_file(
+        prompt=args.prompt,
+        output_path=args.output,
+        duration=args.duration,
+        loopable=args.loop,
+        fmt=args.format,
+    )
+    print(f"Done. Saved to: {path}")
+
+
+def _cmd_generate_sfx(args: argparse.Namespace) -> None:
+    """Generate a sound effect from a text prompt."""
+    from audio_engine.ai import SFXGen
+
+    gen = SFXGen(sample_rate=args.sample_rate, seed=args.seed)
+    print(f"Generating SFX: '{args.prompt}' → {args.output} …")
+    pitch = float(args.pitch) if args.pitch is not None else None
+    path = gen.generate_to_file(
+        prompt=args.prompt,
+        output_path=args.output,
+        duration=args.duration,
+        pitch_hz=pitch,
+    )
+    print(f"Done. Saved to: {path}")
+
+
+def _cmd_generate_voice(args: argparse.Namespace) -> None:
+    """Generate voice/TTS audio from text."""
+    from audio_engine.ai import VoiceGen
+
+    gen = VoiceGen(sample_rate=args.sample_rate)
+    print(f"Synthesising voice: '{args.text}' (voice={args.voice}) → {args.output} …")
+    path = gen.generate_to_file(
+        text=args.text,
+        output_path=args.output,
+        voice=args.voice,
+        speed=args.speed,
+    )
+    print(f"Done. Saved to: {path}")
+
+
+def _cmd_qa(args: argparse.Namespace) -> None:
+    """Run quality-assurance checks on a WAV file."""
+    import wave
+
+    import numpy as np
+
+    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer
+
+    input_path = Path(args.input)
+    if not input_path.exists():
+        print(f"Error: file not found: {input_path}", file=sys.stderr)
+        raise FileNotFoundError(f"file not found: {input_path}")
+
+    # Load audio
+    with wave.open(str(input_path), "r") as wf:
+        n_channels = wf.getnchannels()
+        sampwidth = wf.getsampwidth()
+        sr = wf.getframerate()
+        n_frames = wf.getnframes()
+        raw = wf.readframes(n_frames)
+
+    dtype = {"1": "int8", "2": "int16", "3": "int32", "4": "int32"}.get(str(sampwidth), "int16")
+    scale = {1: 128.0, 2: 32768.0, 3: 8388608.0, 4: 2147483648.0}.get(sampwidth, 32768.0)
+    samples = np.frombuffer(raw, dtype=np.dtype(dtype)).astype(np.float32) / scale
+
+    if n_channels > 1:
+        audio = samples.reshape(-1, n_channels)
+    else:
+        audio = samples
+
+    print(f"\nQA Report: {input_path.name}")
+    print(f"  Sample rate : {sr} Hz")
+    print(f"  Channels    : {n_channels}")
+    print(f"  Duration    : {n_frames / sr:.2f}s  ({n_frames:,} frames)")
+    print()
+
+    # Loudness
+    meter = LoudnessMeter(sample_rate=sr)
+    result = meter.measure(audio)
+    print(f"  Integrated loudness : {result.integrated_lufs:.1f} LUFS")
+    print(f"  True peak           : {result.true_peak_dbfs:.1f} dBFS")
+    print(f"  Loudness range      : {result.loudness_range_lu:.1f} LU")
+
+    # Clipping
+    detector = ClippingDetector()
+    clip_report = detector.detect(audio)
+    print(f"  Clipping            : {clip_report.summary()}")
+
+    # Loop analysis
+    if args.check_loop:
+        analyzer = LoopAnalyzer(sample_rate=sr)
+        loop_report = analyzer.analyze(audio)
+        print(f"  Loop boundary       : {loop_report.summary()}")
+
+    print()
+    issues = []
+    if result.integrated_lufs > -9.0:
+        issues.append(f"Loudness too high ({result.integrated_lufs:.1f} LUFS; target ≤ -9 LUFS)")
+    if result.integrated_lufs < -30.0:
+        issues.append(f"Loudness too low ({result.integrated_lufs:.1f} LUFS; target ≥ -30 LUFS)")
+    if result.true_peak_dbfs > -0.1:
+        issues.append(f"True peak too high ({result.true_peak_dbfs:.1f} dBFS; should be ≤ -0.1 dBFS)")
+    if clip_report.has_clipping:
+        issues.append(clip_report.summary())
+
+    if issues:
+        print("  ⚠  Issues found:")
+        for issue in issues:
+            print(f"     • {issue}")
+    else:
+        print("  ✓  All checks passed.")
+
+
 def _cmd_list_styles(_args: argparse.Namespace) -> None:
     from audio_engine import AudioEngine
 
@@ -75,11 +207,11 @@ def _cmd_list_instruments(_args: argparse.Namespace) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="audio-engine",
-        description="Audio Engine for Game Engine for Teaching – produce music and SFX.",
+        description="Audio Engine – produce AI-assisted music, SFX, and voice.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    # --- generate ---
+    # --- generate (legacy style-based) ---
     gen = sub.add_parser("generate", help="Generate a music track using the AI composer.")
     gen.add_argument(
         "--style",
@@ -99,8 +231,72 @@ def build_parser() -> argparse.ArgumentParser:
     )
     gen.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility.")
 
-    # --- sfx ---
-    sfx = sub.add_parser("sfx", help="Render a quick sound effect.")
+    # --- generate-music (prompt-driven) ---
+    gm = sub.add_parser(
+        "generate-music",
+        help="Generate music from a natural-language prompt.",
+    )
+    gm.add_argument(
+        "--prompt", "-p", required=True,
+        help='Natural-language prompt, e.g. "epic battle theme 140 BPM loopable".',
+    )
+    gm.add_argument("--duration", type=float, default=30.0, help="Duration in seconds (default: 30).")
+    gm.add_argument("--loop", action="store_true", help="Generate a seamless loop.")
+    gm.add_argument("--output", "-o", default="music.wav", help="Output file path.")
+    gm.add_argument(
+        "--format",
+        choices=["wav", "ogg"],
+        default="wav",
+        help="Output format (default: wav).",
+    )
+    gm.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
+    gm.add_argument("--seed", type=int, default=None, help="Random seed.")
+
+    # --- generate-sfx ---
+    gs = sub.add_parser(
+        "generate-sfx",
+        help="Generate a sound effect from a natural-language prompt.",
+    )
+    gs.add_argument(
+        "--prompt", "-p", required=True,
+        help='Description, e.g. "explosion impact 1.5 seconds".',
+    )
+    gs.add_argument("--duration", type=float, default=1.0, help="Duration in seconds (default: 1).")
+    gs.add_argument("--pitch", type=float, default=None, help="Base pitch in Hz (optional).")
+    gs.add_argument("--output", "-o", default="sfx.wav", help="Output WAV file.")
+    gs.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
+    gs.add_argument("--seed", type=int, default=None, help="Random seed.")
+
+    # --- generate-voice ---
+    gv = sub.add_parser(
+        "generate-voice",
+        help="Synthesise speech from text using local TTS.",
+    )
+    gv.add_argument("--text", "-t", required=True, help="Text to speak.")
+    gv.add_argument(
+        "--voice",
+        default="narrator",
+        choices=["narrator", "hero", "villain", "announcer", "npc"],
+        help="Voice preset (default: narrator).",
+    )
+    gv.add_argument("--speed", type=float, default=1.0, help="Speech rate multiplier (default: 1.0).")
+    gv.add_argument("--output", "-o", default="voice.wav", help="Output WAV file.")
+    gv.add_argument("--sample-rate", type=int, default=22050, help="Sample rate in Hz (default: 22050).")
+
+    # --- qa ---
+    qa = sub.add_parser(
+        "qa",
+        help="Run quality-assurance checks on a WAV file.",
+    )
+    qa.add_argument("--input", "-i", required=True, help="Path to the WAV file to check.")
+    qa.add_argument(
+        "--check-loop",
+        action="store_true",
+        help="Also check for loop boundary click artefacts.",
+    )
+
+    # --- sfx (instrument-based) ---
+    sfx = sub.add_parser("sfx", help="Render a quick sound effect using an instrument.")
     sfx.add_argument("--instrument", default="piano", help="Instrument name.")
     sfx.add_argument(
         "--notes",
@@ -135,6 +331,10 @@ def main(argv: list[str] | None = None) -> int:
 
     dispatch = {
         "generate": _cmd_generate,
+        "generate-music": _cmd_generate_music,
+        "generate-sfx": _cmd_generate_sfx,
+        "generate-voice": _cmd_generate_voice,
+        "qa": _cmd_qa,
         "sfx": _cmd_sfx,
         "list-styles": _cmd_list_styles,
         "list-instruments": _cmd_list_instruments,
@@ -148,7 +348,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         handler(args)
         return 0
-    except (KeyError, ValueError) as exc:
+    except (KeyError, ValueError, FileNotFoundError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     except Exception as exc:  # pragma: no cover – surface unexpected errors

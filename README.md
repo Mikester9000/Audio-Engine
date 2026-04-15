@@ -1,9 +1,10 @@
 # Audio Engine
 
-**Audio Engine for Game Engine for Teaching** – a Python library that generates
-music and sound effects inspired by cinematic RPG soundtracks (such as those
-found in *Final Fantasy XV*). It ships with a multi-layer synthesiser, an
-AI-assisted composer, and a game-engine–compatible audio exporter.
+**Audio Engine** – a Python library that rapidly generates production-quality
+music, sound effects, and voice for games, using a local AI pipeline.
+Inspired by cinematic RPG soundtracks (*Final Fantasy XV*-calibre output),
+it ships with a multi-layer synthesiser, an AI-assisted composer, a mastering
+pipeline, and a QA validation suite.  No cloud services required.
 
 ---
 
@@ -13,10 +14,15 @@ AI-assisted composer, and a game-engine–compatible audio exporter.
 |-----------|-------------|
 | **Synthesizer** | Oscillators (sine, square, sawtooth, triangle, FM, additive), ADSR envelopes, filters (low/high/band-pass, notch), and effects (reverb, delay, chorus, distortion, compressor). |
 | **Instrument Library** | 9 pre-built timbres: `strings`, `brass`, `piano`, `choir`, `synth_pad`, `electric_guitar`, `bass`, `flute`, `crystal_synth`. |
-| **AI Composer** | Markov-chain melody generation + rule-based harmony. Six style presets: `battle`, `exploration`, `ambient`, `boss`, `victory`, `menu`. |
-| **Sequencer** | Multi-track timeline with per-track pan, volume, and velocity. Renders to stereo float32 NumPy arrays. |
-| **Exporter** | Writes 16-bit or 32-bit WAV files (built-in) and OGG Vorbis (optional). Supports game-engine loop-point metadata (`smpl` chunk). |
-| **CLI** | `audio-engine generate`, `sfx`, `list-styles`, `list-instruments`. |
+| **AI Music Generator** | Markov-chain melody + rule-based harmony. Six style presets: `battle`, `exploration`, `ambient`, `boss`, `victory`, `menu`. Prompt-driven generation with BPM/loop/style detection. |
+| **AI SFX Generator** | 20+ procedural SFX types from a text prompt: explosions, footsteps, lasers, magic, UI sounds, and more. |
+| **AI Voice / TTS** | Local formant-based text-to-speech with 5 voice presets (`narrator`, `hero`, `villain`, `announcer`, `npc`). Upgradeable to Piper or ONNX TTS. |
+| **DSP Pipeline** | Parametric EQ (multi-band biquad), dynamic compressor, true-peak limiter, convolution reverb, polyphase resampler, and noise dithering. |
+| **Mastering (OfflineBounce)** | Full render/master path: EQ → compression → loudness normalisation (LUFS) → true-peak limiter → dither → export. |
+| **Stem Renderer** | Export individual sequencer tracks as separate stems for adaptive/interactive audio. |
+| **QA Suite** | EBU R128 loudness meter, clipping detector, loop boundary click analyser. |
+| **Exporter** | Writes 16-bit or 32-bit WAV files (built-in) and OGG Vorbis (optional). Game-engine loop-point metadata (`smpl` chunk). |
+| **CLI** | `generate`, `generate-music`, `generate-sfx`, `generate-voice`, `qa`, `sfx`, `list-styles`, `list-instruments`. |
 
 ---
 
@@ -53,36 +59,100 @@ from audio_engine import AudioEngine
 
 engine = AudioEngine(sample_rate=44100, seed=42)
 
-# Generate an 8-bar battle track and save it
+# Generate an 8-bar battle track (style-based)
 audio = engine.generate_track("battle", bars=8, output_path="battle.wav")
 
-# Generate an ambient background loop
-engine.generate_track("ambient", bars=4, output_path="ambient.wav")
-
-# Export with game-engine loop points
-engine.generate_track(
-    "exploration",
-    bars=8,
-    output_path="exploration.wav",
-    loop_start=0,
-    loop_end=len(audio) - 1,
+# Generate music from a natural-language prompt (with mastering)
+engine.generate_music(
+    "dark orchestral battle theme 140 BPM loopable",
+    duration=60.0,
+    loopable=True,
+    output_path="battle_loop.wav",
 )
+
+# Generate a sound effect from a prompt
+engine.generate_sfx_from_prompt("laser zap", duration=0.5, output_path="laser.wav")
+engine.generate_sfx_from_prompt("coin collect", output_path="coin.wav")
+
+# Synthesise voice with local TTS
+engine.generate_voice("The hero must find the crystal sword.", voice="narrator", output_path="narration.wav")
+engine.generate_voice("Level complete!", voice="announcer", output_path="win.wav")
 
 # Quick sound effect – piano C-major chord
 sfx = engine.render_sfx("piano", [261.63, 329.63, 392.0], duration=0.5, overlap=True)
 engine.export(sfx, "chord.wav")
+```
 
-# Custom sequencer
-from audio_engine.composer import Sequencer
-from audio_engine.synthesizer import InstrumentLibrary
+### AI Pipeline (direct module access)
 
-seq = engine.create_sequencer(bpm=120)
-seq.add_track("piano", InstrumentLibrary.get("piano"))
-seq.add_note("piano", frequency=440.0, onset=0.0, duration=0.4)
-seq.add_note("piano", frequency=554.0, onset=0.5, duration=0.4)
-seq.add_note("piano", frequency=659.0, onset=1.0, duration=0.4)
-audio = seq.render()
-engine.export(audio, "custom.wav")
+```python
+from audio_engine.ai import MusicGen, SFXGen, VoiceGen
+
+# Music
+gen = MusicGen(sample_rate=44100, seed=42)
+gen.generate_to_file("epic ambient exploration 90 BPM", "explore.wav", duration=60, loopable=True)
+gen.generate_to_file("intense boss battle 160 BPM", "boss.wav", duration=120)
+
+# SFX
+sfx = SFXGen()
+sfx.generate_to_file("explosion impact", "boom.wav", duration=1.5)
+sfx.generate_to_file("magic spell sparkle", "magic.wav", duration=0.8)
+
+# Voice
+voice = VoiceGen()
+voice.generate_to_file("Welcome, adventurer.", "welcome.wav", voice="narrator")
+voice.generate_to_file("You shall not pass!", "villain.wav", voice="villain")
+```
+
+### Mastering Pipeline
+
+```python
+from audio_engine.render import OfflineBounce
+
+# Master raw audio to -16 LUFS with true-peak limiting
+bounce = OfflineBounce(sample_rate=44100, target_lufs=-16.0, ceiling_db=-0.3)
+mastered = bounce.process(raw_audio)
+bounce.process_and_export(raw_audio, "mastered.wav", loopable=True, loop_start=0, loop_end=len(raw_audio)-1)
+```
+
+### DSP Processing
+
+```python
+from audio_engine.dsp import EQ, Compressor, Limiter, ConvolutionReverb
+from audio_engine.dsp.eq import EQBand
+
+# EQ
+eq = EQ(44100)
+eq.add_band(EQBand(120.0, gain_db=-3.0, band_type="low_shelf"))   # tighten low end
+eq.add_band(EQBand(10000.0, gain_db=+2.0, band_type="high_shelf")) # add air
+processed = eq.process(audio)
+
+# Convolution reverb
+reverb = ConvolutionReverb(44100, rt60=2.0, room_size=0.8, wet=0.3)
+reverbed = reverb.process(audio)
+
+# Compressor + limiter chain
+comp = Compressor(44100, threshold_db=-18.0, ratio=4.0, attack_ms=10.0, release_ms=100.0)
+limiter = Limiter(44100, ceiling_db=-0.3)
+output = limiter.process(comp.process(audio))
+```
+
+### Quality Assurance
+
+```python
+from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer
+
+meter = LoudnessMeter(44100)
+result = meter.measure(audio)
+print(f"Integrated: {result.integrated_lufs:.1f} LUFS")
+print(f"True peak:  {result.true_peak_dbfs:.1f} dBFS")
+print(f"LRA:        {result.loudness_range_lu:.1f} LU")
+
+clip = ClippingDetector().detect(audio)
+print(clip.summary())
+
+loop = LoopAnalyzer(44100).analyze(audio)
+print(loop.summary())
 ```
 
 ### Command-Line Interface
@@ -92,17 +162,30 @@ engine.export(audio, "custom.wav")
 audio-engine list-styles
 audio-engine list-instruments
 
-# Generate a 16-bar exploration track
-audio-engine generate --style exploration --bars 16 --output exploration.wav
+# Generate music from a prompt (with mastering)
+audio-engine generate-music --prompt "dark ambient dungeon loop 90 BPM" \
+    --duration 60 --loop --output dungeon.wav
 
-# Generate a boss battle track (OGG)
-audio-engine generate --style boss --bars 8 --output boss.ogg --format ogg
+# Generate music from a style preset (legacy)
+audio-engine generate --style battle --bars 8 --output battle.wav
 
-# Render a quick A-minor chord SFX
-audio-engine sfx --instrument piano --notes 220 261.63 329.63 --overlap --output chord.wav
+# Generate a sound effect from a prompt
+audio-engine generate-sfx --prompt "explosion impact" --duration 1.5 --output boom.wav
+audio-engine generate-sfx --prompt "laser zap" --duration 0.4 --pitch 800 --output laser.wav
+
+# Generate voice / TTS
+audio-engine generate-voice --text "Welcome, hero." --voice narrator --output greeting.wav
+audio-engine generate-voice --text "Level complete!" --voice announcer --speed 0.9 --output win.wav
+
+# Quality-assurance check on a WAV file
+audio-engine qa --input track.wav
+audio-engine qa --input loop.wav --check-loop
+
+# Render a quick SFX chord (instrument-based)
+audio-engine sfx --instrument piano --notes 261.63 329.63 392.0 --overlap --output chord.wav
 
 # Reproducible generation with a fixed seed
-audio-engine generate --style battle --seed 42 --output battle.wav
+audio-engine generate-music --prompt "battle" --seed 42 --output battle.wav
 ```
 
 ---
@@ -120,6 +203,55 @@ audio-engine generate --style battle --seed 42 --output battle.wav
 
 ---
 
+## Voice Presets
+
+| Preset | Pitch | Character |
+|--------|-------|-----------|
+| `narrator` | 120 Hz | Neutral, clear, storytelling |
+| `hero` | 110 Hz | Confident, warm |
+| `villain` | 85 Hz | Deep, dark, foreboding |
+| `announcer` | 130 Hz | Bright, authoritative |
+| `npc` | 150 Hz | Character voice, varied |
+
+---
+
+## Extending with Real AI Models
+
+The pipeline uses a pluggable **backend** system.  The default `"procedural"`
+backend works entirely offline with zero extra dependencies.
+
+To upgrade to a real AI model:
+
+```python
+from audio_engine.ai.backend import InferenceBackend, BackendRegistry
+import numpy as np
+
+class MyTTSBackend(InferenceBackend):
+    """Wrap Piper TTS for high-quality local speech synthesis."""
+    def generate_voice_audio(self, text, voice_preset="narrator", speed=1.0, **kw):
+        # Call your local Piper model here
+        ...
+        return audio_array  # np.ndarray, mono float32
+
+    def generate_music_audio(self, style, duration, bpm=None, **kw):
+        ...  # delegate to procedural for music
+
+    def generate_sfx_audio(self, sfx_type, duration, pitch_hz=None, **kw):
+        ...
+
+BackendRegistry.register("piper_tts", MyTTSBackend)
+
+from audio_engine.ai import VoiceGen
+voice = VoiceGen(backend="piper_tts", sample_rate=22050)
+voice.generate_to_file("Hello, world!", "hello.wav")
+```
+
+Recommended local models:
+- **Voice/TTS**: [Piper](https://github.com/rhasspy/piper) (ONNX, MIT licence, runs on CPU)
+- **Music/SFX**: [MusicGen](https://github.com/facebookresearch/audiocraft) via ONNX Runtime
+
+---
+
 ## Game Engine Integration
 
 The exported WAV files are compatible with:
@@ -132,13 +264,11 @@ The exported WAV files are compatible with:
 ### Setting Loop Points
 
 ```python
-engine.generate_track(
-    "ambient",
-    bars=8,
-    output_path="ambient.wav",
-    loop_start=0,          # sample index where the loop begins
-    loop_end=44100 * 16,   # sample index where the loop ends
-)
+from audio_engine.render import OfflineBounce
+
+bounce = OfflineBounce(sample_rate=44100)
+n = len(audio)
+bounce.process_and_export(audio, "ambient_loop.wav", loop_start=0, loop_end=n - 1)
 ```
 
 ---
@@ -161,7 +291,28 @@ audio_engine/
 │   ├── pattern.py          # Rhythmic trigger patterns
 │   └── sequencer.py        # Multi-track timeline → stereo render
 ├── ai/
-│   └── generator.py        # Markov-chain melody + rule-based orchestration
+│   ├── generator.py        # Markov-chain melody + rule-based orchestration
+│   ├── music_gen.py        # MusicGen – prompt-driven music generation
+│   ├── sfx_gen.py          # SFXGen – prompt-driven SFX generation
+│   ├── voice_gen.py        # VoiceGen – local text-to-speech
+│   ├── sfx_synth.py        # Procedural SFX synthesiser (20+ types)
+│   ├── voice_synth.py      # Formant speech synthesiser (5 presets)
+│   ├── prompt.py           # Prompt-to-plan parser
+│   └── backend.py          # Pluggable inference backend interface
+├── dsp/
+│   ├── eq.py               # Parametric biquad EQ
+│   ├── compressor.py       # Feed-forward dynamic compressor
+│   ├── limiter.py          # True-peak brick-wall limiter
+│   ├── reverb.py           # Convolution reverb (synthetic + IR loading)
+│   ├── resample.py         # Polyphase sample-rate converter
+│   └── dither.py           # TPDF/RPDF noise dithering
+├── render/
+│   ├── offline_bounce.py   # OfflineBounce – full mastering pipeline
+│   └── stem_renderer.py    # StemRenderer – per-track stem export
+├── qa/
+│   ├── loudness_meter.py   # EBU R128 integrated loudness (LUFS / LRA)
+│   ├── clipping_detector.py # Digital over-threshold clipping detection
+│   └── loop_analyzer.py    # Loop boundary click / discontinuity detection
 └── export/
     └── audio_exporter.py   # WAV (16/32-bit) & OGG export + loop metadata
 ```
@@ -175,7 +326,8 @@ pip install -e ".[dev]"
 pytest
 ```
 
-All 142 tests cover the synthesizer, composer, AI generator, exporter, engine façade, and CLI.
+264 tests cover the synthesizer, composer, AI generators, DSP chain, render
+pipeline, QA suite, exporter, engine façade, and CLI.
 
 ---
 
