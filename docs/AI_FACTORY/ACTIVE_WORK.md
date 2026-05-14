@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a stronger machine-guidance layer (implementation matrix, codebase map, next PR sequence, and committed example artifacts). The next priority is to implement plan/request ingestion in code.
+The repository now has a stronger machine-guidance **and session-autopilot** layer. The canonical next executable session is `SESSION-001` in `docs/AI_FACTORY/SESSION_QUEUE.md`: implement plan/request ingestion in code.
 
 ## Now
 
@@ -14,18 +14,20 @@ The repository now has a stronger machine-guidance layer (implementation matrix,
 - [x] Define a committed `GameRewritten`-oriented audio plan example
 - [x] Commit generation request + review/provenance example artifacts
 - [x] Add implementation matrix + codebase map + next-PR sequence docs
-- [ ] Implement code-side loading of plan/request artifacts
+- [x] Add session queue/autopilot control docs for low-prompt execution
+- [ ] Execute `SESSION-001` from `docs/AI_FACTORY/SESSION_QUEUE.md`
 - [ ] Add approval/review workflow for generated assets
 
 ## Recommended next PRs
 
-1. **Implement plan/request loaders in integration layer**
+1. **Execute `SESSION-001` — implement plan/request loaders in integration layer**
+   - Canonical session spec: `docs/AI_FACTORY/SESSION_QUEUE.md`
    - Parse committed example artifacts into typed runtime structures.
-2. **Add request-batch generation path**
+2. **Execute `SESSION-002` — add request-batch generation path**
    - Generate music/SFX from request files with deterministic seed handling.
-3. **Persist provenance + review status logs**
+3. **Execute `SESSION-003` — persist provenance + review status logs**
    - Capture request ID, seed, output path, and review state per generated asset.
-4. **Add automated batch QA command**
+4. **Execute `SESSION-004` — add automated batch QA command**
    - Wrap loudness/clipping/loop checks for generated sets.
 5. **Implement `GameRewritten` export profile**
    - Align generated outputs with stable downstream import paths.
@@ -37,6 +39,7 @@ The repository now has a stronger machine-guidance layer (implementation matrix,
 - deterministic regeneration
 - downstream folder organization
 - continuity docs
+- session queue clarity
 
 ## Lower-priority work
 

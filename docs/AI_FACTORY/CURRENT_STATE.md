@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, and now a stronger repo-memory layer for low-prompt AI execution.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, and now a stronger repo-memory plus session-autopilot layer for low-prompt AI execution.
 
 ## What is implemented today
 
@@ -24,6 +24,7 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Manifest validation docs + CI | Implemented | `docs/asset-manifest.md`, `.github/workflows/validate-assets.yml` |
 | Implementation matrix / codebase map / next PR sequence | Implemented (docs layer) | `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`, `docs/AI_FACTORY/CODEBASE_MAP.md`, `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` |
 | Example plan/request/review artifacts | Implemented (docs contracts) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` |
+| Session queue / autopilot control docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_QUEUE.md`, `docs/AI_FACTORY/SESSION_STATE.json` |
 | Automated test suite | Implemented | `tests/` |
 
 ### Commands verified in this session
@@ -67,10 +68,11 @@ Observed result in this session:
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
 4. There is now a committed `GameRewritten`-oriented vertical-slice example plan and request set, but there is not yet full-game taxonomy coverage in executable code.
-5. Audio-plan and generation-request formats exist in docs/examples, but request ingestion and orchestration are not yet implemented in code.
-6. There is not yet automated audio-quality acceptance gating in CI.
-7. Windows/Visual Studio support is not the primary development path today.
-8. There is not yet code-level provenance/review-log generation for request-driven workflows.
+5. The repo now has a session queue/autopilot layer, but queued execution still depends on future agents implementing the queued code sessions.
+6. Audio-plan and generation-request formats exist in docs/examples, but request ingestion and orchestration are not yet implemented in code.
+7. There is not yet automated audio-quality acceptance gating in CI.
+8. Windows/Visual Studio support is not the primary development path today.
+9. There is not yet code-level provenance/review-log generation for request-driven workflows.
 
 ## Current blockers
 
@@ -91,4 +93,4 @@ That workflow validates manifests, but there is currently no workflow that valid
 
 ## Immediate interpretation
 
-This repo is already a capable **procedural audio generation toolkit**. The main gap is not “does any code exist?”; the gap is “how do we evolve the existing code into a reliable, AI-operable, full game-audio asset factory with persistent continuity?”
+This repo is already a capable **procedural audio generation toolkit**. The main gap is not “does any code exist?”; the gap is “how do we evolve the existing code into a reliable, AI-operable, full game-audio asset factory with persistent continuity and session-level autopilot?”

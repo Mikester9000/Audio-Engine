@@ -7,14 +7,15 @@
 Every AI agent working in this repository should follow this sequence unless a task explicitly requires a different order:
 
 1. Read `docs/AI_FACTORY/README.md`
-2. Read `CURRENT_STATE.md`, `ACTIVE_WORK.md`, and `HANDOFF.md`
-3. Read the relevant subsystem/style/schema docs
-4. Inspect the real code before changing docs about implementation
-5. Run existing verification commands before editing code
-6. Make the smallest useful change set that fully addresses the task
-7. Re-run targeted verification
-8. Update persistent memory docs
-9. Leave a clean handoff
+2. Read `CURRENT_STATE.md`, `SESSION_QUEUE.md`, `ACTIVE_WORK.md`, and `HANDOFF.md`
+3. Read `NO_DECISION_ZONES.md` and `FAILSAFE_RULES.md`
+4. Read the relevant subsystem/style/schema docs
+5. Inspect the real code before changing docs about implementation
+6. Run existing verification commands before editing code
+7. Make the smallest useful change set that fully addresses the current session
+8. Re-run targeted verification
+9. Update persistent memory docs and session-state docs
+10. Leave a clean handoff
 
 ## Mandatory doc-sync rule
 
@@ -24,8 +25,8 @@ If your PR changes any of the following, update the matching docs:
 |---|---|
 | Repo purpose or priorities | `PROJECT_MISSION.md`, `ROADMAP.md` |
 | Implemented functionality | `CURRENT_STATE.md`, relevant `SUBSYSTEMS/*.md` |
-| Next steps or sequencing | `ACTIVE_WORK.md`, `TASKS/*` |
-| Latest session summary | `HANDOFF.md`, `CHANGE_JOURNAL.md` |
+| Next steps or sequencing | `SESSION_QUEUE.md`, `ACTIVE_WORK.md`, `TASKS/*` |
+| Latest session summary | `HANDOFF.md`, `CHANGE_JOURNAL.md`, `SESSION_HISTORY.md`, `SESSION_STATE.json` |
 | Style policy | `STYLES/*`, relevant ADR |
 | QA/acceptance rules | `QA/QUALITY_BARS.md`, `PLAYBOOKS/TROUBLESHOOTING.md` |
 | Integration behavior | `INTEGRATION/GAMEREWRITTEN.md`, relevant subsystem page |
@@ -56,6 +57,9 @@ If your PR changes any of the following, update the matching docs:
 - [ ] update `ACTIVE_WORK.md`
 - [ ] update `HANDOFF.md`
 - [ ] append `CHANGE_JOURNAL.md`
+- [ ] advance `SESSION_QUEUE.md` if session state changed
+- [ ] append `SESSION_HISTORY.md` for completed sessions
+- [ ] update `SESSION_STATE.json`
 - [ ] update at least one relevant subsystem page
 - [ ] update one quality/style/schema doc if the behavior changed
 - [ ] mention exact verification commands used

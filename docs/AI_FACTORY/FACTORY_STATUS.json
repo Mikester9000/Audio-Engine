@@ -11,7 +11,11 @@
     "ambience",
     "optional_voice"
   ],
-  "priorityOrder": ["music", "sfx", "voice"],
+  "priorityOrder": [
+    "music",
+    "sfx",
+    "voice"
+  ],
   "capabilityState": {
     "generation_core": "implemented",
     "fixed_map_batch_pipeline": "partial",
@@ -19,12 +23,23 @@
     "generation_request_batch_ingestion": "planned",
     "provenance_review_logging": "planned",
     "batch_qa_gate": "planned",
-    "gamerewritten_import_automation": "blocked"
+    "gamerewritten_import_automation": "blocked",
+    "session_autopilot_layer": "implemented"
   },
   "sourceDocs": {
     "implementationMatrix": "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
     "nextPrSequence": "docs/AI_FACTORY/NEXT_PR_SEQUENCE.md",
     "knownIssues": "docs/AI_FACTORY/KNOWN_ISSUES.md",
-    "stabilityRules": "docs/AI_FACTORY/STABILITY_RULES.md"
+    "stabilityRules": "docs/AI_FACTORY/STABILITY_RULES.md",
+    "sessionQueue": "docs/AI_FACTORY/SESSION_QUEUE.md",
+    "noDecisionZones": "docs/AI_FACTORY/NO_DECISION_ZONES.md",
+    "failsafeRules": "docs/AI_FACTORY/FAILSAFE_RULES.md",
+    "sessionState": "docs/AI_FACTORY/SESSION_STATE.json"
+  },
+  "currentSession": {
+    "id": "SESSION-001",
+    "status": "ready",
+    "title": "Implement audio plan + request loading primitives",
+    "next": "SESSION-002"
   }
 }

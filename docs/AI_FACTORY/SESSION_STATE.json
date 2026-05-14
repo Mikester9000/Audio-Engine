@@ -1,0 +1,70 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-05-14",
+  "currentSession": {
+    "id": "SESSION-001",
+    "title": "Implement audio plan + request loading primitives",
+    "status": "ready",
+    "taskType": "loader_parsing",
+    "queueDoc": "docs/AI_FACTORY/SESSION_QUEUE.md",
+    "readFirst": [
+      "docs/AI_FACTORY/SESSION_QUEUE.md",
+      "docs/AI_FACTORY/CURRENT_STATE.md",
+      "docs/AI_FACTORY/HANDOFF.md",
+      "docs/AI_FACTORY/NO_DECISION_ZONES.md",
+      "docs/AI_FACTORY/FAILSAFE_RULES.md",
+      "docs/AI_FACTORY/SCHEMAS/AUDIO_PLAN_SCHEMA.md",
+      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
+      "audio_engine/integration/asset_pipeline.py",
+      "tests/test_integration.py"
+    ],
+    "likelyModify": [
+      "audio_engine/integration/*",
+      "audio_engine/cli.py",
+      "tests/test_integration.py"
+    ],
+    "avoidModify": [
+      "audio_engine/dsp/*",
+      "audio_engine/render/*",
+      "audio_engine/composer/*",
+      "assets/schema/*"
+    ],
+    "verification": [
+      "pip install -e \".[dev]\"",
+      "pytest",
+      "python tools/validate-assets.py assets/examples/ --verbose"
+    ],
+    "docsToUpdate": [
+      "docs/AI_FACTORY/CURRENT_STATE.md",
+      "docs/AI_FACTORY/ACTIVE_WORK.md",
+      "docs/AI_FACTORY/HANDOFF.md",
+      "docs/AI_FACTORY/CHANGE_JOURNAL.md",
+      "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
+      "docs/AI_FACTORY/SESSION_QUEUE.md",
+      "docs/AI_FACTORY/SESSION_HISTORY.md"
+    ],
+    "doneCriteriaDoc": "docs/AI_FACTORY/DONE_CRITERIA.md",
+    "outputContractDoc": "docs/AI_FACTORY/TASK_OUTPUT_CONTRACTS.md",
+    "fileTouchMatrixDoc": "docs/AI_FACTORY/FILE_TOUCH_MATRIX.md",
+    "failsafeDoc": "docs/AI_FACTORY/FAILSAFE_RULES.md",
+    "nextSession": "SESSION-002"
+  },
+  "upcomingSessions": [
+    {
+      "id": "SESSION-002",
+      "title": "Add request-batch generation command",
+      "status": "queued-after-SESSION-001"
+    },
+    {
+      "id": "SESSION-003",
+      "title": "Write provenance + review logs per request",
+      "status": "queued-after-SESSION-002"
+    },
+    {
+      "id": "SESSION-004",
+      "title": "Add batch QA gate command for generated outputs",
+      "status": "queued-after-SESSION-003"
+    }
+  ]
+}
