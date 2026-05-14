@@ -1,14 +1,14 @@
 {
   "version": "1.0.0",
   "lastUpdated": "2026-05-14",
-  "purpose": "Detailed machine-readable snapshot of the single current executable session. This complements SESSION_STATE.json rather than replacing it.",
+  "purpose": "Detailed machine-readable snapshot of the single current executable session.",
   "currentSession": {
-    "id": "SESSION-003",
-    "title": "Write provenance + review logs per request",
+    "id": "SESSION-004",
+    "title": "Add batch QA gate command for generated outputs",
     "status": "ready",
-    "taskType": "provenance",
-    "objective": "Persist request ID, seed, output path, backend, and review state in a machine-readable per-request provenance log alongside each generated batch output.",
-    "whyItMatters": "Without per-request provenance, regeneration decisions and review continuity rely on batch_manifest.json summaries only. A per-request log makes each asset independently traceable and supports future review/approval workflows.",
+    "taskType": "qa",
+    "objective": "Wrap the existing loudness, clipping, and loop QA primitives in a batch CLI command that reports pass/fail per asset and writes a machine-readable QA report.",
+    "whyItMatters": "Without a batch QA gate, generated assets have no automated first-pass acceptance check before promotion to approved/. The existing 'audio-engine qa' command works on individual files only.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/CURRENT_SESSION.json",
@@ -21,43 +21,36 @@
       "docs/AI_FACTORY/NO_DECISION_ZONES.md",
       "docs/AI_FACTORY/FAILSAFE_RULES.md",
       "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
-      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
-      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json",
-      "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
-      "audio_engine/integration/factory_inputs.py",
-      "audio_engine/integration/asset_pipeline.py",
+      "docs/AI_FACTORY/QA/QUALITY_BARS.md",
+      "docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md",
+      "audio_engine/qa/",
       "audio_engine/cli.py",
+      "audio_engine/integration/asset_pipeline.py",
       "tests/test_integration.py"
     ],
     "likelyModify": [
-      "audio_engine/integration/asset_pipeline.py",
       "audio_engine/cli.py",
       "tests/test_integration.py"
     ],
     "conditionalModify": [
       {
-        "path": "audio_engine/integration/factory_inputs.py",
-        "condition": "only if a small normalization or dataclass hook is required for provenance writing"
+        "path": "audio_engine/integration/asset_pipeline.py",
+        "condition": "only if a batch QA helper class fits naturally in this module"
       }
     ],
     "avoidModify": [
       "audio_engine/dsp/*",
       "audio_engine/render/*",
       "audio_engine/composer/*",
-      "assets/schema/*",
-      "docs/AI_FACTORY/STYLES/*"
+      "assets/schema/*"
     ],
     "verification": {
-      "profile": "provenance",
+      "profile": "qa",
       "minimum": [
         "pip install -e \".[dev]\"",
         "python -m pytest",
         "python tools/validate-assets.py assets/examples/ --verbose",
-        "one deterministic /tmp smoke run confirming per-request provenance files are written alongside generated audio"
-      ],
-      "additionalWhenApplicable": [
-        "verify provenance JSON files contain request_id, seed, output_path, backend, review_status, generated_at",
-        "verify provenance files are written for both music and SFX committed fixtures"
+        "one /tmp smoke run confirming QA report is written for a generated batch output directory"
       ]
     },
     "requiredDocsToUpdate": [
@@ -73,25 +66,24 @@
       "docs/AI_FACTORY/CURRENT_SESSION.json"
     ],
     "doneCriteriaSummary": [
-      "Every request in a batch produces a machine-readable provenance record alongside its output file.",
-      "Provenance records include at minimum: request_id, seed, output_path, backend, review_status, generated_at.",
-      "Tests verify provenance file existence and required fields for the committed SFX fixture.",
-      "Existing batch generation behavior (file output, batch_manifest.json) is preserved.",
-      "Docs describe the provenance behavior truthfully without overstating format stability."
+      "A qa-batch CLI command accepts a directory and reports pass/fail per audio file.",
+      "Command writes a machine-readable QA report JSON with file, status, and per-check results.",
+      "Tests cover at least one passing and one failing case.",
+      "The existing audio-engine qa single-file command is preserved.",
+      "Docs reflect the new command truthfully."
     ],
     "nextSession": {
-      "id": "SESSION-004",
-      "title": "Add batch QA gate command for generated outputs"
+      "id": "SESSION-005",
+      "title": "Implement GameRewritten export profile"
     },
     "gateRulesDoc": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
     "blockerProtocolDoc": "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
     "verificationProfilesDoc": "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
     "minimumTestRulesDoc": "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
-    "canonicalOutputLayoutDoc": "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
-    "fullCoverageChecklistDoc": "docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md",
+    "failsafeDoc": "docs/AI_FACTORY/FAILSAFE_RULES.md",
     "fixturePolicy": [
       "Use the committed example artifacts under docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/ as the default fixtures.",
-      "Do not invent alternate schema examples unless the committed artifacts are insufficient and the missing case is added explicitly."
+      "Use generated /tmp outputs from the batch pipeline as test fixtures for QA pass/fail cases where needed."
     ]
   }
 }

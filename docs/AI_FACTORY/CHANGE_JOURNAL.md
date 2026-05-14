@@ -55,3 +55,11 @@
 - Smoke-ran both committed fixtures: 5 SFX and 4 music files produced with seeds 305001–305045 and 204801–204834 respectively.
 - Test count: 334 passed (up from 321).
 
+## 2026-05-14 — Complete SESSION-003 with per-request provenance sidecar files
+
+- Added `_write_provenance()` method to `RequestBatchPipeline` in `audio_engine/integration/asset_pipeline.py`.
+- Each successful generation now writes a `<stem>.provenance.json` sidecar alongside the audio file, containing: `provenanceVersion`, `requestId`, `assetId`, `type`, `backend`, `seed`, `prompt`, `styleFamily`, `generatedOutputPath`, `targetImportPath`, `reviewStatus`, `generatedAt`.
+- Added 5 new tests: provenance files written, required fields present, seed matches request, not written for skipped files.
+- Test count: 338 passed (up from 334).
+
+

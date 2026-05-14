@@ -2,10 +2,10 @@
   "version": "1.1.0",
   "lastUpdated": "2026-05-14",
   "currentSession": {
-    "id": "SESSION-003",
-    "title": "Write provenance + review logs per request",
+    "id": "SESSION-004",
+    "title": "Add batch QA gate command for generated outputs",
     "status": "ready",
-    "taskType": "provenance",
+    "taskType": "qa",
     "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
     "queueDoc": "docs/AI_FACTORY/SESSION_QUEUE.md",
     "gateRulesDoc": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
@@ -21,16 +21,13 @@
       "docs/AI_FACTORY/HANDOFF.md",
       "docs/AI_FACTORY/NO_DECISION_ZONES.md",
       "docs/AI_FACTORY/FAILSAFE_RULES.md",
-      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
-      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json",
-      "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
-      "audio_engine/integration/factory_inputs.py",
-      "audio_engine/integration/asset_pipeline.py",
+      "docs/AI_FACTORY/QA/QUALITY_BARS.md",
+      "docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md",
       "audio_engine/cli.py",
+      "audio_engine/integration/asset_pipeline.py",
       "tests/test_integration.py"
     ],
     "likelyModify": [
-      "audio_engine/integration/asset_pipeline.py",
       "audio_engine/cli.py",
       "tests/test_integration.py"
     ],
@@ -44,7 +41,7 @@
       "pip install -e \".[dev]\"",
       "python -m pytest",
       "python tools/validate-assets.py assets/examples/ --verbose",
-      "one deterministic /tmp smoke run confirming per-request provenance files are written"
+      "one /tmp smoke run confirming QA report written for a committed batch output"
     ],
     "docsToUpdate": [
       "docs/AI_FACTORY/CURRENT_STATE.md",
@@ -58,18 +55,24 @@
       "docs/AI_FACTORY/SESSION_STATE.json",
       "docs/AI_FACTORY/CURRENT_SESSION.json"
     ],
-    "doneCriteriaDoc": "docs/AI_FACTORY/DONE_CRITERIA.md",
-    "minimumTestRulesDoc": "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
-    "outputContractDoc": "docs/AI_FACTORY/TASK_OUTPUT_CONTRACTS.md",
-    "fileTouchMatrixDoc": "docs/AI_FACTORY/FILE_TOUCH_MATRIX.md",
-    "failsafeDoc": "docs/AI_FACTORY/FAILSAFE_RULES.md",
-    "nextSession": "SESSION-004"
+    "doneCriteriaSummary": [
+      "A qa-batch (or qa-request-batch) CLI command accepts a directory and reports pass/fail per file.",
+      "The command writes a machine-readable QA report JSON with file, status, and per-check results.",
+      "Tests cover at least one passing and one failing case.",
+      "The existing audio-engine qa single-file command is preserved.",
+      "Docs reflect the new command truthfully."
+    ],
+    "nextSession": {
+      "id": "SESSION-005",
+      "title": "Implement GameRewritten export profile"
+    },
+    "failsafeDoc": "docs/AI_FACTORY/FAILSAFE_RULES.md"
   },
   "upcomingSessions": [
     {
-      "id": "SESSION-004",
-      "title": "Add batch QA gate command for generated outputs",
-      "status": "queued-after-SESSION-003"
+      "id": "SESSION-005",
+      "title": "Implement GameRewritten export profile",
+      "status": "queued-after-SESSION-004"
     }
   ],
   "completedSessions": [
@@ -82,6 +85,12 @@
     {
       "id": "SESSION-002",
       "title": "Add request-batch generation command",
+      "status": "completed",
+      "completedDate": "2026-05-14"
+    },
+    {
+      "id": "SESSION-003",
+      "title": "Write provenance + review logs per request",
       "status": "completed",
       "completedDate": "2026-05-14"
     }

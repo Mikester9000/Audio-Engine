@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a working request-batch generation command (`generate-request-batch`) that executes any committed generation-request batch deterministically, using per-request seeds, through the `RequestBatchPipeline`. The next executable session is `SESSION-003` in `docs/AI_FACTORY/SESSION_QUEUE.md`: persist provenance + review logs per generated request.
+The repository now writes per-request provenance sidecar files (`.provenance.json`) alongside every generated audio file. The next executable session is `SESSION-004` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add a batch QA gate command for generated outputs.
 
 ## Now
 
@@ -18,17 +18,18 @@ The repository now has a working request-batch generation command (`generate-req
 - [x] Add final execution-safety hardening docs and machine-readable current-session contract
 - [x] Execute `SESSION-001` from `docs/AI_FACTORY/SESSION_QUEUE.md`
 - [x] Execute `SESSION-002` from `docs/AI_FACTORY/SESSION_QUEUE.md`
-- [ ] Execute `SESSION-003` — persist provenance + review logs per request
+- [x] Execute `SESSION-003` from `docs/AI_FACTORY/SESSION_QUEUE.md`
+- [ ] Execute `SESSION-004` — add batch QA gate command
 - [ ] Add approval/review workflow for generated assets
 
 ## Recommended next PRs
 
-1. **Execute `SESSION-003` — persist provenance + review status logs**
-   - Capture request ID, seed, output path, and review state per generated asset.
-2. **Execute `SESSION-004` — add automated batch QA command**
+1. **Execute `SESSION-004` — add automated batch QA command**
    - Wrap loudness/clipping/loop checks for generated sets.
-3. **Implement `GameRewritten` export profile**
+2. **Implement `GameRewritten` export profile**
    - Align generated outputs with stable downstream import paths.
+3. **Add approval/replacement workflow**
+   - Promote assets from `drafts/` to `approved/` with updated provenance review status.
 
 ## Do not deprioritize
 

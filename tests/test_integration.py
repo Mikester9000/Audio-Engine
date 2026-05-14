@@ -806,3 +806,93 @@ class TestRequestBatchPipeline:
         pipeline.execute(batch, tmp_path)
 
         assert len(messages) > 0, "No progress messages were emitted"
+
+    def test_provenance_files_written(self, tmp_path):
+        """execute() must write a .provenance.json sidecar for every generated file."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        assert len(manifest.errors) == 0
+        for record in manifest.sfx:
+            audio_path = Path(record["file"])
+            provenance_path = audio_path.with_name(audio_path.stem + ".provenance.json")
+            assert provenance_path.exists(), f"Missing provenance file: {provenance_path}"
+
+    def test_provenance_required_fields(self, tmp_path):
+        """Each .provenance.json must contain the required traceability fields."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        required_keys = {
+            "provenanceVersion",
+            "requestId",
+            "assetId",
+            "type",
+            "backend",
+            "seed",
+            "generatedOutputPath",
+            "targetImportPath",
+            "reviewStatus",
+            "generatedAt",
+        }
+        for record in manifest.sfx:
+            audio_path = Path(record["file"])
+            provenance_path = audio_path.with_name(audio_path.stem + ".provenance.json")
+            data = json.loads(provenance_path.read_text())
+            missing = required_keys - data.keys()
+            assert not missing, (
+                f"Provenance for {record['request_id']} is missing keys: {missing}"
+            )
+
+    def test_provenance_seed_matches_request(self, tmp_path):
+        """Seed in provenance file must match the seed in the batch request."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        request_seeds = {r.request_id: r.seed for r in batch.requests}
+        for record in manifest.sfx:
+            audio_path = Path(record["file"])
+            provenance_path = audio_path.with_name(audio_path.stem + ".provenance.json")
+            data = json.loads(provenance_path.read_text())
+            assert data["seed"] == request_seeds[data["requestId"]], (
+                f"Provenance seed mismatch for {data['requestId']}"
+            )
+
+    def test_provenance_not_written_for_skipped(self, tmp_path):
+        """No provenance file should be written for skipped (already-existing) files."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        # Pre-create the first output file as a sentinel.
+        first_request = batch.requests[0]
+        type_dir = tmp_path / "drafts" / first_request.type
+        type_dir.mkdir(parents=True)
+        sentinel_name = Path(first_request.output.target_path).name
+        sentinel = type_dir / sentinel_name
+        sentinel.write_bytes(b"SENTINEL")
+
+        pipeline = RequestBatchPipeline(skip_existing=True)
+        pipeline.execute(batch, tmp_path)
+
+        # Provenance file must NOT be written for the skipped file.
+        prov_path = sentinel.with_name(sentinel.stem + ".provenance.json")
+        assert not prov_path.exists(), (
+            "Provenance file should not be written for skipped assets"
+        )

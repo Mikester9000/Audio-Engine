@@ -542,6 +542,7 @@ class RequestBatchPipeline:
 
             try:
                 actual_path = self._generate_one(request, output_path)
+                self._write_provenance(request, actual_path)
                 self.progress_callback(f"  [ok]   {request.request_id} → {actual_path}")
                 self._append_record(manifest, request, actual_path, "ok")
             except Exception as exc:  # noqa: BLE001
@@ -650,3 +651,41 @@ class RequestBatchPipeline:
             manifest.sfx.append(record)
         else:
             manifest.voice.append(record)
+
+    def _write_provenance(
+        self,
+        request: GenerationRequest,
+        output_path: Path,
+    ) -> None:
+        """Write a machine-readable provenance sidecar file next to *output_path*.
+
+        The provenance file is named ``<stem>.provenance.json`` and contains
+        the request ID, seed, backend, review status, and generation timestamp
+        so that each generated file is independently traceable.
+
+        Parameters
+        ----------
+        request:
+            The :class:`~audio_engine.integration.factory_inputs.GenerationRequest`
+            that produced *output_path*.
+        output_path:
+            Path of the generated audio file.
+        """
+        import datetime
+
+        provenance = {
+            "provenanceVersion": "1.0.0",
+            "requestId": request.request_id,
+            "assetId": request.asset_id,
+            "type": request.type,
+            "backend": request.backend,
+            "seed": request.seed,
+            "prompt": request.prompt,
+            "styleFamily": request.style_family,
+            "generatedOutputPath": str(output_path),
+            "targetImportPath": request.output.target_path,
+            "reviewStatus": request.qa.review_status,
+            "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+        provenance_path = output_path.with_name(output_path.stem + ".provenance.json")
+        provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")

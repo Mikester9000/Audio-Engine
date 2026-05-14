@@ -18,22 +18,28 @@
 
 - **Status:** `completed`
 - **Task type:** `loader_parsing`
-- **Result summary:** The committed example audio plan plus music/SFX request fixtures now load into typed runtime structures in `audio_engine/integration/factory_inputs.py`, with tests covering successful ingestion and an invalid-input failure path.
+- **Result summary:** Typed loader code for the committed audio plan and music/SFX request fixtures now exists in `audio_engine/integration/factory_inputs.py`, with tests covering successful ingestion and an invalid-input failure path.
 
 ### SESSION-002 — Add request-batch generation command
 
 - **Status:** `completed`
 - **Task type:** `batch_generation`
-- **Result summary:** `RequestBatchPipeline` added to `audio_engine/integration/asset_pipeline.py`; `generate-request-batch` CLI command added to `audio_engine/cli.py`. Both committed music (4 requests) and SFX (5 requests) fixtures execute deterministically with per-request seeds captured in `batch_manifest.json`. 13 new tests added; 334 total passed.
-
-## Current next session
+- **Result summary:** `RequestBatchPipeline` added to `audio_engine/integration/asset_pipeline.py`; `generate-request-batch` CLI command added. Both committed music (4) and SFX (5) fixtures execute deterministically with per-request seeds captured in `batch_manifest.json`. 13 new tests added; 334 total passed.
 
 ### SESSION-003 — Write provenance + review logs per request
 
-- **Status:** `ready`
+- **Status:** `completed`
 - **Task type:** `provenance`
-- **Objective:** Persist request ID, seed, output path, backend, and review state in a machine-readable per-request provenance log alongside each generated batch output.
-- **Why it matters:** Without per-request provenance, regeneration decisions and review continuity rely on `batch_manifest.json` summaries only; a per-request log makes each asset independently traceable.
+- **Result summary:** `_write_provenance()` method added to `RequestBatchPipeline`. Every successful generation writes a `<stem>.provenance.json` sidecar containing `provenanceVersion`, `requestId`, `assetId`, `type`, `backend`, `seed`, `prompt`, `styleFamily`, `generatedOutputPath`, `targetImportPath`, `reviewStatus`, `generatedAt`. 5 new tests added; 338 total passed.
+
+## Current next session
+
+### SESSION-004 — Add batch QA gate command for generated outputs
+
+- **Status:** `ready`
+- **Task type:** `qa`
+- **Objective:** Wrap the existing loudness, clipping, and loop QA primitives in a batch CLI command that reports pass/fail per asset and writes a machine-readable QA report.
+- **Why it matters:** Without a batch QA gate, generated assets have no automated first-pass acceptance check before they are promoted to `approved/`. The existing `audio-engine qa` command works on individual files only.
 - **Read first docs/files:**
   1. `docs/AI_FACTORY/SESSION_QUEUE.md`
   2. `docs/AI_FACTORY/CURRENT_STATE.md`
@@ -46,28 +52,26 @@
   9. `docs/AI_FACTORY/NO_DECISION_ZONES.md`
   10. `docs/AI_FACTORY/FAILSAFE_RULES.md`
   11. `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md`
-  12. `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`
-  13. `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json`
-  14. `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md`
-  15. `audio_engine/integration/factory_inputs.py`
+  12. `docs/AI_FACTORY/QA/QUALITY_BARS.md`
+  13. `docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md`
+  14. `audio_engine/qa/` (existing QA primitives)
+  15. `audio_engine/cli.py` (existing `qa` command)
   16. `audio_engine/integration/asset_pipeline.py`
-  17. `audio_engine/cli.py`
-  18. `tests/test_integration.py`
+  17. `tests/test_integration.py`
 - **Exact or likely files to modify:**
-  - `audio_engine/integration/asset_pipeline.py`
-  - `audio_engine/cli.py` (if a `--provenance-dir` flag is appropriate)
+  - `audio_engine/cli.py`
   - `tests/test_integration.py`
+  - optionally `audio_engine/integration/asset_pipeline.py` if a batch QA helper fits there
 - **Files not to modify unless absolutely necessary:**
   - `audio_engine/dsp/*`
   - `audio_engine/render/*`
   - `audio_engine/composer/*`
   - `assets/schema/*`
-  - `audio_engine/integration/factory_inputs.py` (unless a tiny hook is needed)
 - **Verification commands:**
   - `pip install -e ".[dev]"`
   - `python -m pytest`
   - `python tools/validate-assets.py assets/examples/ --verbose`
-  - one deterministic `/tmp` smoke run confirming per-request provenance files are written alongside generated audio
+  - one `/tmp` smoke run confirming QA report is written for a committed batch output
 - **Docs that must be updated:**
   - `docs/AI_FACTORY/CURRENT_STATE.md`
   - `docs/AI_FACTORY/ACTIVE_WORK.md`
@@ -80,22 +84,21 @@
   - `docs/AI_FACTORY/CURRENT_SESSION.json`
   - `docs/AI_FACTORY/SESSION_STATE.json`
 - **Explicit done criteria:**
-  1. Every request in a batch produces a machine-readable provenance record alongside its output file.
-  2. Provenance records include at minimum: `request_id`, `seed`, `output_path`, `backend`, `review_status`, `generated_at`.
-  3. Tests verify provenance file existence and required fields for the committed SFX fixture.
-  4. Existing batch generation behavior (file output, `batch_manifest.json`) is preserved.
-  5. Docs describe the provenance behavior truthfully without overstating format stability.
-- **Enqueue next session after completion:** `SESSION-004 — Add batch QA gate command for generated outputs`
+  1. A `qa-batch` (or `qa-request-batch`) CLI command accepts a directory of generated audio files and reports pass/fail per file.
+  2. The command writes a machine-readable QA report (JSON) with at minimum: `file`, `status` (pass/fail), `checks` (per-check results).
+  3. Tests cover at least one passing case (synthetic or generated audio that meets bars) and one failing case (silent/clipping file).
+  4. The existing `audio-engine qa` single-file command is preserved.
+  5. Docs reflect the new command truthfully.
+- **Enqueue next session after completion:** `SESSION-005 — Implement GameRewritten export profile`
 - **If uncertain or blocked:**
   - follow `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`
-  - do not invent new schema fields that conflict with `review_log.example.v1.json`
-  - emit JSONL or individual JSON sidecar files — do not create a new binary format
-  - record blockers in `HANDOFF.md`, `SESSION_QUEUE.md`, `SESSION_STATE.json`, and `CURRENT_SESSION.json`
+  - do not change the existing `qa` command signature
+  - emit JSONL or JSON QA report — do not create a binary format
 
 ## Upcoming queued sessions
 
-### SESSION-004 — Add batch QA gate command for generated outputs
+### SESSION-005 — Implement GameRewritten export profile
 
-- **Status:** `queued-after-SESSION-003`
-- **Task type:** `qa`
-- **Short objective:** Validate generated music/SFX sets with pass/fail reporting and reusable automation.
+- **Status:** `queued-after-SESSION-004`
+- **Task type:** `export`
+- **Short objective:** Copy approved draft assets into the `exports/gamerewritten/Content/Audio/` layout expected by the downstream game.
