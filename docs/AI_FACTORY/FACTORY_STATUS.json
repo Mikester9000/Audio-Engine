@@ -1,5 +1,5 @@
 {
-  "statusVersion": "1.0.0",
+  "statusVersion": "1.1.0",
   "lastUpdated": "2026-05-14",
   "repositoryRole": "GitHub-native audio asset factory for downstream game import",
   "coverageGoal": [
@@ -24,7 +24,8 @@
     "provenance_review_logging": "planned",
     "batch_qa_gate": "planned",
     "gamerewritten_import_automation": "blocked",
-    "session_autopilot_layer": "implemented"
+    "session_autopilot_layer": "implemented",
+    "execution_safety_hardening_layer": "implemented"
   },
   "sourceDocs": {
     "implementationMatrix": "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
@@ -32,14 +33,23 @@
     "knownIssues": "docs/AI_FACTORY/KNOWN_ISSUES.md",
     "stabilityRules": "docs/AI_FACTORY/STABILITY_RULES.md",
     "sessionQueue": "docs/AI_FACTORY/SESSION_QUEUE.md",
+    "currentSession": "docs/AI_FACTORY/CURRENT_SESSION.json",
+    "sessionGateRules": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
+    "blockerProtocol": "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
     "noDecisionZones": "docs/AI_FACTORY/NO_DECISION_ZONES.md",
     "failsafeRules": "docs/AI_FACTORY/FAILSAFE_RULES.md",
+    "verificationProfiles": "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
+    "canonicalOutputLayout": "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
+    "fullGameAudioChecklist": "docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md",
+    "minimumTestExpansionRules": "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
+    "humanCommands": "docs/AI_FACTORY/HUMAN_COMMANDS.md",
     "sessionState": "docs/AI_FACTORY/SESSION_STATE.json"
   },
   "currentSession": {
     "id": "SESSION-001",
     "status": "ready",
     "title": "Implement audio plan + request loading primitives",
+    "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
     "next": "SESSION-002"
   }
 }

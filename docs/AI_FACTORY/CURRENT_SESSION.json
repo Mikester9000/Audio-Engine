@@ -1,0 +1,92 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-05-14",
+  "purpose": "Detailed machine-readable snapshot of the single current executable session. This complements SESSION_STATE.json rather than replacing it.",
+  "currentSession": {
+    "id": "SESSION-001",
+    "title": "Implement audio plan + request loading primitives",
+    "status": "ready",
+    "taskType": "loader_parsing",
+    "objective": "Parse the committed example audio-plan and generation-request artifacts into typed runtime structures that future CLI and batch workflows can consume.",
+    "whyItMatters": "This is the first executable step that turns the repo's docs/example contracts into working factory behavior for practical game-audio generation.",
+    "readFirst": [
+      "docs/AI_FACTORY/SESSION_QUEUE.md",
+      "docs/AI_FACTORY/CURRENT_SESSION.json",
+      "docs/AI_FACTORY/SESSION_GATE_RULES.md",
+      "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
+      "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
+      "docs/AI_FACTORY/CURRENT_STATE.md",
+      "docs/AI_FACTORY/HANDOFF.md",
+      "docs/AI_FACTORY/NEXT_PR_SEQUENCE.md",
+      "docs/AI_FACTORY/NO_DECISION_ZONES.md",
+      "docs/AI_FACTORY/FAILSAFE_RULES.md",
+      "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
+      "docs/AI_FACTORY/SCHEMAS/AUDIO_PLAN_SCHEMA.md",
+      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
+      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/README.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
+      "audio_engine/integration/asset_pipeline.py",
+      "tests/test_integration.py"
+    ],
+    "likelyModify": [
+      "audio_engine/integration/*",
+      "tests/test_integration.py"
+    ],
+    "conditionalModify": [
+      { "path": "audio_engine/cli.py", "condition": "only if a validation/listing hook is required" },
+      { "path": "tests/test_engine_cli.py", "condition": "only if CLI behavior changes" },
+      { "path": "tests/test_new_cli.py", "condition": "only if CLI behavior changes" }
+    ],
+    "avoidModify": [
+      "audio_engine/dsp/*",
+      "audio_engine/render/*",
+      "audio_engine/composer/*",
+      "assets/schema/*",
+      "docs/AI_FACTORY/STYLES/*"
+    ],
+    "verification": {
+      "profile": "loader_parsing",
+      "minimum": [
+        "pip install -e \".[dev]\"",
+        "pytest",
+        "python tools/validate-assets.py assets/examples/ --verbose"
+      ],
+      "additionalWhenApplicable": [
+        "one focused loader smoke check against the committed example artifacts if a new CLI/API entry is added"
+      ]
+    },
+    "requiredDocsToUpdate": [
+      "docs/AI_FACTORY/CURRENT_STATE.md",
+      "docs/AI_FACTORY/ACTIVE_WORK.md",
+      "docs/AI_FACTORY/HANDOFF.md",
+      "docs/AI_FACTORY/CHANGE_JOURNAL.md",
+      "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
+      "docs/AI_FACTORY/SESSION_QUEUE.md",
+      "docs/AI_FACTORY/SESSION_HISTORY.md",
+      "docs/AI_FACTORY/SESSION_STATE.json",
+      "docs/AI_FACTORY/CURRENT_SESSION.json"
+    ],
+    "doneCriteriaSummary": [
+      "The committed example audio plan loads into a typed runtime structure.",
+      "The committed music and SFX generation request examples load into typed runtime structures.",
+      "Tests cover successful example ingestion and at least one invalid-input failure path.",
+      "Existing CLI compatibility is preserved unless the session explicitly adds a new additive command.",
+      "Affected docs stop describing implemented behavior as docs-only."
+    ],
+    "nextSession": {
+      "id": "SESSION-002",
+      "title": "Add request-batch generation command"
+    },
+    "gateRulesDoc": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
+    "blockerProtocolDoc": "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
+    "verificationProfilesDoc": "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
+    "minimumTestRulesDoc": "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
+    "canonicalOutputLayoutDoc": "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
+    "fullCoverageChecklistDoc": "docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md",
+    "fixturePolicy": [
+      "Use the committed example artifacts under docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/ as the default fixtures.",
+      "Do not invent alternate schema examples unless the committed artifacts are insufficient and the missing case is added explicitly."
+    ]
+  }
+}

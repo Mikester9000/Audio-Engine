@@ -1,14 +1,22 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "lastUpdated": "2026-05-14",
   "currentSession": {
     "id": "SESSION-001",
     "title": "Implement audio plan + request loading primitives",
     "status": "ready",
     "taskType": "loader_parsing",
+    "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
     "queueDoc": "docs/AI_FACTORY/SESSION_QUEUE.md",
+    "gateRulesDoc": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
+    "blockerProtocolDoc": "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
+    "verificationProfilesDoc": "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
+      "docs/AI_FACTORY/CURRENT_SESSION.json",
+      "docs/AI_FACTORY/SESSION_GATE_RULES.md",
+      "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
+      "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
       "docs/AI_FACTORY/CURRENT_STATE.md",
       "docs/AI_FACTORY/HANDOFF.md",
       "docs/AI_FACTORY/NO_DECISION_ZONES.md",
@@ -42,9 +50,12 @@
       "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
       "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
       "docs/AI_FACTORY/SESSION_QUEUE.md",
-      "docs/AI_FACTORY/SESSION_HISTORY.md"
+      "docs/AI_FACTORY/SESSION_HISTORY.md",
+      "docs/AI_FACTORY/SESSION_STATE.json",
+      "docs/AI_FACTORY/CURRENT_SESSION.json"
     ],
     "doneCriteriaDoc": "docs/AI_FACTORY/DONE_CRITERIA.md",
+    "minimumTestRulesDoc": "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
     "outputContractDoc": "docs/AI_FACTORY/TASK_OUTPUT_CONTRACTS.md",
     "fileTouchMatrixDoc": "docs/AI_FACTORY/FILE_TOUCH_MATRIX.md",
     "failsafeDoc": "docs/AI_FACTORY/FAILSAFE_RULES.md",

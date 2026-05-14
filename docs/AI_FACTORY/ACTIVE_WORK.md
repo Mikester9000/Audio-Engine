@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a stronger machine-guidance **and session-autopilot** layer. The canonical next executable session is `SESSION-001` in `docs/AI_FACTORY/SESSION_QUEUE.md`: implement plan/request ingestion in code.
+The repository now has a stronger machine-guidance, **session-autopilot, and execution-safety** layer. The canonical next executable session is `SESSION-001` in `docs/AI_FACTORY/SESSION_QUEUE.md`: implement plan/request ingestion in code.
 
 ## Now
 
@@ -15,6 +15,7 @@ The repository now has a stronger machine-guidance **and session-autopilot** lay
 - [x] Commit generation request + review/provenance example artifacts
 - [x] Add implementation matrix + codebase map + next-PR sequence docs
 - [x] Add session queue/autopilot control docs for low-prompt execution
+- [x] Add final execution-safety hardening docs and machine-readable current-session contract
 - [ ] Execute `SESSION-001` from `docs/AI_FACTORY/SESSION_QUEUE.md`
 - [ ] Add approval/review workflow for generated assets
 

@@ -1,6 +1,6 @@
 # Done Criteria
 
-> Central definition of what `done` means for common work types in this repository. Use this file to reduce over-building and under-building.
+> Central definition of what `done` means for common work types in this repository. Use this file to reduce over-building and under-building. For the final mark-complete gate, also use `SESSION_GATE_RULES.md`.
 
 ## Global done rules for every substantial session
 

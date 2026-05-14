@@ -1,6 +1,6 @@
 # Failsafe Rules
 
-> Use these rules when the current session is unclear, partially blocked, or riskier than expected.
+> Use these rules when the current session is unclear, partially blocked, or riskier than expected. For the exact blocked-session procedure, also use `BLOCKER_PROTOCOL.md`.
 
 ## 1) Do not invent missing working behavior
 
