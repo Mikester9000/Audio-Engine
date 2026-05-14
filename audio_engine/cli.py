@@ -21,6 +21,9 @@ Run quality assurance checks on a WAV file:
 Execute a generation-request batch file (factory workflow):
     audio-engine generate-request-batch --batch-file generation_requests.music.v1.json --output-dir /tmp/output
 
+Run batch QA on all WAV files in a directory:
+    audio-engine qa-batch --input-dir /tmp/output/drafts/sfx --output-report qa_report.json
+
 Generate ALL assets for the Game Engine for Teaching:
     audio-engine generate-game-assets --output-dir ./assets/audio
 
@@ -122,20 +125,15 @@ def _cmd_generate_voice(args: argparse.Namespace) -> None:
     print(f"Done. Saved to: {path}")
 
 
-def _cmd_qa(args: argparse.Namespace) -> None:
-    """Run quality-assurance checks on a WAV file."""
+def _load_wav_array(input_path: Path) -> "tuple[np.ndarray, int, int]":
+    """Load a WAV file and return ``(audio, sample_rate, n_channels)``.
+
+    Returns float32 audio in the range ``[-1, 1]``.
+    """
     import wave
 
     import numpy as np
 
-    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer
-
-    input_path = Path(args.input)
-    if not input_path.exists():
-        print(f"Error: file not found: {input_path}", file=sys.stderr)
-        raise FileNotFoundError(f"file not found: {input_path}")
-
-    # Load audio
     with wave.open(str(input_path), "r") as wf:
         n_channels = wf.getnchannels()
         sampwidth = wf.getsampwidth()
@@ -151,6 +149,23 @@ def _cmd_qa(args: argparse.Namespace) -> None:
         audio = samples.reshape(-1, n_channels)
     else:
         audio = samples
+
+    return audio, sr, n_channels
+
+
+def _cmd_qa(args: argparse.Namespace) -> None:
+    """Run quality-assurance checks on a WAV file."""
+    import numpy as np
+
+    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer
+
+    input_path = Path(args.input)
+    if not input_path.exists():
+        print(f"Error: file not found: {input_path}", file=sys.stderr)
+        raise FileNotFoundError(f"file not found: {input_path}")
+
+    audio, sr, n_channels = _load_wav_array(input_path)
+    n_frames = audio.shape[0] if audio.ndim == 2 else len(audio)
 
     print(f"\nQA Report: {input_path.name}")
     print(f"  Sample rate : {sr} Hz")
@@ -193,6 +208,111 @@ def _cmd_qa(args: argparse.Namespace) -> None:
             print(f"     • {issue}")
     else:
         print("  ✓  All checks passed.")
+
+
+def _cmd_qa_batch(args: argparse.Namespace) -> None:
+    """Run QA checks on all WAV files in a directory and write a JSON report."""
+    import datetime
+    import json
+
+    import numpy as np
+
+    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer
+
+    input_dir = Path(args.input_dir)
+    if not input_dir.exists():
+        print(f"Error: input directory not found: {input_dir}", file=sys.stderr)
+        raise FileNotFoundError(f"input directory not found: {input_dir}")
+
+    wav_files = sorted(input_dir.rglob("*.wav") if args.recursive else input_dir.glob("*.wav"))
+    if not wav_files:
+        print(f"No WAV files found in {input_dir}", file=sys.stderr)
+        return
+
+    results = []
+    n_passed = 0
+    n_failed = 0
+
+    for wav_path in wav_files:
+        try:
+            audio, sr, n_channels = _load_wav_array(wav_path)
+        except Exception as exc:
+            record = {
+                "file": str(wav_path),
+                "status": "error",
+                "error": str(exc),
+                "checks": {},
+            }
+            results.append(record)
+            n_failed += 1
+            if not args.quiet:
+                print(f"  [err]  {wav_path.name}: {exc}")
+            continue
+
+        meter = LoudnessMeter(sample_rate=sr)
+        loudness_result = meter.measure(audio)
+
+        detector = ClippingDetector()
+        clip_report = detector.detect(audio)
+
+        checks: dict = {
+            "loudness_lufs": round(float(loudness_result.integrated_lufs), 2),
+            "true_peak_dbfs": round(float(loudness_result.true_peak_dbfs), 2),
+            "loudness_range_lu": round(float(loudness_result.loudness_range_lu), 2),
+            "has_clipping": bool(clip_report.has_clipping),
+            "clipped_samples": int(clip_report.clipped_samples),
+            "loudness_ok": bool(-30.0 <= loudness_result.integrated_lufs <= -9.0),
+            "peak_ok": bool(loudness_result.true_peak_dbfs <= -0.1),
+            "clipping_ok": bool(not clip_report.has_clipping),
+        }
+
+        if args.check_loop:
+            analyzer = LoopAnalyzer(sample_rate=sr)
+            loop_report = analyzer.analyze(audio)
+            checks["loop_is_seamless"] = bool(loop_report.is_seamless)
+            checks["loop_amplitude_jump_db"] = round(float(loop_report.amplitude_jump_db), 2)
+            checks["loop_ok"] = bool(loop_report.is_seamless)
+
+        passed = all(
+            v for k, v in checks.items() if k.endswith("_ok")
+        )
+        status = "pass" if passed else "fail"
+        if passed:
+            n_passed += 1
+        else:
+            n_failed += 1
+
+        record = {
+            "file": str(wav_path),
+            "status": status,
+            "checks": checks,
+        }
+        results.append(record)
+
+        if not args.quiet:
+            symbol = "✓" if passed else "✗"
+            print(f"  [{symbol}]  {wav_path.name}")
+
+    report = {
+        "qaBatchVersion": "1.0.0",
+        "inputDir": str(input_dir),
+        "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "summary": {"total": len(results), "passed": n_passed, "failed": n_failed},
+        "results": results,
+    }
+
+    if args.output_report:
+        report_path = Path(args.output_report)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(f"\nQA report written → {report_path}")
+    else:
+        print()
+
+    print(f"QA batch: {n_passed}/{len(results)} passed, {n_failed} failed")
+
+    if n_failed > 0:
+        raise ValueError(f"{n_failed} file(s) failed QA checks")
 
 
 def _cmd_list_styles(_args: argparse.Namespace) -> None:
@@ -302,6 +422,35 @@ def build_parser() -> argparse.ArgumentParser:
         "--check-loop",
         action="store_true",
         help="Also check for loop boundary click artefacts.",
+    )
+
+    # --- qa-batch ---
+    qab = sub.add_parser(
+        "qa-batch",
+        help="Run QA checks on all WAV files in a directory and write a JSON report.",
+    )
+    qab.add_argument(
+        "--input-dir", "-i", required=True,
+        help="Directory containing WAV files to check.",
+    )
+    qab.add_argument(
+        "--output-report", "-o",
+        help="Path to write the JSON QA report (optional; prints summary to stdout regardless).",
+    )
+    qab.add_argument(
+        "--check-loop",
+        action="store_true",
+        help="Also check for loop boundary click artefacts.",
+    )
+    qab.add_argument(
+        "--recursive", "-r",
+        action="store_true",
+        help="Recurse into subdirectories when searching for WAV files.",
+    )
+    qab.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-file progress messages.",
     )
 
     # --- sfx (instrument-based) ---
@@ -492,6 +641,7 @@ def main(argv: list[str] | None = None) -> int:
         "generate-sfx": _cmd_generate_sfx,
         "generate-voice": _cmd_generate_voice,
         "qa": _cmd_qa,
+        "qa-batch": _cmd_qa_batch,
         "sfx": _cmd_sfx,
         "list-styles": _cmd_list_styles,
         "list-instruments": _cmd_list_instruments,
