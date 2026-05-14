@@ -15,10 +15,12 @@ Usage (from Python)
 >>> pipeline = RequestBatchPipeline()
 >>> manifest = pipeline.execute(batch, "/tmp/factory_output")
 
-Execute a generation-request batch from a factory JSON fixture:
+Execute a generation-request batch using the AssetPipeline (path-safe mode):
 
 >>> from audio_engine.integration import load_generation_request_batch
+>>> from audio_engine.integration.asset_pipeline import AssetPipeline
 >>> batch = load_generation_request_batch("generation_requests.music.v1.json")
+>>> pipeline = AssetPipeline()
 >>> result = pipeline.execute_request_batch(batch, "/tmp/output")
 >>> print(result.summary())
 
