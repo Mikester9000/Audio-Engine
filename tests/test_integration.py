@@ -20,13 +20,19 @@ import pytest
 
 from audio_engine.integration import (
     AssetPipeline,
+    AudioPlan,
+    FactoryInputError,
     GenerationManifest,
+    GenerationRequestBatch,
     MUSIC_MANIFEST,
     SFX_MANIFEST,
     VOICE_MANIFEST,
     MusicAsset,
     SFXAsset,
     VoiceAsset,
+    load_audio_plan,
+    load_generation_request_batch,
+    parse_generation_request_batch,
 )
 from audio_engine.integration.game_state_map import (
     MUSIC_MANIFEST,
@@ -37,6 +43,13 @@ from audio_engine.cli import main
 
 # Absolute path to the integration package.
 INTEGRATION_DIR = Path(__file__).parent.parent / "audio_engine" / "integration"
+EXAMPLE_FACTORY_INPUTS_DIR = (
+    Path(__file__).parent.parent
+    / "docs"
+    / "AI_FACTORY"
+    / "EXAMPLES"
+    / "gamerewritten_vertical_slice"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +199,71 @@ class TestGenerationManifest:
         m = GenerationManifest(output_dir="/tmp")
         m.errors.append("sfx/missing.wav: some error")
         assert "Errors" in m.summary()
+
+
+# ---------------------------------------------------------------------------
+# Factory input loaders
+# ---------------------------------------------------------------------------
+
+class TestFactoryInputLoaders:
+    def test_load_audio_plan_fixture(self):
+        plan = load_audio_plan(EXAMPLE_FACTORY_INPUTS_DIR / "audio_plan.vertical_slice.v1.json")
+
+        assert isinstance(plan, AudioPlan)
+        assert plan.project == "GameRewritten"
+        assert plan.scope == "vertical-slice"
+        assert plan.priorities.music == "high"
+        assert len(plan.asset_groups) == 2
+        assert plan.asset_groups[0].targets[0].asset_id == "bgm_field_day"
+        assert plan.asset_groups[0].targets[0].target_path == "Content/Audio/bgm_field_day.ogg"
+
+    @pytest.mark.parametrize(
+        ("filename", "expected_type", "expected_request_count"),
+        [
+            ("generation_requests.music.v1.json", "music", 4),
+            ("generation_requests.sfx.v1.json", "sfx", 5),
+        ],
+    )
+    def test_load_generation_request_fixture(self, filename, expected_type, expected_request_count):
+        batch = load_generation_request_batch(EXAMPLE_FACTORY_INPUTS_DIR / filename)
+
+        assert isinstance(batch, GenerationRequestBatch)
+        assert batch.project == "GameRewritten"
+        assert len(batch.requests) == expected_request_count
+        assert all(request.type == expected_type for request in batch.requests)
+        assert all(request.qa.review_status == "draft" for request in batch.requests)
+
+    def test_generation_request_loader_rejects_missing_request_id(self):
+        invalid_batch = {
+            "requestBatchVersion": "1.0.0",
+            "project": "GameRewritten",
+            "scope": "vertical-slice",
+            "requests": [
+                {
+                    "requestVersion": "1.0.0",
+                    "assetId": "bgm_field_day",
+                    "type": "music",
+                    "backend": "procedural",
+                    "seed": 42,
+                    "prompt": "loopable field theme",
+                    "styleFamily": "heroic-sci-fantasy",
+                    "output": {
+                        "targetPath": "Content/Audio/bgm_field_day.ogg",
+                        "format": "ogg",
+                        "sampleRate": 44100,
+                        "channels": 2,
+                    },
+                    "qa": {
+                        "loopRequired": True,
+                        "reviewStatus": "draft",
+                        "notes": [],
+                    },
+                }
+            ],
+        }
+
+        with pytest.raises(FactoryInputError, match="requestId"):
+            parse_generation_request_batch(invalid_batch, source="invalid_generation_request")
 
 
 # ---------------------------------------------------------------------------

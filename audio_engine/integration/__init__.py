@@ -46,14 +46,42 @@ from audio_engine.integration.game_state_map import (
     VoiceAsset,
 )
 from audio_engine.integration.asset_pipeline import AssetPipeline, GenerationManifest
+from audio_engine.integration.factory_inputs import (
+    AudioPlan,
+    AudioPlanAssetGroup,
+    AudioPlanPriorities,
+    AudioPlanTarget,
+    FactoryInputError,
+    GenerationRequest,
+    GenerationRequestBatch,
+    GenerationRequestOutput,
+    GenerationRequestQA,
+    load_audio_plan,
+    load_generation_request_batch,
+    parse_audio_plan,
+    parse_generation_request_batch,
+)
 
 __all__ = [
     "AssetPipeline",
     "GenerationManifest",
+    "AudioPlan",
+    "AudioPlanAssetGroup",
+    "AudioPlanPriorities",
+    "AudioPlanTarget",
+    "FactoryInputError",
+    "GenerationRequest",
+    "GenerationRequestBatch",
+    "GenerationRequestOutput",
+    "GenerationRequestQA",
     "MUSIC_MANIFEST",
     "SFX_MANIFEST",
     "VOICE_MANIFEST",
     "MusicAsset",
     "SFXAsset",
     "VoiceAsset",
+    "load_audio_plan",
+    "load_generation_request_batch",
+    "parse_audio_plan",
+    "parse_generation_request_batch",
 ]
