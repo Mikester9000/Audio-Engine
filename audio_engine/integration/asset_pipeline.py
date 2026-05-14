@@ -1163,12 +1163,14 @@ class DraftExportPipeline:
                     try:
                         rel = Path(*p.relative_to("Content/Audio").parts)
                     except ValueError:
+                        # targetImportPath lacks the Content/Audio prefix; fall
+                        # back to just the filename to avoid unintended nesting.
                         rel = Path(p.name)
 
                     if not rel.is_absolute() and ".." not in rel.parts:
                         candidate = audio_root / rel
-                        root_r = str(audio_root.resolve(strict=False))
-                        cand_r = str(candidate.resolve(strict=False))
+                        root_r = os.path.normcase(str(audio_root.resolve(strict=False)))
+                        cand_r = os.path.normcase(str(candidate.resolve(strict=False)))
                         try:
                             is_safe = os.path.commonpath([root_r, cand_r]) == root_r
                         except ValueError:
