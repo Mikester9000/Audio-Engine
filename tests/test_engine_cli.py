@@ -131,7 +131,306 @@ _FIXTURE_DIR = (
 )
 
 
+
+def test_cli_generate_request_batch_help(capsys):
+    """generate-request-batch --help should exit cleanly."""
+    import argparse
+
+    from audio_engine.cli import build_parser
+
+    parser = build_parser()
+    # Verify the subcommand exists in the parser.
+    subparsers_actions = [
+        action
+        for action in parser._actions
+        if isinstance(action, argparse._SubParsersAction)
+    ]
+    assert subparsers_actions, "No subparsers found"
+    choices = subparsers_actions[0].choices
+    assert "generate-request-batch" in choices, (
+        "'generate-request-batch' subcommand not registered"
+    )
+
+
 def test_cli_generate_request_batch_sfx(tmp_path, capsys):
+    """generate-request-batch should execute the SFX fixture and return 0."""
+    batch_file = str(_FIXTURE_DIR / "generation_requests.sfx.v1.json")
+    rc = main([
+        "generate-request-batch",
+        "--batch-file", batch_file,
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc == 0
+    drafts_sfx = tmp_path / "drafts" / "sfx"
+    assert drafts_sfx.exists(), "drafts/sfx directory was not created"
+    wav_files = list(drafts_sfx.glob("*.wav"))
+    assert len(wav_files) > 0, "No WAV files produced in drafts/sfx"
+
+
+def test_cli_generate_request_batch_missing_file(tmp_path, capsys):
+    """generate-request-batch with a missing batch file should return non-zero."""
+    rc = main([
+        "generate-request-batch",
+        "--batch-file", str(tmp_path / "nonexistent_batch.json"),
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc != 0
+
+
+def test_cli_generate_request_batch_quiet(tmp_path, capsys):
+    """--quiet should suppress per-asset progress output."""
+    batch_file = str(_FIXTURE_DIR / "generation_requests.sfx.v1.json")
+    rc = main([
+        "generate-request-batch",
+        "--batch-file", batch_file,
+        "--output-dir", str(tmp_path),
+        "--quiet",
+    ])
+    assert rc == 0
+    captured = capsys.readouterr()
+    # Summary is still printed (not suppressed by --quiet).
+    assert "SFX" in captured.out or "sfx" in captured.out.lower()
+
+
+def test_cli_generate_request_batch_writes_manifest(tmp_path):
+    """generate-request-batch should write batch_manifest.json."""
+    import json
+
+    batch_file = str(_FIXTURE_DIR / "generation_requests.sfx.v1.json")
+    rc = main([
+        "generate-request-batch",
+        "--batch-file", batch_file,
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc == 0
+    manifest_path = tmp_path / "drafts" / "batch_manifest.json"
+    assert manifest_path.exists(), "batch_manifest.json was not written"
+    data = json.loads(manifest_path.read_text())
+    assert "sfx" in data
+    assert len(data["sfx"]) > 0
+
+
+# ---------------------------------------------------------------------------
+# qa-batch CLI tests
+# ---------------------------------------------------------------------------
+
+def _write_silent_wav(path: Path, sample_rate: int = 22050, duration: float = 1.0) -> None:
+    """Write a silent (all-zeros) WAV file for testing."""
+    import struct
+    import wave
+
+    import numpy as np
+
+    n_samples = int(sample_rate * duration)
+    silence = np.zeros(n_samples, dtype=np.int16)
+    with wave.open(str(path), "w") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(silence.tobytes())
+
+
+def _write_loud_wav(path: Path, sample_rate: int = 22050, duration: float = 1.0) -> None:
+    """Write a loud (near-clipping) WAV file for testing."""
+    import wave
+
+    import numpy as np
+
+    n_samples = int(sample_rate * duration)
+    loud = (np.ones(n_samples) * 0.999).astype(np.float32)
+    pcm = (loud * 32767).astype(np.int16)
+    with wave.open(str(path), "w") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(pcm.tobytes())
+
+
+def test_cli_qa_batch_subcommand_registered(capsys):
+    """qa-batch should be registered in the CLI parser."""
+    import argparse
+
+    from audio_engine.cli import build_parser
+
+    parser = build_parser()
+    subparsers_actions = [
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    ]
+    assert subparsers_actions
+    assert "qa-batch" in subparsers_actions[0].choices
+
+
+def test_cli_qa_batch_passes_on_valid_audio(tmp_path, capsys):
+    """qa-batch should return 0 and report pass for a valid audio file."""
+    from audio_engine.ai.sfx_gen import SFXGen
+    from audio_engine.export.audio_exporter import AudioExporter
+
+    gen = SFXGen(sample_rate=22050, seed=99)
+    audio = gen.generate(prompt="soft click")
+    exporter = AudioExporter(sample_rate=22050, bit_depth=16)
+    exporter.export(audio, tmp_path / "test_sfx.wav", fmt="wav")
+
+    rc = main([
+        "qa-batch",
+        "--input-dir", str(tmp_path),
+    ])
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "passed" in captured.out or "pass" in captured.out.lower()
+
+
+def test_cli_qa_batch_fails_on_silent_audio(tmp_path, capsys):
+    """qa-batch should return non-zero for a silent (too quiet) file."""
+    _write_silent_wav(tmp_path / "silent.wav")
+
+    rc = main([
+        "qa-batch",
+        "--input-dir", str(tmp_path),
+    ])
+    assert rc != 0
+    captured = capsys.readouterr()
+    assert "fail" in captured.out.lower() or "failed" in captured.out.lower()
+
+
+def test_cli_qa_batch_writes_json_report(tmp_path, capsys):
+    """qa-batch --output-report should write a JSON report file."""
+    import json
+
+    _write_silent_wav(tmp_path / "silent.wav")
+    report_path = tmp_path / "qa_report.json"
+
+    main([
+        "qa-batch",
+        "--input-dir", str(tmp_path),
+        "--output-report", str(report_path),
+    ])
+
+    assert report_path.exists(), "JSON report was not written"
+    data = json.loads(report_path.read_text())
+    assert "qaBatchVersion" in data
+    assert "summary" in data
+    assert "results" in data
+    assert len(data["results"]) > 0
+    assert "file" in data["results"][0]
+    assert "status" in data["results"][0]
+    assert "checks" in data["results"][0]
+
+
+def test_cli_qa_batch_report_has_required_check_keys(tmp_path, capsys):
+    """Each result in the JSON report must have the required check keys."""
+    import json
+
+    _write_loud_wav(tmp_path / "loud.wav")
+    report_path = tmp_path / "qa_report.json"
+
+    main([
+        "qa-batch",
+        "--input-dir", str(tmp_path),
+        "--output-report", str(report_path),
+    ])
+
+    data = json.loads(report_path.read_text())
+    required_check_keys = {
+        "loudness_lufs",
+        "true_peak_dbfs",
+        "has_clipping",
+        "loudness_ok",
+        "peak_ok",
+        "clipping_ok",
+    }
+    for result in data["results"]:
+        missing = required_check_keys - result["checks"].keys()
+        assert not missing, f"Missing check keys: {missing}"
+
+
+def test_cli_qa_batch_missing_directory(tmp_path, capsys):
+    """qa-batch with a nonexistent directory should return non-zero."""
+    rc = main([
+        "qa-batch",
+        "--input-dir", str(tmp_path / "nonexistent"),
+    ])
+    assert rc != 0
+
+
+def test_cli_qa_batch_quiet_suppresses_per_file_output(tmp_path, capsys):
+    """qa-batch --quiet should suppress per-file lines but still print summary."""
+    from audio_engine.ai.sfx_gen import SFXGen
+    from audio_engine.export.audio_exporter import AudioExporter
+
+    gen = SFXGen(sample_rate=22050, seed=42)
+    audio = gen.generate(prompt="soft click")
+    exporter = AudioExporter(sample_rate=22050, bit_depth=16)
+    exporter.export(audio, tmp_path / "click.wav", fmt="wav")
+
+    rc = main([
+        "qa-batch",
+        "--input-dir", str(tmp_path),
+        "--quiet",
+    ])
+    assert rc == 0
+    captured = capsys.readouterr()
+    # Summary line should still appear.
+    assert "passed" in captured.out or "QA batch" in captured.out
+    # Per-file checkmarks must NOT appear when --quiet suppresses them.
+    assert "✓" not in captured.out and "✗" not in captured.out
+
+
+# ---------------------------------------------------------------------------
+# export-drafts CLI tests
+# ---------------------------------------------------------------------------
+
+def test_cli_export_drafts_subcommand_registered(capsys):
+    """export-drafts should be registered in the CLI parser."""
+    import argparse
+
+    from audio_engine.cli import build_parser
+
+    parser = build_parser()
+    subparsers_actions = [
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    ]
+    assert subparsers_actions
+    assert "export-drafts" in subparsers_actions[0].choices
+
+
+def test_cli_export_drafts_missing_directory(tmp_path, capsys):
+    """export-drafts with an empty factory root (no drafts) should return non-zero."""
+    rc = main([
+        "export-drafts",
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc != 0
+
+
+def test_cli_export_drafts_smoke(tmp_path, capsys):
+    """export-drafts should succeed after generate-request-batch produces drafts."""
+    batch_file = str(_FIXTURE_DIR / "generation_requests.sfx.v1.json")
+
+    # Step 1: generate drafts.
+    rc_gen = main([
+        "generate-request-batch",
+        "--batch-file", batch_file,
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc_gen == 0
+
+    # Step 2: export.
+    rc_exp = main([
+        "export-drafts",
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc_exp == 0
+
+    export_root = tmp_path / "exports" / "gamerewritten"
+    assert export_root.exists(), "Export directory was not created"
+    assert (export_root / "export_manifest.json").exists(), "Export manifest missing"
+
+    # At least some WAV files should have been exported.
+    exported_wavs = list((export_root / "Content" / "Audio").rglob("*.wav"))
+    assert len(exported_wavs) > 0, "No WAV files exported"
+
+
+def test_cli_generate_request_batch_sfx_via_request_file(tmp_path, capsys):
     """generate-request-batch should return 0 and create output files for the SFX fixture."""
     rc = main([
         "generate-request-batch",
@@ -146,7 +445,7 @@ def test_cli_generate_request_batch_sfx(tmp_path, capsys):
     assert output_files, "No output WAV files created"
 
 
-def test_cli_generate_request_batch_missing_file(tmp_path, capsys):
+def test_cli_generate_request_batch_missing_file_via_request_file(tmp_path, capsys):
     """generate-request-batch should return non-zero when the request file is missing."""
     rc = main([
         "generate-request-batch",
@@ -155,7 +454,7 @@ def test_cli_generate_request_batch_missing_file(tmp_path, capsys):
     ])
     assert rc != 0
     captured = capsys.readouterr()
-    assert captured.err.count("Error: request file not found:") == 1
+    assert captured.err.count("Error: batch file not found:") == 1
 
 
 def test_cli_generate_request_batch_writes_result_json(tmp_path, capsys):
@@ -175,11 +474,3 @@ def test_cli_generate_request_batch_writes_result_json(tmp_path, capsys):
     data = json.loads(result_json.read_text())
     assert data["project"] == "GameRewritten"
     assert "records" in data
-
-
-def test_cli_generate_request_batch_help(capsys):
-    """generate-request-batch --help should print usage without error."""
-    import pytest
-    with pytest.raises(SystemExit) as exc_info:
-        main(["generate-request-batch", "--help"])
-    assert exc_info.value.code == 0

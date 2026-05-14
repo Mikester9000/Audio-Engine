@@ -55,3 +55,42 @@
 - Exported the new loader API from `audio_engine.integration` without changing existing CLI behavior.
 - Added fixture-driven integration tests for successful plan/request ingestion plus an invalid-input failure path.
 - Updated AI-factory continuity docs and session-control files to mark `SESSION-001` complete and advance the queue to `SESSION-002`.
+
+## 2026-05-14 — Complete SESSION-002 with request-batch generation command
+
+- Added `RequestBatchPipeline` class to `audio_engine/integration/asset_pipeline.py` with per-request seed execution, channel conversion, WAV/OGG export, and `batch_manifest.json` output.
+- Added `generate-request-batch --batch-file <json> --output-dir <dir>` CLI command to `audio_engine/cli.py`.
+- Exported `RequestBatchPipeline` from `audio_engine.integration`.
+- Added 7 integration tests for `RequestBatchPipeline` (SFX smoke, manifest fields, seed verification, skip_existing, manifest JSON, music batch, progress callback).
+- Added 5 CLI tests for `generate-request-batch` (subcommand presence, SFX smoke, missing file, quiet, manifest written).
+- Smoke-ran both committed fixtures: 5 SFX and 4 music files produced with seeds 305001–305045 and 204801–204834 respectively.
+- Test count: 334 passed (up from 321).
+
+## 2026-05-14 — Complete SESSION-003 with per-request provenance sidecar files
+
+- Added `_write_provenance()` method to `RequestBatchPipeline` in `audio_engine/integration/asset_pipeline.py`.
+- Each successful generation now writes a `<stem>.provenance.json` sidecar alongside the audio file, containing: `provenanceVersion`, `requestId`, `assetId`, `type`, `backend`, `seed`, `prompt`, `styleFamily`, `generatedOutputPath`, `targetImportPath`, `reviewStatus`, `generatedAt`.
+- Added 5 new tests: provenance files written, required fields present, seed matches request, not written for skipped files.
+- Test count: 338 passed (up from 334).
+
+
+
+## 2026-05-14 — Complete SESSION-004 with batch QA gate command
+
+- Extracted `_load_wav_array()` helper from `_cmd_qa` in `audio_engine/cli.py` to avoid duplication.
+- Added `qa-batch --input-dir <dir> [--output-report <path>] [--check-loop] [--recursive] [--quiet]` CLI command that runs `LoudnessMeter`, `ClippingDetector`, and optionally `LoopAnalyzer` on all WAV files in a directory.
+- The command writes a machine-readable JSON report with `qaBatchVersion`, `inputDir`, `generatedAt`, `summary` (total/passed/failed), and per-file `results` with `file`, `status`, and `checks`.
+- Returns non-zero if any file fails QA checks; returns 0 if all pass.
+- Added 7 new CLI tests covering: subcommand presence, valid audio pass, silent audio fail, JSON report output, required check keys, missing directory, quiet flag.
+- Smoke run: 5 SFX files checked; 4 pass, 1 fail (`sfx_ui_cancel.wav` at −6.37 LUFS exceeds −9.0 ceiling).
+- Test count: 345 passed (up from 338).
+
+## 2026-05-14 — Complete SESSION-005 with GameRewritten export profile
+
+- Added `DraftExportPipeline` class to `audio_engine/integration/asset_pipeline.py` that copies draft audio files to `<factory_root>/exports/gamerewritten/Content/Audio/` using `targetImportPath` from `.provenance.json` sidecars as the downstream filename.
+- Exported `DraftExportPipeline` from `audio_engine.integration`.
+- Added `export-drafts --output-dir <factory_root>` CLI command to `audio_engine/cli.py`.
+- Added 7 integration tests for `DraftExportPipeline` (files created, provenance names used, manifest written, manifest fields, drafts not modified, ValueError on empty drafts, fallback without provenance).
+- Added 3 CLI tests for `export-drafts` (subcommand registered, missing dir fails, smoke).
+- Smoke run: 5 SFX files from `/tmp/session003_smoke/drafts/sfx/` exported to `/tmp/session003_smoke/exports/gamerewritten/Content/Audio/` using stable `targetImportPath` filenames.
+- Test count: 355 passed (up from 345).

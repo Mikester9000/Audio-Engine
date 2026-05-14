@@ -2,87 +2,16 @@
   "version": "1.1.0",
   "lastUpdated": "2026-05-14",
   "currentSession": {
-    "id": "SESSION-003",
-    "title": "Write provenance + review logs per request",
+    "id": "SESSION-006",
+    "title": "Add approval workflow (promote drafts to approved/)",
     "status": "ready",
-    "taskType": "provenance",
-    "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
-    "queueDoc": "docs/AI_FACTORY/SESSION_QUEUE.md",
-    "gateRulesDoc": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
-    "blockerProtocolDoc": "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
-    "verificationProfilesDoc": "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
-    "readFirst": [
-      "docs/AI_FACTORY/SESSION_QUEUE.md",
-      "docs/AI_FACTORY/CURRENT_SESSION.json",
-      "docs/AI_FACTORY/SESSION_GATE_RULES.md",
-      "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
-      "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
-      "docs/AI_FACTORY/CURRENT_STATE.md",
-      "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/NO_DECISION_ZONES.md",
-      "docs/AI_FACTORY/FAILSAFE_RULES.md",
-      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
-      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json",
-      "audio_engine/integration/asset_pipeline.py",
-      "audio_engine/cli.py",
-      "tests/test_integration.py"
-    ],
-    "likelyModify": [
-      "audio_engine/integration/asset_pipeline.py",
-      "audio_engine/cli.py",
-      "tests/test_integration.py"
-    ],
-    "avoidModify": [
-      "audio_engine/dsp/*",
-      "audio_engine/render/*",
-      "audio_engine/composer/*",
-      "assets/schema/*",
-      "audio_engine/integration/factory_inputs.py"
-    ],
-    "verification": [
-      "pip install -e \".[dev]\"",
-      "python -m pytest",
-      "python tools/validate-assets.py assets/examples/ --verbose",
-      "one deterministic /tmp smoke run verifying a provenance log is written"
-    ],
-    "docsToUpdate": [
-      "docs/AI_FACTORY/CURRENT_STATE.md",
-      "docs/AI_FACTORY/ACTIVE_WORK.md",
-      "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/CHANGE_JOURNAL.md",
-      "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
-      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
-      "docs/AI_FACTORY/SESSION_QUEUE.md",
-      "docs/AI_FACTORY/SESSION_HISTORY.md",
-      "docs/AI_FACTORY/SESSION_STATE.json",
-      "docs/AI_FACTORY/CURRENT_SESSION.json"
-    ],
-    "doneCriteriaDoc": "docs/AI_FACTORY/DONE_CRITERIA.md",
-    "minimumTestRulesDoc": "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
-    "outputContractDoc": "docs/AI_FACTORY/TASK_OUTPUT_CONTRACTS.md",
-    "fileTouchMatrixDoc": "docs/AI_FACTORY/FILE_TOUCH_MATRIX.md",
-    "failsafeDoc": "docs/AI_FACTORY/FAILSAFE_RULES.md",
-    "nextSession": "SESSION-004"
+    "taskType": "workflow"
   },
   "completedSessions": [
-    {
-      "id": "SESSION-001",
-      "title": "Implement audio plan + request loading primitives",
-      "status": "completed",
-      "date": "2026-05-14"
-    },
-    {
-      "id": "SESSION-002",
-      "title": "Add request-batch generation command",
-      "status": "completed",
-      "date": "2026-05-14"
-    }
-  ],
-  "upcomingSessions": [
-    {
-      "id": "SESSION-004",
-      "title": "Add batch QA gate command for generated outputs",
-      "status": "queued-after-SESSION-003"
-    }
+    {"id": "SESSION-001", "status": "completed", "completedDate": "2026-05-14"},
+    {"id": "SESSION-002", "status": "completed", "completedDate": "2026-05-14"},
+    {"id": "SESSION-003", "status": "completed", "completedDate": "2026-05-14"},
+    {"id": "SESSION-004", "status": "completed", "completedDate": "2026-05-14"},
+    {"id": "SESSION-005", "status": "completed", "completedDate": "2026-05-14"}
   ]
 }

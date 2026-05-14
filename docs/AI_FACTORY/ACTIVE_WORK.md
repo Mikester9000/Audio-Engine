@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a working request-batch generation command (`generate-request-batch`) that executes committed factory-input fixtures through a deterministic, seed-explicit path. The canonical next executable session is `SESSION-003` in `docs/AI_FACTORY/SESSION_QUEUE.md`: persist provenance + review logs per request.
+The repository now has a complete draft-to-export pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → GameRewritten `Content/Audio/` layout. The next executable session is `SESSION-006` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add an approval workflow that promotes drafts to `approved/`.
 
 ## Now
 
@@ -18,17 +18,20 @@ The repository now has a working request-batch generation command (`generate-req
 - [x] Add final execution-safety hardening docs and machine-readable current-session contract
 - [x] Execute `SESSION-001` from `docs/AI_FACTORY/SESSION_QUEUE.md`
 - [x] Execute `SESSION-002` from `docs/AI_FACTORY/SESSION_QUEUE.md`
-- [ ] Execute `SESSION-003` — persist provenance + review logs per request
+- [x] Execute `SESSION-003` from `docs/AI_FACTORY/SESSION_QUEUE.md`
+- [x] Execute `SESSION-004` from `docs/AI_FACTORY/SESSION_QUEUE.md`
+- [x] Execute `SESSION-005` from `docs/AI_FACTORY/SESSION_QUEUE.md`
+- [ ] Execute `SESSION-006` — add approval workflow (promote drafts to approved/)
 - [ ] Add approval/review workflow for generated assets
 
 ## Recommended next PRs
 
-1. **Execute `SESSION-003` — persist provenance + review status logs**
-   - Capture request ID, seed, output path, and review state per generated asset.
-2. **Execute `SESSION-004` — add automated batch QA command**
-   - Wrap loudness/clipping/loop checks for generated sets.
-3. **Implement `GameRewritten` export profile**
-   - Align generated outputs with stable downstream import paths.
+1. **Execute `SESSION-006` — add approval workflow (promote drafts to approved/)**
+   - Mark a draft asset as `approved` (update provenance `reviewStatus`) and copy it to `approved/<type>/`.
+2. **Wire `qa-batch` into CI**
+   - Run QA gate on generated outputs in GitHub Actions.
+3. **Expand full-game taxonomy**
+   - Add ambience, fanfares, UI, and combat audio coverage beyond the vertical slice.
 
 ## Do not deprioritize
 

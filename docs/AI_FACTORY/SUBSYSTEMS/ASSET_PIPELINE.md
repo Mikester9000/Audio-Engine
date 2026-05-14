@@ -2,29 +2,27 @@
 
 ## What exists now
 
-- `AssetPipeline` can generate `music/`, `sfx/`, and `voice/` directories plus `manifest.json` from the fixed game-state map.
-- `AssetPipeline.execute_request_batch()` executes a `GenerationRequestBatch` (loaded from a factory JSON fixture) using per-request seeds explicitly, writing outputs to `output_dir / request.output.targetPath`.
-- `RequestBatchRecord` and `RequestBatchResult` provide machine-readable per-request execution records with status, seed, and output path.
-- CLI supports `generate-game-assets`, `verify-game-assets`, and `generate-request-batch`.
-- `generate-request-batch` flags: `--request-file`, `--output-dir`, `--force`, `--quiet`, `--music-duration`, `--sfx-duration`, `--write-result`.
-- Committed plan/request/review example artifacts exist under `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/`.
-- Typed loader code for the committed audio plan and music/SFX request fixtures exists in `audio_engine/integration/factory_inputs.py`.
+- `AssetPipeline` can generate `music/`, `sfx/`, and `voice/` directories plus `manifest.json`
+- current generation map is defined in `audio_engine/integration/game_state_map.py`
+- CLI supports `generate-game-assets` and `verify-game-assets`
+- committed plan/request/review example artifacts now exist under `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/`
+- typed loader code for the committed audio plan and music/SFX request fixtures now exists in `audio_engine/integration/factory_inputs.py`
+- `RequestBatchPipeline` now exists in `audio_engine/integration/asset_pipeline.py`, executing any `GenerationRequestBatch` deterministically with per-request seeds; outputs land in `<output_dir>/drafts/<type>/`
+- CLI supports `generate-request-batch --batch-file <json> --output-dir <dir>` for factory-driven generation
+- each successful generation writes a `.provenance.json` sidecar file alongside the audio file containing `provenanceVersion`, `requestId`, `assetId`, `type`, `backend`, `seed`, `prompt`, `styleFamily`, `generatedOutputPath`, `targetImportPath`, `reviewStatus`, and `generatedAt`
+- `qa-batch --input-dir <dir> [--output-report <path>] [--check-loop] [--recursive] [--quiet]` runs `LoudnessMeter`, `ClippingDetector`, and optionally `LoopAnalyzer` on all WAVs in a directory and writes a JSON report with per-file pass/fail status
+- `export-drafts --output-dir <factory_root>` copies draft audio files to `exports/gamerewritten/Content/Audio/` using the `targetImportPath` filename from provenance sidecars; writes `export_manifest.json`
 
-## Request-batch execution details
+## Current constraint
 
-- Each request carries its own `seed` field; this is passed explicitly to the generator (not inherited from pipeline-level defaults).
-- Output path: `output_dir / request.output.targetPath` — parent directories created automatically.
-- Duration defaults: 30 s for music, 2 s for SFX (overridable via `--music-duration`, `--sfx-duration`).
-- OGG export requires the optional `soundfile` dep (`pip install audio-engine[ogg]`); graceful per-request errors without it.
-- `--write-result` writes `request_batch_result.json` to `output_dir` for downstream provenance use.
+The existing pipeline has two modes: the legacy fixed-map `AssetPipeline` for the Game Engine for Teaching, and the new plan/request-driven `RequestBatchPipeline`. Provenance sidecars are per-request; there is not yet an approval workflow that promotes assets from `drafts/` to `approved/`.
 
-## Remaining gaps
+## Missing capabilities
 
-- No provenance log persisted per output asset (planned for SESSION-003).
-- No automated QA gate over generated outputs (planned for SESSION-004).
-- No generalized export targets for `GameRewritten`.
-- No approval/replacement workflow.
+- approval/replacement workflow (promote from drafts → approved)
+- generalized export targets for `GameRewritten`
+- automated QA gate for generated output sets
 
 ## Near-term goal
 
-Add per-request provenance log writing (SESSION-003) so each generated asset has a machine-readable record linking it to its request ID, seed, output path, and review status.
+Add an approval workflow (`SESSION-006`) so draft assets can be explicitly marked as `approved` (updating provenance `reviewStatus`) and copied to `approved/<type>/`, cleanly separating draft from approved downstream content.

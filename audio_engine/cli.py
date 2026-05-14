@@ -18,6 +18,15 @@ Generate a voice line:
 Run quality assurance checks on a WAV file:
     audio-engine qa --input track.wav
 
+Execute a generation-request batch file (factory workflow):
+    audio-engine generate-request-batch --batch-file generation_requests.music.v1.json --output-dir /tmp/output
+
+Run batch QA on all WAV files in a directory:
+    audio-engine qa-batch --input-dir /tmp/output/drafts/sfx --output-report qa_report.json
+
+Export draft assets to the GameRewritten layout:
+    audio-engine export-drafts --output-dir /tmp/factory_output
+
 Generate ALL assets for the Game Engine for Teaching:
     audio-engine generate-game-assets --output-dir ./assets/audio
 
@@ -123,20 +132,15 @@ def _cmd_generate_voice(args: argparse.Namespace) -> None:
     print(f"Done. Saved to: {path}")
 
 
-def _cmd_qa(args: argparse.Namespace) -> None:
-    """Run quality-assurance checks on a WAV file."""
+def _load_wav_array(input_path: Path) -> "tuple[np.ndarray, int, int]":
+    """Load a WAV file and return ``(audio, sample_rate, n_channels)``.
+
+    Returns float32 audio in the range ``[-1, 1]``.
+    """
     import wave
 
     import numpy as np
 
-    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer
-
-    input_path = Path(args.input)
-    if not input_path.exists():
-        print(f"Error: file not found: {input_path}", file=sys.stderr)
-        raise FileNotFoundError(f"file not found: {input_path}")
-
-    # Load audio
     with wave.open(str(input_path), "r") as wf:
         n_channels = wf.getnchannels()
         sampwidth = wf.getsampwidth()
@@ -152,6 +156,23 @@ def _cmd_qa(args: argparse.Namespace) -> None:
         audio = samples.reshape(-1, n_channels)
     else:
         audio = samples
+
+    return audio, sr, n_channels
+
+
+def _cmd_qa(args: argparse.Namespace) -> None:
+    """Run quality-assurance checks on a WAV file."""
+    import numpy as np
+
+    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer
+
+    input_path = Path(args.input)
+    if not input_path.exists():
+        print(f"Error: file not found: {input_path}", file=sys.stderr)
+        raise FileNotFoundError(f"file not found: {input_path}")
+
+    audio, sr, n_channels = _load_wav_array(input_path)
+    n_frames = audio.shape[0] if audio.ndim == 2 else len(audio)
 
     print(f"\nQA Report: {input_path.name}")
     print(f"  Sample rate : {sr} Hz")
@@ -194,6 +215,129 @@ def _cmd_qa(args: argparse.Namespace) -> None:
             print(f"     • {issue}")
     else:
         print("  ✓  All checks passed.")
+
+
+def _cmd_qa_batch(args: argparse.Namespace) -> None:
+    """Run QA checks on all WAV files in a directory and write a JSON report."""
+    import datetime
+    import json
+
+    import numpy as np
+
+    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer
+
+    input_dir = Path(args.input_dir)
+    if not input_dir.exists():
+        print(f"Error: input directory not found: {input_dir}", file=sys.stderr)
+        raise FileNotFoundError(f"input directory not found: {input_dir}")
+
+    wav_files = sorted(input_dir.rglob("*.wav") if args.recursive else input_dir.glob("*.wav"))
+    if not wav_files:
+        raise FileNotFoundError(f"No WAV files found in {input_dir}")
+
+    results = []
+    n_passed = 0
+    n_failed = 0
+
+    for wav_path in wav_files:
+        try:
+            audio, sr, n_channels = _load_wav_array(wav_path)
+        except Exception as exc:
+            record = {
+                "file": str(wav_path),
+                "status": "error",
+                "error": str(exc),
+                "checks": {},
+            }
+            results.append(record)
+            n_failed += 1
+            if not args.quiet:
+                print(f"  [err]  {wav_path.name}: {exc}")
+            continue
+
+        meter = LoudnessMeter(sample_rate=sr)
+        loudness_result = meter.measure(audio)
+
+        detector = ClippingDetector()
+        clip_report = detector.detect(audio)
+
+        checks: dict = {
+            "loudness_lufs": round(float(loudness_result.integrated_lufs), 2),
+            "true_peak_dbfs": round(float(loudness_result.true_peak_dbfs), 2),
+            "loudness_range_lu": round(float(loudness_result.loudness_range_lu), 2),
+            "has_clipping": bool(clip_report.has_clipping),
+            "clipped_samples": int(clip_report.clipped_samples),
+            "loudness_ok": bool(-30.0 <= loudness_result.integrated_lufs <= -9.0),
+            "peak_ok": bool(loudness_result.true_peak_dbfs <= -0.1),
+            "clipping_ok": bool(not clip_report.has_clipping),
+        }
+
+        if args.check_loop:
+            analyzer = LoopAnalyzer(sample_rate=sr)
+            loop_report = analyzer.analyze(audio)
+            checks["loop_is_seamless"] = bool(loop_report.is_seamless)
+            checks["loop_amplitude_jump_db"] = round(float(loop_report.amplitude_jump_db), 2)
+            checks["loop_ok"] = bool(loop_report.is_seamless)
+
+        passed = all(
+            v for k, v in checks.items() if k.endswith("_ok")
+        )
+        status = "pass" if passed else "fail"
+        if passed:
+            n_passed += 1
+        else:
+            n_failed += 1
+
+        record = {
+            "file": str(wav_path),
+            "status": status,
+            "checks": checks,
+        }
+        results.append(record)
+
+        if not args.quiet:
+            symbol = "✓" if passed else "✗"
+            print(f"  [{symbol}]  {wav_path.name}")
+
+    report = {
+        "qaBatchVersion": "1.0.0",
+        "inputDir": str(input_dir),
+        "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "summary": {"total": len(results), "passed": n_passed, "failed": n_failed},
+        "results": results,
+    }
+
+    if args.output_report:
+        report_path = Path(args.output_report)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        print(f"\nQA report written → {report_path}")
+    else:
+        print()
+
+    print(f"QA batch: {n_passed}/{len(results)} passed, {n_failed} failed")
+
+    if n_failed > 0:
+        raise ValueError(f"{n_failed} file(s) failed QA checks")
+
+
+def _cmd_export_drafts(args: argparse.Namespace) -> None:
+    """Copy draft audio files to the GameRewritten export surface."""
+    from audio_engine.integration.asset_pipeline import DraftExportPipeline
+
+    factory_root = Path(args.output_dir)
+
+    quiet = args.quiet
+
+    def _progress(msg: str) -> None:
+        if not quiet:
+            print(msg)
+
+    pipeline = DraftExportPipeline(progress_callback=_progress)
+    manifest = pipeline.export(factory_root)
+
+    n_total = manifest["summary"]["total"]
+    print(f"\nExport complete — {n_total} file(s) → {factory_root / 'exports' / 'gamerewritten'}")
 
 
 def _cmd_list_styles(_args: argparse.Namespace) -> None:
@@ -305,6 +449,54 @@ def build_parser() -> argparse.ArgumentParser:
         help="Also check for loop boundary click artefacts.",
     )
 
+    # --- qa-batch ---
+    qab = sub.add_parser(
+        "qa-batch",
+        help="Run QA checks on all WAV files in a directory and write a JSON report.",
+    )
+    qab.add_argument(
+        "--input-dir", "-i", required=True,
+        help="Directory containing WAV files to check.",
+    )
+    qab.add_argument(
+        "--output-report", "-o",
+        help="Path to write the JSON QA report (optional; prints summary to stdout regardless).",
+    )
+    qab.add_argument(
+        "--check-loop",
+        action="store_true",
+        help="Also check for loop boundary click artefacts.",
+    )
+    qab.add_argument(
+        "--recursive", "-r",
+        action="store_true",
+        help="Recurse into subdirectories when searching for WAV files.",
+    )
+    qab.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-file progress messages.",
+    )
+
+    # --- export-drafts ---
+    exportdrafts = sub.add_parser(
+        "export-drafts",
+        help=(
+            "Copy draft audio files from <output-dir>/drafts/ to "
+            "<output-dir>/exports/gamerewritten/Content/Audio/ "
+            "using targetImportPath from provenance sidecars."
+        ),
+    )
+    exportdrafts.add_argument(
+        "--output-dir", "-o", required=True,
+        help="Factory output root directory containing the drafts/ sub-directory.",
+    )
+    exportdrafts.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-file progress messages.",
+    )
+
     # --- sfx (instrument-based) ---
     sfx = sub.add_parser("sfx", help="Render a quick sound effect using an instrument.")
     sfx.add_argument("--instrument", default="piano", help="Instrument name.")
@@ -332,7 +524,43 @@ def build_parser() -> argparse.ArgumentParser:
     # --- list-instruments ---
     sub.add_parser("list-instruments", help="List available synthesised instruments.")
 
-    # --- generate-game-assets ---
+    # --- generate-request-batch ---
+    grb = sub.add_parser(
+        "generate-request-batch",
+        help="Execute a generation-request batch file to produce draft audio assets.",
+    )
+    grb.add_argument(
+        "--batch-file", "-b",
+        help="Path to a generation-request batch JSON file (RequestBatchPipeline path).",
+    )
+    grb.add_argument(
+        "--request-file", "-r",
+        help="Path to a generation-request batch JSON fixture (AssetPipeline path).",
+    )
+    grb.add_argument(
+        "--output-dir", "-o", default=".",
+        help="Root output directory for drafts (default: current directory).",
+    )
+    grb.add_argument(
+        "--force", action="store_true",
+        help="Regenerate assets even if output files already exist.",
+    )
+    grb.add_argument(
+        "--quiet", action="store_true",
+        help="Suppress per-asset progress messages.",
+    )
+    grb.add_argument(
+        "--music-duration", type=float, default=30.0,
+        help="Default duration in seconds for music requests (default: 30).",
+    )
+    grb.add_argument(
+        "--sfx-duration", type=float, default=2.0,
+        help="Default duration in seconds for SFX requests (default: 2).",
+    )
+    grb.add_argument(
+        "--write-result", action="store_true",
+        help="Write request_batch_result.json to the output directory.",
+    )
     gga = sub.add_parser(
         "generate-game-assets",
         help="Pre-generate ALL audio assets for the Game Engine for Teaching.",
@@ -368,83 +596,62 @@ def build_parser() -> argparse.ArgumentParser:
         help="Root audio assets directory to verify (default: assets/audio).",
     )
 
-    # --- generate-request-batch ---
-    grb = sub.add_parser(
-        "generate-request-batch",
-        help="Execute a generation-request batch fixture (music, SFX, or voice).",
-    )
-    grb.add_argument(
-        "--request-file", "-r", required=True,
-        help="Path to a generation-request batch JSON fixture.",
-    )
-    grb.add_argument(
-        "--output-dir", "-o", required=True,
-        help="Base output directory; request targetPath values are appended here.",
-    )
-    grb.add_argument(
-        "--force", action="store_true",
-        help="Regenerate output files even if they already exist.",
-    )
-    grb.add_argument(
-        "--quiet", action="store_true",
-        help="Suppress per-request progress messages.",
-    )
-    grb.add_argument(
-        "--music-duration", type=float, default=30.0,
-        help="Default duration in seconds for music requests (default: 30).",
-    )
-    grb.add_argument(
-        "--sfx-duration", type=float, default=2.0,
-        help="Default duration in seconds for SFX requests (default: 2).",
-    )
-    grb.add_argument(
-        "--write-result", action="store_true",
-        help="Write request_batch_result.json to the output directory.",
-    )
-
     return parser
 
 
 def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
-    """Execute a generation-request batch from a factory JSON fixture."""
+    """Execute a generation-request batch file deterministically."""
+    from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
     from audio_engine.integration.asset_pipeline import AssetPipeline
-    from audio_engine.integration.factory_inputs import load_generation_request_batch
 
-    request_file = Path(args.request_file)
-    if not request_file.exists():
-        raise FileNotFoundError(f"request file not found: {request_file}")
+    # Support both --batch-file (RequestBatchPipeline path) and --request-file (AssetPipeline path)
+    batch_file = args.batch_file or args.request_file
+    if not batch_file:
+        raise ValueError("Either --batch-file or --request-file must be provided")
 
-    batch = load_generation_request_batch(request_file)
+    batch_path = Path(batch_file)
+    if not batch_path.exists():
+        raise FileNotFoundError(f"batch file not found: {batch_path}")
+
+    batch = load_generation_request_batch(batch_path)
 
     def _progress(msg: str) -> None:
         if not args.quiet:
             print(msg)
 
-    pipeline = AssetPipeline(progress_callback=_progress)
-
-    print(
-        f"Executing request batch: {request_file.name}"
-        f" ({len(batch.requests)} requests) → {args.output_dir}"
-    )
-
-    result = pipeline.execute_request_batch(
-        batch,
-        args.output_dir,
-        force=args.force,
-        default_music_duration=args.music_duration,
-        default_sfx_duration=args.sfx_duration,
-    )
-
-    print()
-    print(result.summary())
-    if args.write_result:
-        result_path = Path(args.output_dir) / "request_batch_result.json"
-        result_path.parent.mkdir(parents=True, exist_ok=True)
-        result_path.write_text(result.to_json(), encoding="utf-8")
-        print(f"Result written → {result_path}")
-
-    if any(r.status == "error" for r in result.records):
-        raise SystemExit(1)
+    # If --request-file was used, fall back to AssetPipeline path for backward compat
+    if args.request_file:
+        pipeline = AssetPipeline(progress_callback=_progress)
+        print(
+            f"Executing request batch: {batch_path.name}"
+            f" ({len(batch.requests)} requests) → {args.output_dir}"
+        )
+        result = pipeline.execute_request_batch(
+            batch,
+            args.output_dir,
+            force=args.force,
+            default_music_duration=args.music_duration,
+            default_sfx_duration=args.sfx_duration,
+        )
+        print()
+        print(result.summary())
+        if args.write_result:
+            result_path = Path(args.output_dir) / "request_batch_result.json"
+            result_path.parent.mkdir(parents=True, exist_ok=True)
+            result_path.write_text(result.to_json(), encoding="utf-8")
+            print(f"Result written → {result_path}")
+        if any(r.status == "error" for r in result.records):
+            raise SystemExit(1)
+    else:
+        pipeline = RequestBatchPipeline(
+            progress_callback=_progress,
+            skip_existing=not args.force,
+        )
+        manifest = pipeline.execute(batch, args.output_dir)
+        print()
+        print(manifest.summary())
+        if manifest.errors:
+            raise SystemExit(1)
 
 
 def _cmd_generate_game_assets(args: argparse.Namespace) -> None:
@@ -522,12 +729,14 @@ def main(argv: list[str] | None = None) -> int:
         "generate-sfx": _cmd_generate_sfx,
         "generate-voice": _cmd_generate_voice,
         "qa": _cmd_qa,
+        "qa-batch": _cmd_qa_batch,
+        "export-drafts": _cmd_export_drafts,
         "sfx": _cmd_sfx,
         "list-styles": _cmd_list_styles,
         "list-instruments": _cmd_list_instruments,
+        "generate-request-batch": _cmd_generate_request_batch,
         "generate-game-assets": _cmd_generate_game_assets,
         "verify-game-assets": _cmd_verify_game_assets,
-        "generate-request-batch": _cmd_generate_request_batch,
     }
 
     handler = dispatch.get(args.command)

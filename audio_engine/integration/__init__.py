@@ -45,7 +45,7 @@ from audio_engine.integration.game_state_map import (
     SFXAsset,
     VoiceAsset,
 )
-from audio_engine.integration.asset_pipeline import AssetPipeline, GenerationManifest, RequestBatchRecord, RequestBatchResult
+from audio_engine.integration.asset_pipeline import AssetPipeline, GenerationManifest, RequestBatchPipeline, DraftExportPipeline, RequestBatchRecord, RequestBatchResult
 from audio_engine.integration.factory_inputs import (
     AudioPlan,
     AudioPlanAssetGroup,
@@ -64,7 +64,9 @@ from audio_engine.integration.factory_inputs import (
 
 __all__ = [
     "AssetPipeline",
+    "DraftExportPipeline",
     "GenerationManifest",
+    "RequestBatchPipeline",
     "RequestBatchRecord",
     "RequestBatchResult",
     "AudioPlan",
