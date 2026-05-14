@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now writes per-request provenance sidecar files (`.provenance.json`) alongside every generated audio file. The next executable session is `SESSION-004` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add a batch QA gate command for generated outputs.
+The repository now has a batch QA gate command (`qa-batch`) that checks all WAV files in a directory for loudness, clipping, and loop compliance, and writes a machine-readable JSON report. The next executable session is `SESSION-005` in `docs/AI_FACTORY/SESSION_QUEUE.md`: implement the GameRewritten export profile.
 
 ## Now
 
@@ -19,17 +19,18 @@ The repository now writes per-request provenance sidecar files (`.provenance.jso
 - [x] Execute `SESSION-001` from `docs/AI_FACTORY/SESSION_QUEUE.md`
 - [x] Execute `SESSION-002` from `docs/AI_FACTORY/SESSION_QUEUE.md`
 - [x] Execute `SESSION-003` from `docs/AI_FACTORY/SESSION_QUEUE.md`
-- [ ] Execute `SESSION-004` — add batch QA gate command
+- [x] Execute `SESSION-004` from `docs/AI_FACTORY/SESSION_QUEUE.md`
+- [ ] Execute `SESSION-005` — implement GameRewritten export profile
 - [ ] Add approval/review workflow for generated assets
 
 ## Recommended next PRs
 
-1. **Execute `SESSION-004` — add automated batch QA command**
-   - Wrap loudness/clipping/loop checks for generated sets.
-2. **Implement `GameRewritten` export profile**
-   - Align generated outputs with stable downstream import paths.
-3. **Add approval/replacement workflow**
+1. **Execute `SESSION-005` — implement GameRewritten export profile**
+   - Copy approved draft assets into the `exports/gamerewritten/Content/Audio/` layout.
+2. **Add approval/replacement workflow**
    - Promote assets from `drafts/` to `approved/` with updated provenance review status.
+3. **Expand full-game taxonomy**
+   - Add ambience, fanfares, UI, and combat audio coverage beyond the vertical slice.
 
 ## Do not deprioritize
 

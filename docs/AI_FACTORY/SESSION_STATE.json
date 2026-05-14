@@ -2,10 +2,10 @@
   "version": "1.1.0",
   "lastUpdated": "2026-05-14",
   "currentSession": {
-    "id": "SESSION-004",
-    "title": "Add batch QA gate command for generated outputs",
+    "id": "SESSION-005",
+    "title": "Implement GameRewritten export profile",
     "status": "ready",
-    "taskType": "qa",
+    "taskType": "export",
     "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
     "queueDoc": "docs/AI_FACTORY/SESSION_QUEUE.md",
     "gateRulesDoc": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
@@ -21,13 +21,14 @@
       "docs/AI_FACTORY/HANDOFF.md",
       "docs/AI_FACTORY/NO_DECISION_ZONES.md",
       "docs/AI_FACTORY/FAILSAFE_RULES.md",
-      "docs/AI_FACTORY/QA/QUALITY_BARS.md",
-      "docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md",
-      "audio_engine/cli.py",
+      "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
+      "docs/AI_FACTORY/INTEGRATION/GAMEREWRITTEN.md",
       "audio_engine/integration/asset_pipeline.py",
+      "audio_engine/cli.py",
       "tests/test_integration.py"
     ],
     "likelyModify": [
+      "audio_engine/integration/asset_pipeline.py",
       "audio_engine/cli.py",
       "tests/test_integration.py"
     ],
@@ -35,13 +36,14 @@
       "audio_engine/dsp/*",
       "audio_engine/render/*",
       "audio_engine/composer/*",
-      "assets/schema/*"
+      "assets/schema/*",
+      "audio_engine/integration/factory_inputs.py"
     ],
     "verification": [
       "pip install -e \".[dev]\"",
       "python -m pytest",
       "python tools/validate-assets.py assets/examples/ --verbose",
-      "one /tmp smoke run confirming QA report written for a committed batch output"
+      "one /tmp smoke run confirming export files land in Content/Audio/<type>/ by targetImportPath name"
     ],
     "docsToUpdate": [
       "docs/AI_FACTORY/CURRENT_STATE.md",
@@ -56,23 +58,24 @@
       "docs/AI_FACTORY/CURRENT_SESSION.json"
     ],
     "doneCriteriaSummary": [
-      "A qa-batch (or qa-request-batch) CLI command accepts a directory and reports pass/fail per file.",
-      "The command writes a machine-readable QA report JSON with file, status, and per-check results.",
-      "Tests cover at least one passing and one failing case.",
-      "The existing audio-engine qa single-file command is preserved.",
-      "Docs reflect the new command truthfully."
+      "CLI command copies drafts/<type>/ to exports/gamerewritten/Content/Audio/<type>/ using targetImportPath from provenance sidecars.",
+      "Command writes an export manifest listing source and destination paths.",
+      "Existing drafts/ content is not modified or deleted.",
+      "Tests verify file copying, destination names, and export manifest.",
+      "Command returns non-zero if no drafts exist to export.",
+      "Docs describe export behavior truthfully."
     ],
     "nextSession": {
-      "id": "SESSION-005",
-      "title": "Implement GameRewritten export profile"
+      "id": "SESSION-006",
+      "title": "Add approval workflow (promote drafts to approved/)"
     },
     "failsafeDoc": "docs/AI_FACTORY/FAILSAFE_RULES.md"
   },
   "upcomingSessions": [
     {
-      "id": "SESSION-005",
-      "title": "Implement GameRewritten export profile",
-      "status": "queued-after-SESSION-004"
+      "id": "SESSION-006",
+      "title": "Add approval workflow (promote drafts to approved/)",
+      "status": "queued-after-SESSION-005"
     }
   ],
   "completedSessions": [
@@ -91,6 +94,12 @@
     {
       "id": "SESSION-003",
       "title": "Write provenance + review logs per request",
+      "status": "completed",
+      "completedDate": "2026-05-14"
+    },
+    {
+      "id": "SESSION-004",
+      "title": "Add batch QA gate command for generated outputs",
       "status": "completed",
       "completedDate": "2026-05-14"
     }

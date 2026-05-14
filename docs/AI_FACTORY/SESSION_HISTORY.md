@@ -11,3 +11,4 @@
 | `SESSION-001` | 2026-05-14 | completed | Added typed audio-plan and generation-request loaders plus fixture-driven parsing tests in the integration layer. | this PR |
 | `SESSION-002` | 2026-05-14 | completed | Added `RequestBatchPipeline` and `generate-request-batch` CLI command; executed committed music (4) and SFX (5) fixtures deterministically; 13 new tests; 334 total pass. | this PR |
 | `SESSION-003` | 2026-05-14 | completed | Added per-request `.provenance.json` sidecar files to `RequestBatchPipeline`; 5 new tests; 338 total pass. | this PR |
+| `SESSION-004` | 2026-05-14 | completed | Added `qa-batch` CLI command with JSON report; 7 new tests; 345 total pass. `sfx_ui_cancel.wav` correctly flagged at -6.37 LUFS. | this PR |

@@ -19,7 +19,7 @@
 | SFX generation (prompt/procedural) | implemented | `audio_engine/ai/sfx_gen.py`, `audio_engine/ai/sfx_synth.py` | 2026-05-14 | `pytest` | Add broader variation control in later PRs. |
 | Voice generation (prototype-grade) | partial | `audio_engine/ai/voice_gen.py`, `audio_engine/ai/voice_synth.py` | 2026-05-14 | `pytest` | Keep low priority; useful for placeholders only. |
 | DSP / mastering | implemented | `audio_engine/dsp/*`, `audio_engine/render/offline_bounce.py` | 2026-05-14 | `pytest` | Use as current quality floor before backend expansion. |
-| Audio QA primitives | implemented | `audio_engine/qa/*`, `audio_engine/cli.py` (`qa`) | 2026-05-14 | `pytest` | Missing batch QA gate workflow over generated sets. |
+| Audio QA primitives | implemented | `audio_engine/qa/*`, `audio_engine/cli.py` (`qa`, `qa-batch`) | 2026-05-14 | `pytest` | Single-file `qa` and batch `qa-batch` commands; JSON report with per-file loudness/clipping/loop results. |
 | Fixed-map batch generation pipeline | implemented | `audio_engine/integration/asset_pipeline.py`, `audio_engine/integration/game_state_map.py` | 2026-05-14 | `pytest` | Works for current integration map; not plan-driven. |
 | Request-batch generation pipeline | implemented | `audio_engine/integration/asset_pipeline.py` (`RequestBatchPipeline`), `audio_engine/cli.py` (`generate-request-batch`) | 2026-05-14 | `pytest`, smoke run | Executes any `GenerationRequestBatch` deterministically with per-request seeds; outputs in `<output_dir>/drafts/<type>/`; writes `.provenance.json` sidecar per request. |
 | Asset-manifest schema validation | implemented | `tools/validate-assets.py`, `.github/workflows/validate-assets.yml`, `assets/schema/*` | 2026-05-14 | `python tools/validate-assets.py assets/examples/ --verbose` | Extend idea to future audio-plan/request validation when implemented. |
@@ -39,8 +39,8 @@
 
 | Capability | State | Source of truth | Last verified | Verification command | Notes / next step |
 |---|---|---|---|---|---|
-| Plan-driven batch orchestration | planned | `docs/AI_FACTORY/ROADMAP.md`, `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` | 2026-05-14 | N/A | Implement as small PRs that preserve existing CLI compatibility. |
+| Plan-driven batch orchestration | implemented | `docs/AI_FACTORY/ROADMAP.md`, `audio_engine/integration/asset_pipeline.py` | 2026-05-14 | `pytest`, smoke run | `RequestBatchPipeline` and `generate-request-batch` CLI; provenance sidecars and batch QA gate also implemented. |
 | Deterministic provenance capture per generated asset | planned | `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`, `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json` | 2026-05-14 | N/A | Persist request ID, seed, output path, review status. |
-| Automated QA gate for generated outputs in CI | planned | `docs/AI_FACTORY/QA/QUALITY_BARS.md`, `docs/AI_FACTORY/KNOWN_ISSUES.md` | 2026-05-14 | N/A | Add command first, then CI workflow wiring. |
+| Automated QA gate for generated outputs in CI | planned | `docs/AI_FACTORY/QA/QUALITY_BARS.md`, `docs/AI_FACTORY/KNOWN_ISSUES.md` | 2026-05-14 | N/A | CLI command exists; CI wiring not yet added. |
 | `GameRewritten` import automation | blocked | `docs/AI_FACTORY/INTEGRATION/GAMEREWRITTEN.md`, `docs/AI_FACTORY/KNOWN_ISSUES.md` | 2026-05-14 | N/A | Blocked on concrete import contract from consuming repo. |
 | Full game-audio coverage tracking (music + SFX + ambience + fanfares + optional voice) | planned | `docs/AI_FACTORY/TARGET_STATE.md`, `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` | 2026-05-14 | N/A | Expand from vertical slice toward full game asset taxonomy. |

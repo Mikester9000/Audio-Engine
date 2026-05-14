@@ -24,6 +24,7 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Typed audio plan + generation request loading | Implemented | `audio_engine/integration/factory_inputs.py`, `tests/test_integration.py` |
 | Request-batch generation pipeline | Implemented | `audio_engine/integration/asset_pipeline.py` (`RequestBatchPipeline`), `audio_engine/cli.py` (`generate-request-batch`) |
 | Per-request provenance sidecar files | Implemented | `audio_engine/integration/asset_pipeline.py` (`_write_provenance`) | 2026-05-14 | `pytest`, smoke run | Each successfully generated audio file now has a `<stem>.provenance.json` sidecar with requestId, seed, backend, reviewStatus, generatedAt, and output paths. |
+| Batch QA gate command | Implemented | `audio_engine/cli.py` (`qa-batch`) | 2026-05-14 | `pytest`, smoke run | `qa-batch --input-dir <dir>` runs LoudnessMeter, ClippingDetector, optional LoopAnalyzer on all WAVs; writes JSON report; non-zero exit on failure. |
 | Manifest validation docs + CI | Implemented | `docs/asset-manifest.md`, `.github/workflows/validate-assets.yml` |
 | Implementation matrix / codebase map / next PR sequence | Implemented (docs layer) | `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`, `docs/AI_FACTORY/CODEBASE_MAP.md`, `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` |
 | Example plan/request/review artifacts | Implemented (docs contracts) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` |
@@ -50,6 +51,8 @@ Observed result in this session:
 - asset example manifests passed validation
 - SFX batch smoke run produced 5 WAV files + 5 `.provenance.json` sidecars in `/tmp/session003_smoke/drafts/sfx/`
 - each provenance file contained `requestId`, `seed`, `backend`, `reviewStatus`, `generatedAt`, `generatedOutputPath`, and `targetImportPath`
+- QA batch smoke run (SESSION-004): 5 SFX files checked; 4 pass, 1 fail (sfx_ui_cancel.wav at -6.37 LUFS)
+- test count: 345 passed (up from 338)
 
 ## Current repository structure
 
@@ -80,18 +83,19 @@ Observed result in this session:
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
 4. There is now a committed `GameRewritten`-oriented vertical-slice example plan and request set, but there is not yet full-game taxonomy coverage in executable code.
-5. The repo now has a session queue/autopilot layer; queued execution continues with SESSION-004.
-6. OGG export requires the optional `soundfile` dependency; the pipeline falls back to WAV when it is not installed.
-7. Per-request provenance sidecars are written with `reviewStatus: "draft"` from the request; there is not yet an approval workflow that promotes assets to `approved/`.
-8. There is not yet automated audio-quality acceptance gating in CI.
+7. The repo now has a session queue/autopilot layer; queued execution continues with SESSION-005.
+8. OGG export requires the optional `soundfile` dependency; the pipeline falls back to WAV when it is not installed.
+9. Per-request provenance sidecars are written with `reviewStatus: "draft"` from the request; there is not yet an approval/promotion workflow.
+10. The `qa-batch` command provides batch QA reports but is not yet wired into CI.
+11. Generated assets currently live in `drafts/` only; there is not yet an export step to place them in the downstream game's `Content/Audio/` layout.
 
 ## Current blockers
 
 | Blocker | Why it matters | Suggested next move |
 |---|---|---|
-| No batch QA gate command | Generated assets have no automated acceptance check before promotion | Add batch QA command with pass/fail report (SESSION-004) |
-| No approval/promotion workflow | Provenance reviews remain at `"draft"` with no path to `approved/` | Implement approval command after QA gate exists |
-| No broad full-game asset taxonomy beyond vertical slice | Harder to scale to complete game coverage | Expand taxonomy/checklists for all major audio families |
+| No export step to game layout | Factory cannot produce a deployable deliverable | Implement GameRewritten export profile (SESSION-005) |
+| No approval/promotion workflow | Provenance reviews remain at `"draft"` with no path to `approved/` | Add approval command after export profile exists |
+| No QA gate wired into CI | QA is manual/local only | Wire `qa-batch` into CI workflow after export is established |
 
 ## Existing GitHub Actions state
 
@@ -103,4 +107,4 @@ That workflow validates manifests, but there is currently no workflow that valid
 
 ## Immediate interpretation
 
-This repo is now a capable **procedural audio generation toolkit** with typed loading for committed factory-input artifacts, a working deterministic request-batch generation command, and per-request provenance sidecar files. The main gap is no longer request-batch execution or provenance; the next gap is automated QA gating and an approval workflow.
+This repo is now a capable **procedural audio generation toolkit** with typed loading for committed factory-input artifacts, a working deterministic request-batch generation command, per-request provenance sidecar files, and a batch QA gate command. The next gap is an export step that places approved assets into the downstream game's `Content/Audio/` layout (SESSION-005).

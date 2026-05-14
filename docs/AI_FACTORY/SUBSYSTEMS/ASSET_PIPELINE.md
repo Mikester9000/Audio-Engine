@@ -10,6 +10,7 @@
 - `RequestBatchPipeline` now exists in `audio_engine/integration/asset_pipeline.py`, executing any `GenerationRequestBatch` deterministically with per-request seeds; outputs land in `<output_dir>/drafts/<type>/`
 - CLI supports `generate-request-batch --batch-file <json> --output-dir <dir>` for factory-driven generation
 - each successful generation writes a `.provenance.json` sidecar file alongside the audio file containing `provenanceVersion`, `requestId`, `assetId`, `type`, `backend`, `seed`, `prompt`, `styleFamily`, `generatedOutputPath`, `targetImportPath`, `reviewStatus`, and `generatedAt`
+- `qa-batch --input-dir <dir> [--output-report <path>] [--check-loop] [--recursive] [--quiet]` runs `LoudnessMeter`, `ClippingDetector`, and optionally `LoopAnalyzer` on all WAVs in a directory and writes a JSON report with per-file pass/fail status
 
 ## Current constraint
 
@@ -23,4 +24,4 @@ The existing pipeline has two modes: the legacy fixed-map `AssetPipeline` for th
 
 ## Near-term goal
 
-Add a batch QA gate command (`SESSION-004`) so generated output files can be checked for loudness, clipping, and loop boundary compliance before being promoted to `approved/`.
+Implement the `GameRewritten` export profile (`SESSION-005`) so approved draft assets can be copied into the downstream game's `Content/Audio/` layout automatically.

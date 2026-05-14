@@ -4,52 +4,69 @@
 
 ## Last completed change
 
-This PR completes `SESSION-003` by adding per-request provenance sidecar files (`<stem>.provenance.json`) to `RequestBatchPipeline`. Every successfully generated audio file now has an independent machine-readable provenance record beside it containing request ID, seed, backend, review status, and generation timestamp. 5 new tests were added; total test count is 338.
+This PR completes `SESSION-004` by adding a `qa-batch` CLI command that runs quality-assurance checks on all WAV files in a directory and writes a machine-readable JSON report. 7 new tests were added; total test count is 345.
 
 ## Verified in this session
 
 ```bash
 pip install -e ".[dev]"
 python -m pytest
-# 338 passed (was 334 before SESSION-003)
+# 345 passed (was 338 before SESSION-004)
 python tools/validate-assets.py assets/examples/ --verbose
 # PASS — all manifests are valid
-audio-engine generate-request-batch \
-  --batch-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json \
-  --output-dir /tmp/session003_smoke
-# 5 SFX WAV files + 5 .provenance.json sidecars written
-# seeds and request IDs confirmed in provenance files
+audio-engine qa-batch \
+  --input-dir /tmp/session003_smoke/drafts/sfx \
+  --output-report /tmp/session004_qa_report.json
+# 5 files checked: 4 pass, 1 fail (sfx_ui_cancel.wav at -6.37 LUFS exceeds -9.0 ceiling)
 ```
 
-## Smoke run provenance example
+## QA report format
 
 ```json
 {
-  "provenanceVersion": "1.0.0",
-  "requestId": "req_sfx_ui_confirm_v1",
-  "assetId": "sfx_ui_confirm",
-  "type": "sfx",
-  "backend": "procedural",
-  "seed": 305001,
-  "prompt": "clean menu confirm click, short and readable",
-  "styleFamily": "heroic-sci-fantasy",
-  "generatedOutputPath": "/tmp/session003_smoke/drafts/sfx/sfx_ui_confirm.wav",
-  "targetImportPath": "Content/Audio/sfx_ui_confirm.wav",
-  "reviewStatus": "draft",
-  "generatedAt": "2026-05-14T22:45:41.734635+00:00"
+  "qaBatchVersion": "1.0.0",
+  "inputDir": "/tmp/session003_smoke/drafts/sfx",
+  "generatedAt": "2026-05-14T22:59:11.584885+00:00",
+  "summary": {"total": 5, "passed": 4, "failed": 1},
+  "results": [
+    {
+      "file": "...",
+      "status": "pass",
+      "checks": {
+        "loudness_lufs": -12.57,
+        "true_peak_dbfs": -3.0,
+        "loudness_range_lu": 0.0,
+        "has_clipping": false,
+        "clipped_samples": 0,
+        "loudness_ok": true,
+        "peak_ok": true,
+        "clipping_ok": true
+      }
+    }
+  ]
 }
 ```
 
-## Provenance sidecar behavior
+## QA batch command options
 
-- File name: `<audio_stem>.provenance.json` beside the generated audio file.
-- Written for every successfully generated request; not written for skipped requests.
-- `reviewStatus` is copied from `qa.reviewStatus` in the request (initially `"draft"`).
-- `generatedAt` is the UTC ISO 8601 timestamp at write time.
+```
+audio-engine qa-batch --input-dir <dir> [--output-report <path>] [--check-loop] [--recursive] [--quiet]
+```
+
+- `--check-loop`: also run `LoopAnalyzer` per file (adds `loop_is_seamless`, `loop_amplitude_jump_db`, `loop_ok` to checks)
+- `--recursive`: recurse into subdirectories when searching for WAV files
+- `--quiet`: suppress per-file output lines (summary is still printed)
+- Returns non-zero exit code if any file fails
+
+## Loudness bars used
+
+- `loudness_ok`: `-30.0 ≤ integrated_lufs ≤ -9.0`
+- `peak_ok`: `true_peak_dbfs ≤ -0.1`
+- `clipping_ok`: no clipped samples detected
 
 ## Immediate next best task
 
-Execute `SESSION-004` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add a batch QA gate command that checks generated audio files for loudness, clipping, and loop boundary compliance.
+Execute `SESSION-005` from `docs/AI_FACTORY/SESSION_QUEUE.md`: implement the GameRewritten export profile — copy approved draft assets into the `exports/gamerewritten/Content/Audio/` layout.
 
 ## Files future agents should read first
 
@@ -81,5 +98,6 @@ Execute `SESSION-004` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add a batch QA ga
 - [x] Audio plan and music/SFX generation-request fixtures load through typed integration code and tests
 - [x] Request-batch generation command implemented (`generate-request-batch` CLI + `RequestBatchPipeline`)
 - [x] Per-request provenance sidecar files written alongside every generated audio file
-- [ ] Audio QA/review automation (batch gate command)
+- [x] Batch QA gate command implemented (`qa-batch` CLI with JSON report)
 - [ ] Approval/replacement workflow (drafts → approved promotion)
+- [ ] GameRewritten export profile (copy approved to `exports/gamerewritten/Content/Audio/`)

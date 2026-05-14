@@ -63,3 +63,13 @@
 - Test count: 338 passed (up from 334).
 
 
+
+## 2026-05-14 — Complete SESSION-004 with batch QA gate command
+
+- Extracted `_load_wav_array()` helper from `_cmd_qa` in `audio_engine/cli.py` to avoid duplication.
+- Added `qa-batch --input-dir <dir> [--output-report <path>] [--check-loop] [--recursive] [--quiet]` CLI command that runs `LoudnessMeter`, `ClippingDetector`, and optionally `LoopAnalyzer` on all WAV files in a directory.
+- The command writes a machine-readable JSON report with `qaBatchVersion`, `inputDir`, `generatedAt`, `summary` (total/passed/failed), and per-file `results` with `file`, `status`, and `checks`.
+- Returns non-zero if any file fails QA checks; returns 0 if all pass.
+- Added 7 new CLI tests covering: subcommand presence, valid audio pass, silent audio fail, JSON report output, required check keys, missing directory, quiet flag.
+- Smoke run: 5 SFX files checked; 4 pass, 1 fail (`sfx_ui_cancel.wav` at −6.37 LUFS exceeds −9.0 ceiling).
+- Test count: 345 passed (up from 338).
