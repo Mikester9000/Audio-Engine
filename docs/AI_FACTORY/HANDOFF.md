@@ -4,7 +4,7 @@
 
 ## Last completed change
 
-This PR adds the next repo-memory layer after the initial AI-factory docs: implementation matrix, next PR sequence, codebase map, known issues, stability rules, a machine-friendly status JSON, and committed `GameRewritten` vertical-slice plan/request/review examples.
+This PR adds a **session control / autopilot layer** on top of the existing AI-factory docs: `SESSION_QUEUE.md`, `SESSION_TEMPLATE.md`, `DONE_CRITERIA.md`, `NO_DECISION_ZONES.md`, `TASK_OUTPUT_CONTRACTS.md`, `FILE_TOUCH_MATRIX.md`, `FAILSAFE_RULES.md`, `PR_AUTOPILOT_CHECKLIST.md`, `SESSION_HISTORY.md`, and `SESSION_STATE.json`.
 
 ## Verified in this session
 
@@ -21,15 +21,17 @@ Observed result:
 
 ## Immediate next best task
 
-Implement code-side loading and execution for the committed example artifacts in `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/` so plan/request flows become executable rather than docs-only.
+Execute `SESSION-001` from `docs/AI_FACTORY/SESSION_QUEUE.md`: implement code-side loading for the committed example audio-plan and generation-request artifacts so the request flow stops being docs-only.
 
 ## Files future agents should read first
 
 1. `docs/AI_FACTORY/README.md`
 2. `docs/AI_FACTORY/CURRENT_STATE.md`
-3. `docs/AI_FACTORY/ACTIVE_WORK.md`
-4. `docs/AI_FACTORY/PLAYBOOKS/AGENT_WORKFLOW.md`
-5. relevant subsystem/style/schema docs
+3. `docs/AI_FACTORY/SESSION_QUEUE.md`
+4. `docs/AI_FACTORY/HANDOFF.md`
+5. `docs/AI_FACTORY/NO_DECISION_ZONES.md`
+6. `docs/AI_FACTORY/FAILSAFE_RULES.md`
+7. relevant subsystem/style/schema docs
 
 ## Handoff checklist
 
@@ -43,5 +45,8 @@ Implement code-side loading and execution for the committed example artifacts in
 - [x] Project-level audio plan example implemented in repo
 - [x] Generation request examples with seeds/output/review fields implemented in repo
 - [x] Implementation matrix + codebase map + next PR sequence implemented in repo
+- [x] Session queue + template added
+- [x] Done criteria, no-decision zones, task-output contracts, file-touch matrix, and failsafe rules added
+- [x] PR autopilot checklist + session history + machine-readable session state added
 - [ ] Batch generation request format implemented in code
 - [ ] Audio QA/review automation added

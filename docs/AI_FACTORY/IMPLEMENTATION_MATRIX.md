@@ -10,7 +10,7 @@
 - `planned` = intended future work with no active code path
 - `blocked` = cannot proceed without external dependency or prerequisite
 
-## A. Implemented or partial code
+## A. Implemented code or operational control layer
 
 | Capability | State | Source of truth | Last verified | Verification command | Notes / next step |
 |---|---|---|---|---|---|
@@ -22,6 +22,7 @@
 | Audio QA primitives | implemented | `audio_engine/qa/*`, `audio_engine/cli.py` (`qa`) | 2026-05-14 | `pytest` | Missing batch QA gate workflow over generated sets. |
 | Fixed-map batch generation pipeline | partial | `audio_engine/integration/asset_pipeline.py`, `audio_engine/integration/game_state_map.py` | 2026-05-14 | `pytest` | Works for current integration map; not plan-driven yet. |
 | Asset-manifest schema validation | implemented | `tools/validate-assets.py`, `.github/workflows/validate-assets.yml`, `assets/schema/*` | 2026-05-14 | `python tools/validate-assets.py assets/examples/ --verbose` | Extend idea to future audio-plan/request validation when implemented. |
+| Session-control / autopilot docs layer | implemented | `docs/AI_FACTORY/SESSION_QUEUE.md`, `docs/AI_FACTORY/DONE_CRITERIA.md`, `docs/AI_FACTORY/NO_DECISION_ZONES.md`, `docs/AI_FACTORY/FAILSAFE_RULES.md`, `docs/AI_FACTORY/PR_AUTOPILOT_CHECKLIST.md`, `docs/AI_FACTORY/SESSION_STATE.json` | 2026-05-14 | Manual doc review | Treat `SESSION_QUEUE.md` as the canonical single-session controller for future agents. |
 
 ## B. Documentation contracts (not implemented in code yet)
 

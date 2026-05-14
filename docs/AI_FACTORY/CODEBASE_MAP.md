@@ -60,7 +60,8 @@
 
 | Need | Primary files |
 |---|---|
-| Mission/state/handoff | `docs/AI_FACTORY/PROJECT_MISSION.md`, `CURRENT_STATE.md`, `ACTIVE_WORK.md`, `HANDOFF.md` |
+| Mission/state/handoff | `docs/AI_FACTORY/PROJECT_MISSION.md`, `CURRENT_STATE.md`, `SESSION_QUEUE.md`, `ACTIVE_WORK.md`, `HANDOFF.md` |
+| Session rules and machine-readable next-session snapshot | `docs/AI_FACTORY/DONE_CRITERIA.md`, `NO_DECISION_ZONES.md`, `TASK_OUTPUT_CONTRACTS.md`, `FILE_TOUCH_MATRIX.md`, `FAILSAFE_RULES.md`, `PR_AUTOPILOT_CHECKLIST.md`, `SESSION_STATE.json` |
 | Implementation truth table | `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md` |
 | Mechanical build order | `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` |
 | Known constraints | `docs/AI_FACTORY/KNOWN_ISSUES.md` |

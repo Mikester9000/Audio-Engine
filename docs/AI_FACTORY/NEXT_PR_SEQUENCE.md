@@ -1,6 +1,8 @@
 # Next PR Sequence
 
 > Mechanical build order for future agents. Goal: evolve this repository into a GitHub-native factory that can generate all audio files needed by a game (music, fanfares/stingers, UI/combat/spell SFX, ambience, optional low-priority voice).
+>
+> `SESSION_QUEUE.md` is the canonical file for **the single next session**. This file remains the longer-range ordered sequence behind that queue.
 
 ## PR-1 — Implement audio plan + request loading primitives
 

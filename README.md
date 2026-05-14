@@ -6,9 +6,13 @@
 
 - Mission and non-goals: [`docs/AI_FACTORY/PROJECT_MISSION.md`](docs/AI_FACTORY/PROJECT_MISSION.md)
 - Current implementation status: [`docs/AI_FACTORY/CURRENT_STATE.md`](docs/AI_FACTORY/CURRENT_STATE.md)
+- Canonical next session: [`docs/AI_FACTORY/SESSION_QUEUE.md`](docs/AI_FACTORY/SESSION_QUEUE.md)
+- Machine-readable next session snapshot: [`docs/AI_FACTORY/SESSION_STATE.json`](docs/AI_FACTORY/SESSION_STATE.json)
 - Implementation truth table: [`docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`](docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md)
 - Next priorities: [`docs/AI_FACTORY/ACTIVE_WORK.md`](docs/AI_FACTORY/ACTIVE_WORK.md)
 - Mechanical next PR order: [`docs/AI_FACTORY/NEXT_PR_SEQUENCE.md`](docs/AI_FACTORY/NEXT_PR_SEQUENCE.md)
+- No-improvisation rules: [`docs/AI_FACTORY/NO_DECISION_ZONES.md`](docs/AI_FACTORY/NO_DECISION_ZONES.md)
+- Failsafe behavior when uncertain: [`docs/AI_FACTORY/FAILSAFE_RULES.md`](docs/AI_FACTORY/FAILSAFE_RULES.md)
 - Code locator map: [`docs/AI_FACTORY/CODEBASE_MAP.md`](docs/AI_FACTORY/CODEBASE_MAP.md)
 - Handoff / what changed last: [`docs/AI_FACTORY/HANDOFF.md`](docs/AI_FACTORY/HANDOFF.md)
 - Build/run/test workflow: [`docs/AI_FACTORY/PLAYBOOKS/BUILD_AND_RUN.md`](docs/AI_FACTORY/PLAYBOOKS/BUILD_AND_RUN.md)

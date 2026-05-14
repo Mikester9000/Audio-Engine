@@ -7,7 +7,7 @@
 - CLI command family in `audio_engine/cli.py` (`generate`, `generate-music`, `generate-sfx`, `generate-game-assets`, `verify-game-assets`, `qa`, etc.)
 - Top-level `AudioEngine` API in `audio_engine/engine.py`
 - Current integration manifest concepts in `audio_engine/integration/game_state_map.py`
-- Persistent memory docs in `docs/AI_FACTORY/` (especially `README`, `CURRENT_STATE`, `ACTIVE_WORK`, `HANDOFF`)
+- Persistent memory docs in `docs/AI_FACTORY/` (especially `README`, `CURRENT_STATE`, `SESSION_QUEUE`, `ACTIVE_WORK`, `HANDOFF`)
 
 If you need to change these, do it incrementally and update docs in the same PR.
 
@@ -38,8 +38,9 @@ When behavior changes, update these in the same PR:
 1. `docs/AI_FACTORY/CURRENT_STATE.md`
 2. `docs/AI_FACTORY/ACTIVE_WORK.md`
 3. `docs/AI_FACTORY/HANDOFF.md`
-4. one relevant subsystem doc
-5. one relevant QA/style/schema doc
+4. `docs/AI_FACTORY/SESSION_QUEUE.md` when session order/state changes
+5. one relevant subsystem doc
+6. one relevant QA/style/schema doc
 
 ## 6) Full-game-audio direction rule
 

@@ -23,3 +23,10 @@
 - Added committed example artifacts for `GameRewritten` vertical-slice planning and request-driven workflows under `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/`.
 - Added machine-friendly continuity snapshot `FACTORY_STATUS.json`.
 - Updated AI-factory indexes and continuity docs so future agents can distinguish implemented code from docs-only contracts and planned work.
+
+## 2026-05-14 — Add session queue and autopilot control layer for AI agents
+
+- Added `SESSION_QUEUE.md` as the canonical “what should I do next?” file for low-prompt continuation.
+- Added `SESSION_TEMPLATE.md`, `DONE_CRITERIA.md`, `NO_DECISION_ZONES.md`, `TASK_OUTPUT_CONTRACTS.md`, `FILE_TOUCH_MATRIX.md`, `FAILSAFE_RULES.md`, and `PR_AUTOPILOT_CHECKLIST.md`.
+- Added continuity tracking artifacts `SESSION_HISTORY.md` and `SESSION_STATE.json`.
+- Updated repo entrypoints and workflow docs so future agents can execute one explicit session with less ambiguity and less improvisation.
