@@ -5,6 +5,7 @@
 - `AssetPipeline` can generate `music/`, `sfx/`, and `voice/` directories plus `manifest.json`
 - current generation map is defined in `audio_engine/integration/game_state_map.py`
 - CLI supports `generate-game-assets` and `verify-game-assets`
+- committed plan/request/review example artifacts now exist under `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/`
 
 ## Current constraint
 

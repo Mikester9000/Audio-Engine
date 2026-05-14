@@ -8,7 +8,11 @@ This repository is an **AI-first audio asset factory**, not just a code library.
 2. `docs/AI_FACTORY/CURRENT_STATE.md`
 3. `docs/AI_FACTORY/ACTIVE_WORK.md`
 4. `docs/AI_FACTORY/HANDOFF.md`
-5. relevant subsystem/style/schema docs
+5. `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`
+6. `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md`
+7. `docs/AI_FACTORY/CODEBASE_MAP.md`
+8. `docs/AI_FACTORY/STABILITY_RULES.md`
+9. relevant subsystem/style/schema docs
 
 ## Core rules
 

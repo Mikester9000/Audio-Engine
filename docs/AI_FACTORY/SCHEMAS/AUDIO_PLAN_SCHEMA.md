@@ -6,6 +6,10 @@
 
 A project audio plan describes the full set of desired assets for a game or game slice before generation begins.
 
+Committed example:
+
+- `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json`
+
 ## Suggested shape
 
 ```json

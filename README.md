@@ -6,7 +6,10 @@
 
 - Mission and non-goals: [`docs/AI_FACTORY/PROJECT_MISSION.md`](docs/AI_FACTORY/PROJECT_MISSION.md)
 - Current implementation status: [`docs/AI_FACTORY/CURRENT_STATE.md`](docs/AI_FACTORY/CURRENT_STATE.md)
+- Implementation truth table: [`docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`](docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md)
 - Next priorities: [`docs/AI_FACTORY/ACTIVE_WORK.md`](docs/AI_FACTORY/ACTIVE_WORK.md)
+- Mechanical next PR order: [`docs/AI_FACTORY/NEXT_PR_SEQUENCE.md`](docs/AI_FACTORY/NEXT_PR_SEQUENCE.md)
+- Code locator map: [`docs/AI_FACTORY/CODEBASE_MAP.md`](docs/AI_FACTORY/CODEBASE_MAP.md)
 - Handoff / what changed last: [`docs/AI_FACTORY/HANDOFF.md`](docs/AI_FACTORY/HANDOFF.md)
 - Build/run/test workflow: [`docs/AI_FACTORY/PLAYBOOKS/BUILD_AND_RUN.md`](docs/AI_FACTORY/PLAYBOOKS/BUILD_AND_RUN.md)
 - Style safety and inspiration guidance: [`docs/AI_FACTORY/STYLES/STYLE_FAMILIES.md`](docs/AI_FACTORY/STYLES/STYLE_FAMILIES.md)

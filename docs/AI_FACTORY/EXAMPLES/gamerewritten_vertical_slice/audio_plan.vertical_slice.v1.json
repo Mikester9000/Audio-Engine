@@ -1,0 +1,134 @@
+{
+  "planVersion": "1.0.0",
+  "project": "GameRewritten",
+  "scope": "vertical-slice",
+  "coverageGoal": "full-game-audio eventually; this file defines first implementation slice",
+  "priorities": {
+    "music": "high",
+    "sfx": "high",
+    "voice": "low"
+  },
+  "styleFamilies": [
+    "heroic-sci-fantasy",
+    "melancholic-techno-fantasy"
+  ],
+  "assetGroups": [
+    {
+      "groupId": "music-core-loops",
+      "type": "music",
+      "required": true,
+      "targets": [
+        {
+          "assetId": "bgm_field_day",
+          "gameplayRole": "field exploration",
+          "targetPath": "Content/Audio/bgm_field_day.ogg",
+          "loop": true,
+          "durationTargetSeconds": 90,
+          "mood": ["adventure", "wonder", "forward-motion"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "bgm_town_evening",
+          "gameplayRole": "town exploration",
+          "targetPath": "Content/Audio/bgm_town_evening.ogg",
+          "loop": true,
+          "durationTargetSeconds": 90,
+          "mood": ["safe", "nostalgic", "quiet-hope"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "bgm_dungeon_ruins",
+          "gameplayRole": "dungeon traversal",
+          "targetPath": "Content/Audio/bgm_dungeon_ruins.ogg",
+          "loop": true,
+          "durationTargetSeconds": 90,
+          "mood": ["tension", "mystery", "danger"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "bgm_battle_standard",
+          "gameplayRole": "regular combat",
+          "targetPath": "Content/Audio/bgm_battle_standard.ogg",
+          "loop": true,
+          "durationTargetSeconds": 75,
+          "mood": ["urgency", "drive", "heroism"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "bgm_boss_phase1",
+          "gameplayRole": "boss combat",
+          "targetPath": "Content/Audio/bgm_boss_phase1.ogg",
+          "loop": true,
+          "durationTargetSeconds": 90,
+          "mood": ["threat", "intensity", "drama"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "stinger_victory_short",
+          "gameplayRole": "post-combat victory",
+          "targetPath": "Content/Audio/stinger_victory_short.wav",
+          "loop": false,
+          "durationTargetSeconds": 6,
+          "mood": ["reward", "release"],
+          "reviewPriority": "medium"
+        }
+      ]
+    },
+    {
+      "groupId": "sfx-ui-combat-magic",
+      "type": "sfx",
+      "required": true,
+      "targets": [
+        {
+          "assetId": "sfx_ui_confirm",
+          "gameplayRole": "ui confirm",
+          "targetPath": "Content/Audio/sfx_ui_confirm.wav",
+          "loop": false,
+          "durationTargetSeconds": 0.12,
+          "mood": ["clean", "affirmative"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "sfx_ui_cancel",
+          "gameplayRole": "ui cancel",
+          "targetPath": "Content/Audio/sfx_ui_cancel.wav",
+          "loop": false,
+          "durationTargetSeconds": 0.12,
+          "mood": ["soft", "negative"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "sfx_attack_light",
+          "gameplayRole": "light weapon hit",
+          "targetPath": "Content/Audio/sfx_attack_light.wav",
+          "loop": false,
+          "durationTargetSeconds": 0.35,
+          "mood": ["impact", "readable"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "sfx_spell_fire_small",
+          "gameplayRole": "small fire spell",
+          "targetPath": "Content/Audio/sfx_spell_fire_small.wav",
+          "loop": false,
+          "durationTargetSeconds": 0.7,
+          "mood": ["arcane", "heat", "burst"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "amb_wind_ruins_loop",
+          "gameplayRole": "ruins ambience",
+          "targetPath": "Content/Audio/amb_wind_ruins_loop.wav",
+          "loop": true,
+          "durationTargetSeconds": 20,
+          "mood": ["empty", "windy", "ancient"],
+          "reviewPriority": "medium"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Voice is intentionally out of scope for this vertical slice except optional placeholders.",
+    "This plan is a committed example/contract and not yet consumed by pipeline code."
+  ]
+}
