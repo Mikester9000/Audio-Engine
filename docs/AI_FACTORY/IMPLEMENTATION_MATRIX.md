@@ -25,14 +25,14 @@
 | Session-control / autopilot docs layer | implemented | `docs/AI_FACTORY/SESSION_QUEUE.md`, `docs/AI_FACTORY/CURRENT_SESSION.json`, `docs/AI_FACTORY/DONE_CRITERIA.md`, `docs/AI_FACTORY/SESSION_GATE_RULES.md`, `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`, `docs/AI_FACTORY/NO_DECISION_ZONES.md`, `docs/AI_FACTORY/FAILSAFE_RULES.md`, `docs/AI_FACTORY/VERIFICATION_PROFILES.md`, `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md`, `docs/AI_FACTORY/PR_AUTOPILOT_CHECKLIST.md`, `docs/AI_FACTORY/SESSION_STATE.json` | 2026-05-14 | Manual doc review | Treat `SESSION_QUEUE.md` as the canonical single-session controller and `CURRENT_SESSION.json` as the detailed machine-readable session contract. |
 | Canonical output-layout + full-game coverage docs | implemented | `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md`, `docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md`, `docs/AI_FACTORY/HUMAN_COMMANDS.md` | 2026-05-14 | Manual doc review | Keeps future agents aligned on output targets, coverage expectations, and low-prompt interaction model before code-side implementation expands. |
 
-## B. Documentation contracts (not implemented in code yet)
+## B. Documentation-driven capabilities with partial or docs-only implementation
 
 | Capability | State | Source of truth doc | Last verified | Verification command | Notes / next step |
 |---|---|---|---|---|---|
-| Project-level audio plan format | docs-contract | `docs/AI_FACTORY/SCHEMAS/AUDIO_PLAN_SCHEMA.md` | 2026-05-14 | Manual doc review | Implement parser + validator in code. |
-| Generation request format with seed/provenance fields | docs-contract | `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md` | 2026-05-14 | Manual doc review | Implement request runner + provenance writer. |
+| Project-level audio plan format | partial | `docs/AI_FACTORY/SCHEMAS/AUDIO_PLAN_SCHEMA.md`, `audio_engine/integration/factory_inputs.py` | 2026-05-14 | `pytest` | Typed loader exists for the committed example artifact; batch execution and broader validation are still future work. |
+| Generation request format with seed/provenance fields | partial | `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`, `audio_engine/integration/factory_inputs.py` | 2026-05-14 | `pytest` | Typed batch/request loading exists for the committed music and SFX fixtures; execution and provenance writing remain future work. |
 | AI factory review-state workflow | docs-contract | `docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md` | 2026-05-14 | Manual doc review | Add machine-readable review log writer. |
-| `GameRewritten` vertical-slice examples | docs-contract | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` | 2026-05-14 | Manual artifact review | Use these as fixtures for orchestration implementation PRs. |
+| `GameRewritten` vertical-slice examples | docs-contract | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` | 2026-05-14 | `pytest` | The committed examples now serve as canonical loader fixtures; broader orchestration still needs follow-up sessions. |
 
 ## C. Planned / blocked work
 

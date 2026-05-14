@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a stronger machine-guidance, **session-autopilot, and execution-safety** layer. The canonical next executable session is `SESSION-001` in `docs/AI_FACTORY/SESSION_QUEUE.md`: implement plan/request ingestion in code.
+The repository now has typed plan/request loader primitives in code alongside the machine-guidance, **session-autopilot, and execution-safety** layer. The canonical next executable session is `SESSION-002` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add request-batch generation using those loaders.
 
 ## Now
 
@@ -16,21 +16,19 @@ The repository now has a stronger machine-guidance, **session-autopilot, and exe
 - [x] Add implementation matrix + codebase map + next-PR sequence docs
 - [x] Add session queue/autopilot control docs for low-prompt execution
 - [x] Add final execution-safety hardening docs and machine-readable current-session contract
-- [ ] Execute `SESSION-001` from `docs/AI_FACTORY/SESSION_QUEUE.md`
+- [x] Execute `SESSION-001` from `docs/AI_FACTORY/SESSION_QUEUE.md`
+- [ ] Execute `SESSION-002` from `docs/AI_FACTORY/SESSION_QUEUE.md`
 - [ ] Add approval/review workflow for generated assets
 
 ## Recommended next PRs
 
-1. **Execute `SESSION-001` — implement plan/request loaders in integration layer**
-   - Canonical session spec: `docs/AI_FACTORY/SESSION_QUEUE.md`
-   - Parse committed example artifacts into typed runtime structures.
-2. **Execute `SESSION-002` — add request-batch generation path**
+1. **Execute `SESSION-002` — add request-batch generation path**
    - Generate music/SFX from request files with deterministic seed handling.
-3. **Execute `SESSION-003` — persist provenance + review status logs**
+2. **Execute `SESSION-003` — persist provenance + review status logs**
    - Capture request ID, seed, output path, and review state per generated asset.
-4. **Execute `SESSION-004` — add automated batch QA command**
+3. **Execute `SESSION-004` — add automated batch QA command**
    - Wrap loudness/clipping/loop checks for generated sets.
-5. **Implement `GameRewritten` export profile**
+4. **Implement `GameRewritten` export profile**
    - Align generated outputs with stable downstream import paths.
 
 ## Do not deprioritize

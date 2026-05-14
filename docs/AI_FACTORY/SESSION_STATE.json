@@ -2,10 +2,10 @@
   "version": "1.1.0",
   "lastUpdated": "2026-05-14",
   "currentSession": {
-    "id": "SESSION-001",
-    "title": "Implement audio plan + request loading primitives",
+    "id": "SESSION-002",
+    "title": "Add request-batch generation command",
     "status": "ready",
-    "taskType": "loader_parsing",
+    "taskType": "batch_generation",
     "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
     "queueDoc": "docs/AI_FACTORY/SESSION_QUEUE.md",
     "gateRulesDoc": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
@@ -21,15 +21,20 @@
       "docs/AI_FACTORY/HANDOFF.md",
       "docs/AI_FACTORY/NO_DECISION_ZONES.md",
       "docs/AI_FACTORY/FAILSAFE_RULES.md",
-      "docs/AI_FACTORY/SCHEMAS/AUDIO_PLAN_SCHEMA.md",
       "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
+      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/README.md",
+      "audio_engine/integration/factory_inputs.py",
       "audio_engine/integration/asset_pipeline.py",
-      "tests/test_integration.py"
+      "audio_engine/cli.py",
+      "tests/test_integration.py",
+      "tests/test_engine_cli.py"
     ],
     "likelyModify": [
-      "audio_engine/integration/*",
       "audio_engine/cli.py",
-      "tests/test_integration.py"
+      "audio_engine/integration/asset_pipeline.py",
+      "audio_engine/integration/factory_inputs.py",
+      "tests/test_integration.py",
+      "tests/test_engine_cli.py"
     ],
     "avoidModify": [
       "audio_engine/dsp/*",
@@ -39,8 +44,9 @@
     ],
     "verification": [
       "pip install -e \".[dev]\"",
-      "pytest",
-      "python tools/validate-assets.py assets/examples/ --verbose"
+      "python -m pytest",
+      "python tools/validate-assets.py assets/examples/ --verbose",
+      "one deterministic /tmp smoke run using the committed generation-request fixtures"
     ],
     "docsToUpdate": [
       "docs/AI_FACTORY/CURRENT_STATE.md",
@@ -59,14 +65,9 @@
     "outputContractDoc": "docs/AI_FACTORY/TASK_OUTPUT_CONTRACTS.md",
     "fileTouchMatrixDoc": "docs/AI_FACTORY/FILE_TOUCH_MATRIX.md",
     "failsafeDoc": "docs/AI_FACTORY/FAILSAFE_RULES.md",
-    "nextSession": "SESSION-002"
+    "nextSession": "SESSION-003"
   },
   "upcomingSessions": [
-    {
-      "id": "SESSION-002",
-      "title": "Add request-batch generation command",
-      "status": "queued-after-SESSION-001"
-    },
     {
       "id": "SESSION-003",
       "title": "Write provenance + review logs per request",

@@ -1,6 +1,6 @@
 # Generation Request Schema
 
-> This is a documentation contract for future work. It is not yet implemented in code.
+> This contract is partially implemented in code via `audio_engine/integration/factory_inputs.py` for fixture-backed request-batch loading and validation. Batch execution/provenance writing remain future work.
 
 ## Purpose
 

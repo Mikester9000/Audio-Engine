@@ -37,3 +37,10 @@
 - Added `SESSION_GATE_RULES.md`, `BLOCKER_PROTOCOL.md`, `VERIFICATION_PROFILES.md`, and `MINIMUM_TEST_EXPANSION_RULES.md` to reduce false completion, under-testing, and blocker ambiguity.
 - Added `CANONICAL_OUTPUT_LAYOUT.md`, `FULL_GAME_AUDIO_CHECKLIST.md`, and `HUMAN_COMMANDS.md` so future sessions target a stable output shape, full game-audio coverage, and a simple low-prompt interaction model.
 - Updated AI-factory indexes, status JSON, session-control docs, and handoff/state docs to integrate the new hardening layer cleanly into the existing `docs/AI_FACTORY` system.
+
+## 2026-05-14 — Complete SESSION-001 with typed audio-plan and request loaders
+
+- Added `audio_engine/integration/factory_inputs.py` with typed dataclasses and JSON loaders for the committed audio-plan and generation-request example artifacts.
+- Exported the new loader API from `audio_engine.integration` without changing existing CLI behavior.
+- Added fixture-driven integration tests for successful plan/request ingestion plus an invalid-input failure path.
+- Updated AI-factory continuity docs and session-control files to mark `SESSION-001` complete and advance the queue to `SESSION-002`.

@@ -1,6 +1,6 @@
 # Project Audio Plan Schema
 
-> This is a documentation contract for future work. It is not yet implemented in code.
+> This contract is partially implemented in code via `audio_engine/integration/factory_inputs.py` for fixture-backed plan loading and validation. Full plan-driven orchestration remains future work.
 
 ## Purpose
 

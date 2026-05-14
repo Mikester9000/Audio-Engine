@@ -12,14 +12,22 @@
 6. If the current session becomes blocked or partially completed, update this file, `HANDOFF.md`, `SESSION_STATE.json`, and `CURRENT_SESSION.json` in the same PR.
 7. If facts are missing, follow `BLOCKER_PROTOCOL.md` and `FAILSAFE_RULES.md` instead of improvising.
 
-## Current next session
+## Recently completed session
 
 ### SESSION-001 — Implement audio plan + request loading primitives
 
-- **Status:** `ready`
+- **Status:** `completed`
 - **Task type:** `loader_parsing`
-- **Objective:** Parse the committed example audio-plan and generation-request artifacts into typed runtime structures that future CLI/batch workflows can consume.
-- **Why it matters:** This is the first step that turns the current docs/example layer into executable factory behavior.
+- **Result summary:** The committed example audio plan plus music/SFX request fixtures now load into typed runtime structures in `audio_engine/integration/factory_inputs.py`, with tests covering successful ingestion and an invalid-input failure path.
+
+## Current next session
+
+### SESSION-002 — Add request-batch generation command
+
+- **Status:** `ready`
+- **Task type:** `batch_generation`
+- **Objective:** Execute the committed music and SFX generation-request batches deterministically through an additive CLI/API path that uses the new typed loaders.
+- **Why it matters:** This turns the newly loaded factory-input artifacts into practical reproducible output generation for the game-audio workflow.
 - **Read first docs/files:**
   1. `docs/AI_FACTORY/SESSION_QUEUE.md`
   2. `docs/AI_FACTORY/CURRENT_STATE.md`
@@ -32,17 +40,20 @@
   9. `docs/AI_FACTORY/NO_DECISION_ZONES.md`
   10. `docs/AI_FACTORY/FAILSAFE_RULES.md`
   11. `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md`
-  12. `docs/AI_FACTORY/SCHEMAS/AUDIO_PLAN_SCHEMA.md`
-  13. `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`
-  14. `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/README.md`
-  15. `docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md`
+  12. `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`
+  13. `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/README.md`
+  14. `docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md`
+  15. `audio_engine/integration/factory_inputs.py`
   16. `audio_engine/integration/asset_pipeline.py`
-  17. `tests/test_integration.py`
+  17. `audio_engine/cli.py`
+  18. `tests/test_integration.py`
+  19. `tests/test_engine_cli.py`
 - **Exact or likely files to modify:**
-  - `audio_engine/integration/*` (add loader/parser support)
-  - `audio_engine/cli.py` only if a validation/listing hook is required
+  - `audio_engine/cli.py`
+  - `audio_engine/integration/asset_pipeline.py`
+  - `audio_engine/integration/factory_inputs.py` only if a small compatibility hook is required
   - `tests/test_integration.py`
-  - `tests/test_engine_cli.py` or `tests/test_new_cli.py` only if CLI behavior changes
+  - `tests/test_engine_cli.py`
 - **Files not to modify unless absolutely necessary:**
   - `audio_engine/dsp/*`
   - `audio_engine/render/*`
@@ -51,9 +62,9 @@
   - `docs/AI_FACTORY/STYLES/*`
 - **Verification commands:**
   - `pip install -e ".[dev]"`
-  - `pytest`
+  - `python -m pytest`
   - `python tools/validate-assets.py assets/examples/ --verbose`
-  - one focused loader smoke check against the committed example artifacts if a new CLI/API entry is added
+  - one deterministic `/tmp` smoke run using the committed generation-request fixtures
 - **Docs that must be updated:**
   - `docs/AI_FACTORY/CURRENT_STATE.md`
   - `docs/AI_FACTORY/ACTIVE_WORK.md`
@@ -66,26 +77,20 @@
   - `docs/AI_FACTORY/CURRENT_SESSION.json`
   - `docs/AI_FACTORY/SESSION_STATE.json`
 - **Explicit done criteria:**
-  1. The committed example audio plan loads into a typed runtime structure.
-  2. The committed music and SFX generation request examples load into typed runtime structures.
-  3. Tests cover successful example ingestion and at least one invalid-input failure path.
-  4. Existing CLI compatibility is preserved unless the session explicitly adds a new additive command.
-  5. Docs are updated so implemented behavior is no longer described as docs-only in the affected areas.
-- **Enqueue next session after completion:** `SESSION-002 — Add request-batch generation command`
+  1. One additive CLI or API path executes at least the committed music and SFX request-batch fixtures.
+  2. Deterministic seeds remain explicit and are passed through the execution path.
+  3. Tests cover the new request-batch generation path.
+  4. Existing one-off CLI behavior remains compatible.
+  5. Docs describe the new batch-generation behavior truthfully without overstating provenance or QA automation.
+- **Enqueue next session after completion:** `SESSION-003 — Write provenance + review logs per request`
 - **If uncertain or blocked:**
   - follow `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`
-  - do not invent unsupported schema fields
-  - support the committed example artifacts first before generalizing
-  - choose the smallest additive loader design that preserves current CLI behavior
+  - do not invent unsupported schema fields or downstream import guarantees
+  - support the committed example request fixtures first before generalizing
+  - choose the smallest additive execution path that preserves current CLI behavior
   - record blockers in `HANDOFF.md`, `SESSION_QUEUE.md`, `SESSION_STATE.json`, and `CURRENT_SESSION.json`
 
 ## Upcoming queued sessions
-
-### SESSION-002 — Add request-batch generation command
-
-- **Status:** `queued-after-SESSION-001`
-- **Task type:** `batch_generation`
-- **Short objective:** Execute music and SFX request files deterministically from the new loaders.
 
 ### SESSION-003 — Write provenance + review logs per request
 
