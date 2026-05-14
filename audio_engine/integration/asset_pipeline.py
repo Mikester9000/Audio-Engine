@@ -1,6 +1,7 @@
 """
 asset_pipeline.py – pre-generate the complete audio asset library for the
-Game Engine for Teaching.
+Game Engine for Teaching, plus a request-batch execution pipeline for
+factory-driven generation workflows.
 
 Usage (from Python)
 -------------------
@@ -9,16 +10,31 @@ Usage (from Python)
 >>> manifest = pipeline.generate_all("./game/assets/audio")
 >>> print(manifest.summary())
 
+>>> from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+>>> batch = load_generation_request_batch("generation_requests.music.v1.json")
+>>> pipeline = RequestBatchPipeline()
+>>> manifest = pipeline.execute(batch, "/tmp/factory_output")
+
 Usage (from the CLI)
 --------------------
     audio-engine generate-game-assets --output-dir ./game/assets/audio
+    audio-engine generate-request-batch --batch-file generation_requests.music.v1.json \\
+        --output-dir /tmp/factory_output
 
-The pipeline creates three sub-directories:
+The AssetPipeline creates three sub-directories:
 
     <output_dir>/
     ├── music/      # One WAV per GameState + named scenes
     ├── sfx/        # One WAV per in-game event
     └── voice/      # Voice/TTS lines
+
+The RequestBatchPipeline creates:
+
+    <output_dir>/
+    └── drafts/
+        ├── music/    # Generated music from batch requests
+        ├── sfx/      # Generated SFX from batch requests
+        └── voice/    # Generated voice from batch requests
 
 It also writes ``manifest.json`` at the root of *output_dir* so the C++
 AudioSystem can verify all assets are present at startup.
@@ -30,7 +46,9 @@ import json
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
+
+import numpy as np
 
 from audio_engine.integration.game_state_map import (
     MUSIC_MANIFEST,
@@ -41,7 +59,10 @@ from audio_engine.integration.game_state_map import (
     VoiceAsset,
 )
 
-__all__ = ["AssetPipeline", "GenerationManifest"]
+if TYPE_CHECKING:
+    from audio_engine.integration.factory_inputs import GenerationRequest, GenerationRequestBatch
+
+__all__ = ["AssetPipeline", "GenerationManifest", "RequestBatchPipeline"]
 
 
 # ---------------------------------------------------------------------------
@@ -401,3 +422,223 @@ class AssetPipeline:
 
         exporter = AudioExporter(sample_rate=voice_sr, bit_depth=16)
         exporter.export(audio, output_path, fmt="wav")
+
+
+# ---------------------------------------------------------------------------
+# Channel conversion helper
+# ---------------------------------------------------------------------------
+
+def _convert_channels(audio: np.ndarray, target_channels: int) -> np.ndarray:
+    """Convert a NumPy audio array to the requested channel count.
+
+    Parameters
+    ----------
+    audio:
+        Input array: 1-D (mono) or shape ``(N, 2)`` (stereo).
+    target_channels:
+        Desired number of output channels (1 or 2).
+
+    Returns
+    -------
+    np.ndarray
+        Audio in the requested channel layout.
+    """
+    is_stereo = audio.ndim == 2 and audio.shape[1] == 2
+    is_mono = audio.ndim == 1
+
+    if target_channels == 1:
+        if is_stereo:
+            return audio.mean(axis=1).astype(audio.dtype)
+        return audio
+    elif target_channels == 2:
+        if is_mono:
+            return np.column_stack([audio, audio])
+        return audio
+    return audio  # pass-through for unsupported channel counts
+
+
+# ---------------------------------------------------------------------------
+# RequestBatchPipeline
+# ---------------------------------------------------------------------------
+
+class RequestBatchPipeline:
+    """Execute a :class:`~audio_engine.integration.factory_inputs.GenerationRequestBatch` deterministically.
+
+    Each request in the batch is generated using the request's own ``seed``,
+    ``prompt``, ``format``, ``sampleRate``, and ``channels``.  Outputs are
+    written to ``<output_dir>/drafts/<type>/<basename_of_targetPath>``.
+
+    Parameters
+    ----------
+    progress_callback:
+        Optional callable ``(message: str) -> None`` invoked after each asset
+        is processed.
+    skip_existing:
+        If ``True`` (default), skip requests whose output file already exists.
+    """
+
+    def __init__(
+        self,
+        progress_callback: Callable[[str], None] | None = None,
+        skip_existing: bool = True,
+    ) -> None:
+        self.progress_callback = progress_callback or (lambda msg: None)
+        self.skip_existing = skip_existing
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def execute(
+        self,
+        batch: GenerationRequestBatch,
+        output_dir: str | Path,
+    ) -> GenerationManifest:
+        """Execute all requests in *batch* and return a :class:`GenerationManifest`.
+
+        Parameters
+        ----------
+        batch:
+            Loaded :class:`~audio_engine.integration.factory_inputs.GenerationRequestBatch`.
+        output_dir:
+            Root output directory.  Each request is written to
+            ``<output_dir>/drafts/<type>/<filename>``.
+
+        Returns
+        -------
+        GenerationManifest
+            Record of every generated (or skipped) asset, plus any errors.
+            Also written to ``<output_dir>/drafts/batch_manifest.json``.
+        """
+        output_dir = Path(output_dir)
+        manifest = GenerationManifest(output_dir=str(output_dir))
+        t_start = time.monotonic()
+
+        self.progress_callback(
+            f"Executing request batch: {batch.project} / {batch.scope} "
+            f"({len(batch.requests)} requests) → {output_dir}"
+        )
+
+        for request in batch.requests:
+            type_dir = output_dir / "drafts" / request.type
+            type_dir.mkdir(parents=True, exist_ok=True)
+
+            # Derive output filename from targetPath basename.
+            target_name = Path(request.output.target_path).name
+            output_path = type_dir / target_name
+
+            if self.skip_existing and output_path.exists():
+                self.progress_callback(f"  [skip] {request.request_id} → {output_path}")
+                self._append_record(manifest, request, output_path, "skipped")
+                continue
+
+            try:
+                actual_path = self._generate_one(request, output_path)
+                self.progress_callback(f"  [ok]   {request.request_id} → {actual_path}")
+                self._append_record(manifest, request, actual_path, "ok")
+            except Exception as exc:  # noqa: BLE001
+                msg = f"{request.request_id}: {exc}"
+                manifest.errors.append(msg)
+                self.progress_callback(f"  [err]  {msg}")
+
+        manifest.total_duration_seconds = time.monotonic() - t_start
+
+        # Write batch manifest under drafts/
+        drafts_dir = output_dir / "drafts"
+        drafts_dir.mkdir(parents=True, exist_ok=True)
+        manifest_path = drafts_dir / "batch_manifest.json"
+        manifest_path.write_text(manifest.to_json(), encoding="utf-8")
+        self.progress_callback(f"manifest written → {manifest_path}")
+
+        return manifest
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _generate_one(self, request: GenerationRequest, output_path: Path) -> Path:
+        """Generate audio for one request and write it to *output_path*.
+
+        Parameters
+        ----------
+        request:
+            A single :class:`~audio_engine.integration.factory_inputs.GenerationRequest`.
+        output_path:
+            Desired output file path.
+
+        Returns
+        -------
+        Path
+            Actual path of the written file (may differ in extension if OGG
+            fallback to WAV is needed).
+        """
+        from audio_engine.export.audio_exporter import AudioExporter
+
+        audio = self._generate_audio(request)
+        audio = _convert_channels(audio, request.output.channels)
+
+        exporter = AudioExporter(sample_rate=request.output.sample_rate, bit_depth=16)
+        fmt = request.output.format.lower()
+
+        try:
+            written = exporter.export(audio, output_path, fmt=fmt)
+        except ImportError:
+            # OGG requires optional soundfile dependency; fall back to WAV.
+            self.progress_callback(
+                f"  [warn] OGG not available for {request.request_id}; writing WAV instead"
+            )
+            written = exporter.export(audio, output_path.with_suffix(".wav"), fmt="wav")
+
+        if request.qa.loop_required and written.suffix.lower() == ".wav":
+            n_samples = audio.shape[0] if audio.ndim == 2 else len(audio)
+            exporter.write_loop_points(written, loop_start=0, loop_end=n_samples - 1)
+
+        return written
+
+    def _generate_audio(self, request: GenerationRequest) -> np.ndarray:
+        """Generate raw audio for *request* using the appropriate generator."""
+        sr = request.output.sample_rate
+
+        if request.type == "music":
+            from audio_engine.ai.music_gen import MusicGen
+
+            gen = MusicGen(sample_rate=sr, seed=request.seed)
+            return gen.generate(
+                prompt=request.prompt,
+                loopable=request.qa.loop_required,
+            )
+        elif request.type == "sfx":
+            from audio_engine.ai.sfx_gen import SFXGen
+
+            gen = SFXGen(sample_rate=sr, seed=request.seed)
+            return gen.generate(prompt=request.prompt)
+        elif request.type == "voice":
+            from audio_engine.ai.voice_gen import VoiceGen
+
+            gen = VoiceGen(sample_rate=sr, seed=request.seed)
+            return gen.generate(request.prompt)
+        else:
+            raise ValueError(f"Unknown request type: {request.type!r}")
+
+    def _append_record(
+        self,
+        manifest: GenerationManifest,
+        request: GenerationRequest,
+        path: Path,
+        status: str,
+    ) -> None:
+        """Append a result record to the appropriate manifest list."""
+        record: dict = {
+            "request_id": request.request_id,
+            "asset_id": request.asset_id,
+            "type": request.type,
+            "seed": request.seed,
+            "file": str(path),
+            "status": status,
+        }
+        if request.type == "music":
+            manifest.music.append(record)
+        elif request.type == "sfx":
+            manifest.sfx.append(record)
+        else:
+            manifest.voice.append(record)

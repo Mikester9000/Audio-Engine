@@ -18,6 +18,9 @@ Generate a voice line:
 Run quality assurance checks on a WAV file:
     audio-engine qa --input track.wav
 
+Execute a generation-request batch file (factory workflow):
+    audio-engine generate-request-batch --batch-file generation_requests.music.v1.json --output-dir /tmp/output
+
 Generate ALL assets for the Game Engine for Teaching:
     audio-engine generate-game-assets --output-dir ./assets/audio
 
@@ -328,6 +331,28 @@ def build_parser() -> argparse.ArgumentParser:
     # --- list-instruments ---
     sub.add_parser("list-instruments", help="List available synthesised instruments.")
 
+    # --- generate-request-batch ---
+    grb = sub.add_parser(
+        "generate-request-batch",
+        help="Execute a generation-request batch file to produce draft audio assets.",
+    )
+    grb.add_argument(
+        "--batch-file", "-b", required=True,
+        help="Path to a generation-request batch JSON file.",
+    )
+    grb.add_argument(
+        "--output-dir", "-o", default=".",
+        help="Root output directory for drafts (default: current directory).",
+    )
+    grb.add_argument(
+        "--force", action="store_true",
+        help="Regenerate assets even if output files already exist.",
+    )
+    grb.add_argument(
+        "--quiet", action="store_true",
+        help="Suppress per-asset progress messages.",
+    )
+
     # --- generate-game-assets ---
     gga = sub.add_parser(
         "generate-game-assets",
@@ -365,6 +390,31 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
+    """Execute a generation-request batch file deterministically."""
+    from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+    batch_path = Path(args.batch_file)
+    if not batch_path.exists():
+        raise FileNotFoundError(f"batch file not found: {batch_path}")
+
+    batch = load_generation_request_batch(batch_path)
+
+    def _progress(msg: str) -> None:
+        if not args.quiet:
+            print(msg)
+
+    pipeline = RequestBatchPipeline(
+        progress_callback=_progress,
+        skip_existing=not args.force,
+    )
+
+    manifest = pipeline.execute(batch, args.output_dir)
+
+    print()
+    print(manifest.summary())
 
 
 def _cmd_generate_game_assets(args: argparse.Namespace) -> None:
@@ -445,6 +495,7 @@ def main(argv: list[str] | None = None) -> int:
         "sfx": _cmd_sfx,
         "list-styles": _cmd_list_styles,
         "list-instruments": _cmd_list_instruments,
+        "generate-request-batch": _cmd_generate_request_batch,
         "generate-game-assets": _cmd_generate_game_assets,
         "verify-game-assets": _cmd_verify_game_assets,
     }

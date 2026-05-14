@@ -659,3 +659,150 @@ class TestIntegrationArtefacts:
         assert hasattr(integration, "MUSIC_MANIFEST")
         assert hasattr(integration, "SFX_MANIFEST")
         assert hasattr(integration, "VOICE_MANIFEST")
+
+
+# ---------------------------------------------------------------------------
+# RequestBatchPipeline tests
+# ---------------------------------------------------------------------------
+
+class TestRequestBatchPipeline:
+    """Tests for the request-batch generation pipeline (SESSION-002)."""
+
+    def test_imports_cleanly(self):
+        from audio_engine.integration import RequestBatchPipeline
+        assert RequestBatchPipeline is not None
+
+    def test_execute_sfx_batch_creates_files(self, tmp_path):
+        """Execute the committed SFX request batch; verify output files are created."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        assert len(manifest.errors) == 0, f"Errors during batch execution: {manifest.errors}"
+        assert len(manifest.sfx) == len(batch.requests)
+
+        drafts_sfx_dir = tmp_path / "drafts" / "sfx"
+        assert drafts_sfx_dir.exists()
+        for record in manifest.sfx:
+            assert Path(record["file"]).exists(), f"Missing output: {record['file']}"
+            assert Path(record["file"]).stat().st_size > 0
+
+    def test_execute_sfx_batch_manifest_has_required_fields(self, tmp_path):
+        """Each manifest record must carry request_id, asset_id, seed, type, file, status."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        for record in manifest.sfx:
+            for key in ("request_id", "asset_id", "seed", "type", "file", "status"):
+                assert key in record, f"Missing key '{key}' in SFX record: {record}"
+            assert record["status"] == "ok"
+
+    def test_execute_sfx_batch_seeds_are_explicit(self, tmp_path):
+        """Seeds in manifest records must match the request definitions."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        request_seeds = {r.request_id: r.seed for r in batch.requests}
+        for record in manifest.sfx:
+            assert record["seed"] == request_seeds[record["request_id"]], (
+                f"Seed mismatch for {record['request_id']}"
+            )
+
+    def test_execute_skip_existing(self, tmp_path):
+        """skip_existing=True must not overwrite files that already exist."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+
+        # Pre-create one output file as a sentinel.
+        first_request = batch.requests[0]
+        type_dir = tmp_path / "drafts" / first_request.type
+        type_dir.mkdir(parents=True)
+        sentinel_name = Path(first_request.output.target_path).name
+        sentinel = type_dir / sentinel_name
+        sentinel.write_bytes(b"SENTINEL")
+
+        pipeline = RequestBatchPipeline(skip_existing=True)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        # Sentinel file must not have been overwritten.
+        assert sentinel.read_bytes() == b"SENTINEL"
+
+        # Corresponding record should be marked skipped.
+        skipped = [r for r in manifest.sfx if r["request_id"] == first_request.request_id]
+        assert skipped and skipped[0]["status"] == "skipped"
+
+    def test_execute_writes_batch_manifest_json(self, tmp_path):
+        """execute() must write batch_manifest.json under <output_dir>/drafts/."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        pipeline.execute(batch, tmp_path)
+
+        manifest_path = tmp_path / "drafts" / "batch_manifest.json"
+        assert manifest_path.exists(), "batch_manifest.json was not written"
+        data = json.loads(manifest_path.read_text())
+        assert "sfx" in data
+        assert "errors" in data
+
+    def test_execute_music_batch_creates_files(self, tmp_path, monkeypatch):
+        """Execute the committed music request batch (monkeypatched to 2 s duration)."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+        from audio_engine.ai.music_gen import MusicGen
+
+        # Monkeypatch generate() to produce a short dummy signal instead of 30 s.
+        import numpy as np
+
+        original_generate = MusicGen.generate
+
+        def _fast_generate(self, prompt, duration=30.0, loopable=False):
+            return original_generate(self, prompt, duration=2.0, loopable=loopable)
+
+        monkeypatch.setattr(MusicGen, "generate", _fast_generate)
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        assert len(manifest.errors) == 0, f"Errors during music batch execution: {manifest.errors}"
+        assert len(manifest.music) == len(batch.requests)
+        for record in manifest.music:
+            assert Path(record["file"]).exists(), f"Missing output: {record['file']}"
+            assert record["seed"] > 0
+
+    def test_progress_callback_invoked(self, tmp_path):
+        """Progress messages should be emitted during batch execution."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        messages: list[str] = []
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = RequestBatchPipeline(
+            progress_callback=messages.append,
+            skip_existing=False,
+        )
+        pipeline.execute(batch, tmp_path)
+
+        assert len(messages) > 0, "No progress messages were emitted"

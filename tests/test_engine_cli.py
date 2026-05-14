@@ -116,3 +116,94 @@ def test_cli_sfx(tmp_path, capsys):
 def test_cli_generate_unknown_style(capsys):
     rc = main(["generate", "--style", "nonexistent_xyz", "--output", "/tmp/x.wav"])
     assert rc != 0
+
+
+# ---------------------------------------------------------------------------
+# generate-request-batch CLI tests
+# ---------------------------------------------------------------------------
+
+_FIXTURE_DIR = (
+    Path(__file__).parent.parent
+    / "docs"
+    / "AI_FACTORY"
+    / "EXAMPLES"
+    / "gamerewritten_vertical_slice"
+)
+
+
+def test_cli_generate_request_batch_help(capsys):
+    """generate-request-batch --help should exit cleanly."""
+    import argparse
+
+    from audio_engine.cli import build_parser
+
+    parser = build_parser()
+    # Verify the subcommand exists in the parser.
+    subparsers_actions = [
+        action
+        for action in parser._actions
+        if isinstance(action, argparse._SubParsersAction)
+    ]
+    assert subparsers_actions, "No subparsers found"
+    choices = subparsers_actions[0].choices
+    assert "generate-request-batch" in choices, (
+        "'generate-request-batch' subcommand not registered"
+    )
+
+
+def test_cli_generate_request_batch_sfx(tmp_path, capsys):
+    """generate-request-batch should execute the SFX fixture and return 0."""
+    batch_file = str(_FIXTURE_DIR / "generation_requests.sfx.v1.json")
+    rc = main([
+        "generate-request-batch",
+        "--batch-file", batch_file,
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc == 0
+    drafts_sfx = tmp_path / "drafts" / "sfx"
+    assert drafts_sfx.exists(), "drafts/sfx directory was not created"
+    wav_files = list(drafts_sfx.glob("*.wav"))
+    assert len(wav_files) > 0, "No WAV files produced in drafts/sfx"
+
+
+def test_cli_generate_request_batch_missing_file(tmp_path, capsys):
+    """generate-request-batch with a missing batch file should return non-zero."""
+    rc = main([
+        "generate-request-batch",
+        "--batch-file", str(tmp_path / "nonexistent_batch.json"),
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc != 0
+
+
+def test_cli_generate_request_batch_quiet(tmp_path, capsys):
+    """--quiet should suppress per-asset progress output."""
+    batch_file = str(_FIXTURE_DIR / "generation_requests.sfx.v1.json")
+    rc = main([
+        "generate-request-batch",
+        "--batch-file", batch_file,
+        "--output-dir", str(tmp_path),
+        "--quiet",
+    ])
+    assert rc == 0
+    captured = capsys.readouterr()
+    # Summary is still printed (not suppressed by --quiet).
+    assert "SFX" in captured.out or "sfx" in captured.out.lower()
+
+
+def test_cli_generate_request_batch_writes_manifest(tmp_path):
+    """generate-request-batch should write batch_manifest.json."""
+    import json
+
+    batch_file = str(_FIXTURE_DIR / "generation_requests.sfx.v1.json")
+    rc = main([
+        "generate-request-batch",
+        "--batch-file", batch_file,
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc == 0
+    manifest_path = tmp_path / "drafts" / "batch_manifest.json"
+    assert manifest_path.exists(), "batch_manifest.json was not written"
+    data = json.loads(manifest_path.read_text())
+    assert "sfx" in data
+    assert len(data["sfx"]) > 0
