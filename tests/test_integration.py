@@ -868,7 +868,7 @@ class TestRequestBatchExecution:
         )
         wav_requests = [r for r in batch.requests if r.output.format == "wav"]
         assert wav_requests, "No WAV-format music requests found in fixture"
-        bad_backend_request = replace(wav_requests[0], backend="nonexistent_backend_for_test")
+        bad_backend_request = replace(wav_requests[0], backend="invalid_backend")
         single_request_batch = replace(batch, requests=[bad_backend_request])
 
         pipeline = AssetPipeline()
@@ -880,7 +880,7 @@ class TestRequestBatchExecution:
 
         assert len(result.records) == 1
         assert result.records[0].status == "error"
-        assert "Unknown backend 'nonexistent_backend_for_test'" in (result.records[0].error or "")
+        assert "Unknown backend 'invalid_backend'" in (result.records[0].error or "")
 
     def test_execute_sfx_request_honors_channels_and_actual_export_path(self, tmp_path):
         """SFX requests should honor channels and record the path actually written by exporter."""

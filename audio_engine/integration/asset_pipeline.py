@@ -498,7 +498,7 @@ class AssetPipeline:
         t_start = time.monotonic()
 
         for request in batch.requests:
-            exported_path = str(output_dir / request.output.target_path)
+            exported_path = request.output.target_path
 
             try:
                 output_path = self._resolve_request_output_path(
@@ -636,7 +636,13 @@ class AssetPipeline:
         candidate = output_dir / requested
         root = output_dir.resolve()
         resolved_candidate = candidate.resolve(strict=False)
-        if os.path.commonpath([str(root), str(resolved_candidate)]) != str(root):
+        try:
+            is_within_root = os.path.commonpath([str(root), str(resolved_candidate)]) == str(root)
+        except ValueError as exc:
+            raise ValueError(
+                f"unsafe targetPath (cross-drive paths are not allowed): {target_path}"
+            ) from exc
+        if not is_within_root:
             raise ValueError(f"unsafe targetPath escapes output directory: {target_path}")
         return candidate
 
