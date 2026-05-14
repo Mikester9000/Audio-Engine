@@ -26,7 +26,7 @@
 
 ### `docs_only`
 
-- **Minimum verification:** Manual doc consistency review; parse any new/edited JSON with `python -m json.tool <file>`.
+- **Minimum verification:** Manual doc consistency review; parse any new/edited JSON with a concrete command such as `python -m json.tool docs/AI_FACTORY/FACTORY_STATUS.json`.
 - **Stronger verification when feasible:** Re-run repo baseline commands if repo entrypoint instructions or verification policy changed materially.
 - **Evidence to record in handoff:** Which docs changed, which JSON files were parsed, and whether baseline repo commands were already known-good in the session.
 
