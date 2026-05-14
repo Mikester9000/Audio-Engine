@@ -372,3 +372,58 @@ def test_cli_qa_batch_quiet_suppresses_per_file_output(tmp_path, capsys):
     assert "passed" in captured.out or "QA batch" in captured.out
     # Per-file checkmarks should NOT appear (✓ or ✗ symbols, or [✓]).
     assert "✓" not in captured.out or "QA batch" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# export-drafts CLI tests
+# ---------------------------------------------------------------------------
+
+def test_cli_export_drafts_subcommand_registered(capsys):
+    """export-drafts should be registered in the CLI parser."""
+    import argparse
+
+    from audio_engine.cli import build_parser
+
+    parser = build_parser()
+    subparsers_actions = [
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    ]
+    assert subparsers_actions
+    assert "export-drafts" in subparsers_actions[0].choices
+
+
+def test_cli_export_drafts_missing_directory(tmp_path, capsys):
+    """export-drafts with an empty factory root (no drafts) should return non-zero."""
+    rc = main([
+        "export-drafts",
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc != 0
+
+
+def test_cli_export_drafts_smoke(tmp_path, capsys):
+    """export-drafts should succeed after generate-request-batch produces drafts."""
+    batch_file = str(_FIXTURE_DIR / "generation_requests.sfx.v1.json")
+
+    # Step 1: generate drafts.
+    rc_gen = main([
+        "generate-request-batch",
+        "--batch-file", batch_file,
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc_gen == 0
+
+    # Step 2: export.
+    rc_exp = main([
+        "export-drafts",
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc_exp == 0
+
+    export_root = tmp_path / "exports" / "gamerewritten"
+    assert export_root.exists(), "Export directory was not created"
+    assert (export_root / "export_manifest.json").exists(), "Export manifest missing"
+
+    # At least some WAV files should have been exported.
+    exported_wavs = list((export_root / "Content" / "Audio").rglob("*.wav"))
+    assert len(exported_wavs) > 0, "No WAV files exported"

@@ -896,3 +896,126 @@ class TestRequestBatchPipeline:
         assert not prov_path.exists(), (
             "Provenance file should not be written for skipped assets"
         )
+
+
+class TestDraftExportPipeline:
+    """Tests for the DraftExportPipeline."""
+
+    def _make_factory_root_with_sfx(self, tmp_path: Path) -> Path:
+        """Generate a batch of SFX into tmp_path/drafts/ and return tmp_path."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        pipeline.execute(batch, tmp_path)
+        return tmp_path
+
+    def test_export_creates_files(self, tmp_path):
+        """DraftExportPipeline.export() must copy audio files to the export surface."""
+        from audio_engine.integration import DraftExportPipeline
+
+        factory_root = self._make_factory_root_with_sfx(tmp_path)
+        pipeline = DraftExportPipeline()
+        manifest = pipeline.export(factory_root)
+
+        assert manifest["summary"]["total"] > 0
+        for entry in manifest["entries"]:
+            dest = Path(entry["destination"])
+            assert dest.exists(), f"Exported file missing: {dest}"
+
+    def test_export_uses_provenance_targetImportPath(self, tmp_path):
+        """Exported filenames must match targetImportPath from provenance sidecars."""
+        from audio_engine.integration import DraftExportPipeline
+
+        factory_root = self._make_factory_root_with_sfx(tmp_path)
+        pipeline = DraftExportPipeline()
+        manifest = pipeline.export(factory_root)
+
+        for entry in manifest["entries"]:
+            source_path = Path(entry["source"])
+            provenance_path = source_path.with_name(source_path.stem + ".provenance.json")
+            if provenance_path.exists():
+                provenance = json.loads(provenance_path.read_text())
+                expected_name = Path(provenance["targetImportPath"]).name
+                actual_name = Path(entry["destination"]).name
+                assert actual_name == expected_name, (
+                    f"Expected exported name {expected_name!r}, got {actual_name!r}"
+                )
+
+    def test_export_writes_manifest(self, tmp_path):
+        """DraftExportPipeline.export() must write export_manifest.json."""
+        from audio_engine.integration import DraftExportPipeline
+
+        factory_root = self._make_factory_root_with_sfx(tmp_path)
+        pipeline = DraftExportPipeline()
+        pipeline.export(factory_root)
+
+        manifest_path = tmp_path / "exports" / "gamerewritten" / "export_manifest.json"
+        assert manifest_path.exists(), "export_manifest.json was not written"
+        data = json.loads(manifest_path.read_text())
+        assert "exportManifestVersion" in data
+        assert "entries" in data
+        assert "summary" in data
+        assert len(data["entries"]) > 0
+
+    def test_export_manifest_has_required_fields(self, tmp_path):
+        """Each entry in export_manifest.json must have 'source' and 'destination' keys."""
+        from audio_engine.integration import DraftExportPipeline
+
+        factory_root = self._make_factory_root_with_sfx(tmp_path)
+        pipeline = DraftExportPipeline()
+        pipeline.export(factory_root)
+
+        manifest_path = tmp_path / "exports" / "gamerewritten" / "export_manifest.json"
+        data = json.loads(manifest_path.read_text())
+        for entry in data["entries"]:
+            assert "source" in entry, "Missing 'source' in entry"
+            assert "destination" in entry, "Missing 'destination' in entry"
+
+    def test_export_does_not_modify_drafts(self, tmp_path):
+        """DraftExportPipeline.export() must not delete or modify files in drafts/."""
+        from audio_engine.integration import DraftExportPipeline
+
+        factory_root = self._make_factory_root_with_sfx(tmp_path)
+
+        # Record all files in drafts/ before export.
+        drafts_dir = tmp_path / "drafts"
+        before = set(str(p) for p in drafts_dir.rglob("*") if p.is_file())
+
+        pipeline = DraftExportPipeline()
+        pipeline.export(factory_root)
+
+        after = set(str(p) for p in drafts_dir.rglob("*") if p.is_file())
+        assert before == after, (
+            "DraftExportPipeline modified the drafts/ directory.\n"
+            f"  Removed: {before - after}\n"
+            f"  Added: {after - before}"
+        )
+
+    def test_export_raises_on_empty_drafts(self, tmp_path):
+        """DraftExportPipeline.export() must raise ValueError if no audio files exist."""
+        from audio_engine.integration import DraftExportPipeline
+
+        # Don't generate anything; drafts/ is empty.
+        pipeline = DraftExportPipeline()
+        with pytest.raises(ValueError, match="No audio files found"):
+            pipeline.export(tmp_path)
+
+    def test_export_falls_back_to_audio_name_without_provenance(self, tmp_path):
+        """If no provenance sidecar exists, the audio filename is used as-is."""
+        from audio_engine.integration import DraftExportPipeline
+
+        # Create a WAV file without a provenance sidecar.
+        drafts_sfx = tmp_path / "drafts" / "sfx"
+        drafts_sfx.mkdir(parents=True)
+        wav_path = drafts_sfx / "test_no_provenance.wav"
+        wav_path.write_bytes(b"RIFF")  # Minimal placeholder.
+
+        pipeline = DraftExportPipeline()
+        manifest = pipeline.export(tmp_path)
+
+        assert len(manifest["entries"]) == 1
+        exported_name = Path(manifest["entries"][0]["destination"]).name
+        assert exported_name == "test_no_provenance.wav"

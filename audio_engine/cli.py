@@ -24,6 +24,9 @@ Execute a generation-request batch file (factory workflow):
 Run batch QA on all WAV files in a directory:
     audio-engine qa-batch --input-dir /tmp/output/drafts/sfx --output-report qa_report.json
 
+Export approved draft assets to the GameRewritten layout:
+    audio-engine export-drafts --output-dir /tmp/factory_output
+
 Generate ALL assets for the Game Engine for Teaching:
     audio-engine generate-game-assets --output-dir ./assets/audio
 
@@ -315,6 +318,25 @@ def _cmd_qa_batch(args: argparse.Namespace) -> None:
         raise ValueError(f"{n_failed} file(s) failed QA checks")
 
 
+def _cmd_export_drafts(args: argparse.Namespace) -> None:
+    """Copy draft audio files to the GameRewritten export surface."""
+    from audio_engine.integration.asset_pipeline import DraftExportPipeline
+
+    factory_root = Path(args.output_dir)
+
+    quiet = args.quiet
+
+    def _progress(msg: str) -> None:
+        if not quiet:
+            print(msg)
+
+    pipeline = DraftExportPipeline(progress_callback=_progress)
+    manifest = pipeline.export(factory_root)
+
+    n_total = manifest["summary"]["total"]
+    print(f"\nExport complete — {n_total} file(s) → {factory_root / 'exports' / 'gamerewritten'}")
+
+
 def _cmd_list_styles(_args: argparse.Namespace) -> None:
     from audio_engine import AudioEngine
 
@@ -448,6 +470,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Recurse into subdirectories when searching for WAV files.",
     )
     qab.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-file progress messages.",
+    )
+
+    # --- export-drafts ---
+    exportdrafts = sub.add_parser(
+        "export-drafts",
+        help=(
+            "Copy draft audio files from <output-dir>/drafts/ to "
+            "<output-dir>/exports/gamerewritten/Content/Audio/ "
+            "using targetImportPath from provenance sidecars."
+        ),
+    )
+    exportdrafts.add_argument(
+        "--output-dir", "-o", required=True,
+        help="Factory output root directory containing the drafts/ sub-directory.",
+    )
+    exportdrafts.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress per-file progress messages.",
@@ -642,6 +683,7 @@ def main(argv: list[str] | None = None) -> int:
         "generate-voice": _cmd_generate_voice,
         "qa": _cmd_qa,
         "qa-batch": _cmd_qa_batch,
+        "export-drafts": _cmd_export_drafts,
         "sfx": _cmd_sfx,
         "list-styles": _cmd_list_styles,
         "list-instruments": _cmd_list_instruments,
