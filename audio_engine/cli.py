@@ -33,6 +33,10 @@ Generate ALL assets for the Game Engine for Teaching:
 Verify that all game assets are present:
     audio-engine verify-game-assets --assets-dir ./assets/audio
 
+Execute a factory generation-request batch:
+    audio-engine generate-request-batch --request-file generation_requests.sfx.v1.json \\
+        --output-dir /tmp/output --write-result
+
 List available styles and instruments:
     audio-engine list-styles
     audio-engine list-instruments
@@ -527,8 +531,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Execute a generation-request batch file to produce draft audio assets.",
     )
     grb.add_argument(
-        "--batch-file", "-b", required=True,
-        help="Path to a generation-request batch JSON file.",
+        "--batch-file", "-b",
+        help="Path to a generation-request batch JSON file (RequestBatchPipeline path).",
+    )
+    grb.add_argument(
+        "--request-file", "-r",
+        help="Path to a generation-request batch JSON fixture (AssetPipeline path).",
     )
     grb.add_argument(
         "--output-dir", "-o", default=".",
@@ -542,8 +550,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--quiet", action="store_true",
         help="Suppress per-asset progress messages.",
     )
-
-    # --- generate-game-assets ---
+    grb.add_argument(
+        "--music-duration", type=float, default=30.0,
+        help="Default duration in seconds for music requests (default: 30).",
+    )
+    grb.add_argument(
+        "--sfx-duration", type=float, default=2.0,
+        help="Default duration in seconds for SFX requests (default: 2).",
+    )
+    grb.add_argument(
+        "--write-result", action="store_true",
+        help="Write request_batch_result.json to the output directory.",
+    )
     gga = sub.add_parser(
         "generate-game-assets",
         help="Pre-generate ALL audio assets for the Game Engine for Teaching.",
@@ -585,8 +603,14 @@ def build_parser() -> argparse.ArgumentParser:
 def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
     """Execute a generation-request batch file deterministically."""
     from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+    from audio_engine.integration.asset_pipeline import AssetPipeline
 
-    batch_path = Path(args.batch_file)
+    # Support both --batch-file (RequestBatchPipeline path) and --request-file (AssetPipeline path)
+    batch_file = getattr(args, 'batch_file', None) or getattr(args, 'request_file', None)
+    if not batch_file:
+        raise ValueError("Either --batch-file or --request-file must be provided")
+
+    batch_path = Path(batch_file)
     if not batch_path.exists():
         raise FileNotFoundError(f"batch file not found: {batch_path}")
 
@@ -596,15 +620,39 @@ def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
         if not args.quiet:
             print(msg)
 
-    pipeline = RequestBatchPipeline(
-        progress_callback=_progress,
-        skip_existing=not args.force,
-    )
-
-    manifest = pipeline.execute(batch, args.output_dir)
-
-    print()
-    print(manifest.summary())
+    # If --request-file was used, fall back to AssetPipeline path for backward compat
+    if getattr(args, 'request_file', None):
+        pipeline = AssetPipeline(progress_callback=_progress)
+        print(
+            f"Executing request batch: {batch_path.name}"
+            f" ({len(batch.requests)} requests) → {args.output_dir}"
+        )
+        result = pipeline.execute_request_batch(
+            batch,
+            args.output_dir,
+            force=args.force,
+            default_music_duration=getattr(args, 'music_duration', 30.0),
+            default_sfx_duration=getattr(args, 'sfx_duration', 2.0),
+        )
+        print()
+        print(result.summary())
+        if getattr(args, 'write_result', False):
+            result_path = Path(args.output_dir) / "request_batch_result.json"
+            result_path.parent.mkdir(parents=True, exist_ok=True)
+            result_path.write_text(result.to_json(), encoding="utf-8")
+            print(f"Result written → {result_path}")
+        if any(r.status == "error" for r in result.records):
+            raise SystemExit(1)
+    else:
+        pipeline = RequestBatchPipeline(
+            progress_callback=_progress,
+            skip_existing=not args.force,
+        )
+        manifest = pipeline.execute(batch, args.output_dir)
+        print()
+        print(manifest.summary())
+        if manifest.errors:
+            raise SystemExit(1)
 
 
 def _cmd_generate_game_assets(args: argparse.Namespace) -> None:

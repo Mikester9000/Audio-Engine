@@ -2,7 +2,18 @@
 
 > Append a short entry for every substantial PR. Keep entries brief and factual.
 
-## 2026-05-14 — Add AI-first documentation system for GitHub-native audio asset factory
+## 2026-05-14 — SESSION-002: Add request-batch generation command
+
+- Added `RequestBatchRecord` and `RequestBatchResult` dataclasses to `audio_engine/integration/asset_pipeline.py`.
+- Added `AssetPipeline.execute_request_batch()` with private helpers `_execute_music_request()`, `_execute_sfx_request()`, and `_execute_voice_request()` that pass per-request seeds explicitly.
+- Added `generate-request-batch` CLI command (`audio_engine/cli.py`) with `--request-file`, `--output-dir`, `--force`, `--quiet`, `--music-duration`, `--sfx-duration`, `--write-result` flags.
+- Exported `RequestBatchRecord` and `RequestBatchResult` from `audio_engine/integration/__init__.py`.
+- Added `TestRequestBatchExecution` class (7 tests) to `tests/test_integration.py` using committed vertical-slice fixtures.
+- Added 4 CLI tests for `generate-request-batch` to `tests/test_engine_cli.py`.
+- Smoke run: SFX fixture 5/5 OK (seeds 305001–305045 explicit in result JSON); WAV music stinger OK; OGG music requests report graceful errors (optional `soundfile` dep not installed in this environment).
+- Test suite: 332 passed (up from 321).
+
+
 
 - Added `docs/AI_FACTORY/` as the persistent mission/state/roadmap/handoff memory tree.
 - Added subsystem, style, schema, QA, troubleshooting, Windows, and integration docs.

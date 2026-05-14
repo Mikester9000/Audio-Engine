@@ -1,7 +1,7 @@
 """
 asset_pipeline.py – pre-generate the complete audio asset library for the
 Game Engine for Teaching, plus a request-batch execution pipeline for
-factory-driven generation workflows.
+factory-driven generation workflows and execute factory generation-request batches.
 
 Usage (from Python)
 -------------------
@@ -15,11 +15,20 @@ Usage (from Python)
 >>> pipeline = RequestBatchPipeline()
 >>> manifest = pipeline.execute(batch, "/tmp/factory_output")
 
+Execute a generation-request batch from a factory JSON fixture:
+
+>>> from audio_engine.integration import load_generation_request_batch
+>>> batch = load_generation_request_batch("generation_requests.music.v1.json")
+>>> result = pipeline.execute_request_batch(batch, "/tmp/output")
+>>> print(result.summary())
+
 Usage (from the CLI)
 --------------------
     audio-engine generate-game-assets --output-dir ./game/assets/audio
-    audio-engine generate-request-batch --batch-file generation_requests.music.v1.json \\
+    audio-engine generate-request-batch --batch-file generation_requests.music.v1.json \
         --output-dir /tmp/factory_output
+    audio-engine generate-request-batch --request-file generation_requests.sfx.v1.json \
+        --output-dir /tmp/output
 
 The AssetPipeline creates three sub-directories:
 
@@ -43,9 +52,10 @@ AudioSystem can verify all assets are present at startup.
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, Callable
 
 import numpy as np
@@ -62,7 +72,7 @@ from audio_engine.integration.game_state_map import (
 if TYPE_CHECKING:
     from audio_engine.integration.factory_inputs import GenerationRequest, GenerationRequestBatch
 
-__all__ = ["AssetPipeline", "GenerationManifest", "RequestBatchPipeline", "DraftExportPipeline"]
+__all__ = ["AssetPipeline", "GenerationManifest", "RequestBatchPipeline", "DraftExportPipeline", "RequestBatchRecord", "RequestBatchResult"]
 
 
 # ---------------------------------------------------------------------------
@@ -132,6 +142,95 @@ class GenerationManifest:
         """Deserialise from a JSON string."""
         d = json.loads(text)
         return cls(**d)
+
+
+# ---------------------------------------------------------------------------
+# RequestBatchResult
+# ---------------------------------------------------------------------------
+
+@dataclass
+class RequestBatchRecord:
+    """Record for a single generation request executed by :meth:`AssetPipeline.execute_request_batch`.
+
+    Fields
+    ------
+    request_id:
+        Unique identifier from the request fixture.
+    asset_id:
+        Asset identifier from the request.
+    type:
+        Request type: ``"music"``, ``"sfx"``, or ``"voice"``.
+    seed:
+        Seed used for this request (taken verbatim from the request).
+    output_path:
+        Absolute path to the output file (or intended path if skipped/failed).
+    status:
+        ``"ok"`` | ``"skipped"`` | ``"error"``.
+    error:
+        Error message when *status* is ``"error"``; ``None`` otherwise.
+    """
+
+    request_id: str
+    asset_id: str
+    type: str
+    seed: int
+    output_path: str
+    status: str
+    error: str | None = None
+
+
+@dataclass
+class RequestBatchResult:
+    """Aggregated result of :meth:`AssetPipeline.execute_request_batch`.
+
+    This is the machine-readable counterpart to :class:`GenerationManifest`
+    for factory-input-driven (request-batch) execution paths.
+    """
+
+    output_dir: str
+    """Base output directory used for this batch run."""
+
+    project: str
+    """Project name from the request batch."""
+
+    scope: str
+    """Scope label from the request batch."""
+
+    records: list[RequestBatchRecord] = field(default_factory=list)
+    """Per-request execution records."""
+
+    total_duration_seconds: float = 0.0
+    """Wall-clock time taken to execute all requests."""
+
+    def summary(self) -> str:
+        """Return a human-readable summary string."""
+        ok = sum(1 for r in self.records if r.status == "ok")
+        skipped = sum(1 for r in self.records if r.status == "skipped")
+        errors = [r for r in self.records if r.status == "error"]
+        lines = [
+            f"Request-batch execution complete — {self.output_dir}",
+            f"  Project : {self.project} / {self.scope}",
+            f"  OK      : {ok}",
+            f"  Skipped : {skipped}",
+            f"  Errors  : {len(errors)}",
+            f"  Total   : {len(self.records)} requests in {self.total_duration_seconds:.1f}s",
+        ]
+        for r in errors:
+            lines.append(f"    • [{r.request_id}] {r.error}")
+        return "\n".join(lines)
+
+    def to_json(self) -> str:
+        """Serialise to a JSON string."""
+        return json.dumps(
+            {
+                "output_dir": self.output_dir,
+                "project": self.project,
+                "scope": self.scope,
+                "records": [asdict(r) for r in self.records],
+                "total_duration_seconds": self.total_duration_seconds,
+            },
+            indent=2,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -363,6 +462,216 @@ class AssetPipeline:
             (present if (output_dir / rel).exists() else missing).append(rel)
 
         return {"present": present, "missing": missing}
+
+    # ------------------------------------------------------------------
+    # Request-batch execution (factory-input driven)
+    # ------------------------------------------------------------------
+
+    def execute_request_batch(
+        self,
+        batch: "GenerationRequestBatch",
+        output_dir: str | Path,
+        *,
+        force: bool = False,
+        default_music_duration: float = 30.0,
+        default_sfx_duration: float = 2.0,
+    ) -> RequestBatchResult:
+        """Execute all requests in a :class:`~audio_engine.integration.factory_inputs.GenerationRequestBatch`.
+
+        Each request carries its own ``seed`` which is passed explicitly to the
+        generator, ensuring deterministic reproduction from the same fixture.
+
+        Parameters
+        ----------
+        batch:
+            Typed request batch loaded by
+            :func:`~audio_engine.integration.factory_inputs.load_generation_request_batch`.
+        output_dir:
+            Base directory under which output files are written.  Each
+            request's ``output.targetPath`` is appended to this root, so the
+            directory layout mirrors the project's content tree.
+        force:
+            If ``True``, regenerate files that already exist.  If ``False``
+            (default), skip existing files.
+        default_music_duration:
+            Duration in seconds used for music requests that do not embed a
+            duration in their prompt (default: 30 s).
+        default_sfx_duration:
+            Duration in seconds used for SFX requests that do not embed a
+            duration in their prompt (default: 2 s).
+
+        Returns
+        -------
+        RequestBatchResult
+            Per-request execution records with status, seed, and output path.
+        """
+        output_dir = Path(output_dir)
+        result = RequestBatchResult(
+            output_dir=str(output_dir),
+            project=batch.project,
+            scope=batch.scope,
+        )
+        t_start = time.monotonic()
+
+        for request in batch.requests:
+            exported_path = request.output.target_path
+
+            try:
+                output_path = self._resolve_request_output_path(
+                    output_dir=output_dir,
+                    target_path=request.output.target_path,
+                )
+                exported_path = output_path.with_suffix(f".{request.output.format}")
+
+                if not force and exported_path.exists():
+                    self.progress_callback(f"  [skip] {request.request_id} → {exported_path}")
+                    result.records.append(
+                        RequestBatchRecord(
+                            request_id=request.request_id,
+                            asset_id=request.asset_id,
+                            type=request.type,
+                            seed=request.seed,
+                            output_path=str(exported_path),
+                            status="skipped",
+                        )
+                    )
+                    continue
+
+                if request.type == "music":
+                    exported_path = self._execute_music_request(request, output_path, default_music_duration)
+                elif request.type == "sfx":
+                    exported_path = self._execute_sfx_request(request, output_path, default_sfx_duration)
+                elif request.type == "voice":
+                    exported_path = self._execute_voice_request(request, output_path)
+                else:
+                    raise ValueError(f"unsupported request type: {request.type!r}")
+
+                result.records.append(
+                    RequestBatchRecord(
+                        request_id=request.request_id,
+                        asset_id=request.asset_id,
+                        type=request.type,
+                        seed=request.seed,
+                        output_path=str(exported_path),
+                        status="ok",
+                    )
+                )
+                self.progress_callback(f"  [ok]   {request.request_id} → {exported_path}")
+
+            except Exception as exc:  # noqa: BLE001
+                msg = str(exc)
+                result.records.append(
+                    RequestBatchRecord(
+                        request_id=request.request_id,
+                        asset_id=request.asset_id,
+                        type=request.type,
+                        seed=request.seed,
+                        output_path=str(exported_path),
+                        status="error",
+                        error=msg,
+                    )
+                )
+                self.progress_callback(f"  [err]  {request.request_id}: {msg}")
+
+        result.total_duration_seconds = time.monotonic() - t_start
+        return result
+
+    def _execute_music_request(
+        self,
+        request: "GenerationRequest",
+        output_path: Path,
+        default_duration: float,
+    ) -> Path:
+        """Generate and export one music request using per-request seed."""
+        from audio_engine.ai.music_gen import MusicGen
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        gen = MusicGen(
+            sample_rate=request.output.sample_rate,
+            backend=request.backend,
+            seed=request.seed,
+        )
+        return gen.generate_to_file(
+            prompt=request.prompt,
+            output_path=output_path,
+            duration=default_duration,
+            loopable=request.qa.loop_required,
+            fmt=request.output.format,
+        )
+
+    def _execute_sfx_request(
+        self,
+        request: "GenerationRequest",
+        output_path: Path,
+        default_duration: float,
+    ) -> Path:
+        """Generate and export one SFX request using per-request seed."""
+        from audio_engine.ai.sfx_gen import SFXGen
+        from audio_engine.export.audio_exporter import AudioExporter
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        gen = SFXGen(
+            sample_rate=request.output.sample_rate,
+            backend=request.backend,
+            seed=request.seed,
+        )
+        audio = gen.generate(
+            prompt=request.prompt,
+            duration=default_duration,
+        )
+        audio = self._normalize_request_channels(audio, request.output.channels)
+        exporter = AudioExporter(sample_rate=request.output.sample_rate, bit_depth=16)
+        return exporter.export(audio, output_path, fmt=request.output.format)
+
+    def _execute_voice_request(
+        self,
+        request: "GenerationRequest",
+        output_path: Path,
+    ) -> Path:
+        """Generate and export one voice request using per-request seed."""
+        from audio_engine.ai.voice_gen import VoiceGen
+        from audio_engine.export.audio_exporter import AudioExporter
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        voice_sr = request.output.sample_rate
+        gen = VoiceGen(sample_rate=voice_sr, backend=request.backend, seed=request.seed)
+        audio = gen.generate(request.prompt)
+        audio = self._normalize_request_channels(audio, request.output.channels)
+        exporter = AudioExporter(sample_rate=voice_sr, bit_depth=16)
+        return exporter.export(audio, output_path, fmt=request.output.format)
+
+    @staticmethod
+    def _resolve_request_output_path(*, output_dir: Path, target_path: str) -> Path:
+        """Resolve and validate a request target path under ``output_dir``."""
+        requested = Path(target_path)
+        if requested.is_absolute() or PureWindowsPath(target_path).is_absolute():
+            raise ValueError(f"unsafe targetPath (absolute paths are not allowed): {target_path}")
+        if ".." in requested.parts:
+            raise ValueError(f"unsafe targetPath (path traversal is not allowed): {target_path}")
+
+        candidate = output_dir / requested
+        root = output_dir.resolve()
+        resolved_candidate = candidate.resolve(strict=False)
+        try:
+            is_within_root = os.path.commonpath([str(root), str(resolved_candidate)]) == str(root)
+        except ValueError as exc:
+            raise ValueError(
+                f"unsafe targetPath (cross-drive paths are not allowed): {target_path}"
+            ) from exc
+        if not is_within_root:
+            raise ValueError(f"unsafe targetPath escapes output directory: {target_path}")
+        return candidate
+
+    @staticmethod
+    def _normalize_request_channels(audio: np.ndarray, channels: int) -> np.ndarray:
+        """Normalize mono generator output to the requested channel count."""
+        if channels == 1:
+            return audio
+        if channels == 2:
+            if audio.ndim == 1:
+                return np.column_stack((audio, audio))
+            return audio
+        raise ValueError(f"unsupported channel count {channels}; supported values are 1 or 2")
 
     # ------------------------------------------------------------------
     # Private helpers

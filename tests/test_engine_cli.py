@@ -131,6 +131,7 @@ _FIXTURE_DIR = (
 )
 
 
+
 def test_cli_generate_request_batch_help(capsys):
     """generate-request-batch --help should exit cleanly."""
     import argparse
@@ -427,3 +428,49 @@ def test_cli_export_drafts_smoke(tmp_path, capsys):
     # At least some WAV files should have been exported.
     exported_wavs = list((export_root / "Content" / "Audio").rglob("*.wav"))
     assert len(exported_wavs) > 0, "No WAV files exported"
+
+
+def test_cli_generate_request_batch_sfx_via_request_file(tmp_path, capsys):
+    """generate-request-batch should return 0 and create output files for the SFX fixture."""
+    rc = main([
+        "generate-request-batch",
+        "--request-file", str(_FIXTURE_DIR / "generation_requests.sfx.v1.json"),
+        "--output-dir", str(tmp_path),
+        "--sfx-duration", "0.1",
+        "--quiet",
+    ])
+    assert rc == 0
+    # At least one output file should exist under tmp_path
+    output_files = list(tmp_path.rglob("*.wav"))
+    assert output_files, "No output WAV files created"
+
+
+def test_cli_generate_request_batch_missing_file_via_request_file(tmp_path, capsys):
+    """generate-request-batch should return non-zero when the request file is missing."""
+    rc = main([
+        "generate-request-batch",
+        "--request-file", str(tmp_path / "nonexistent.json"),
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc != 0
+    captured = capsys.readouterr()
+    assert captured.err.count("Error: batch file not found:") == 1
+
+
+def test_cli_generate_request_batch_writes_result_json(tmp_path, capsys):
+    """--write-result should create request_batch_result.json in the output directory."""
+    rc = main([
+        "generate-request-batch",
+        "--request-file", str(_FIXTURE_DIR / "generation_requests.sfx.v1.json"),
+        "--output-dir", str(tmp_path),
+        "--sfx-duration", "0.1",
+        "--write-result",
+        "--quiet",
+    ])
+    assert rc == 0
+    result_json = tmp_path / "request_batch_result.json"
+    assert result_json.exists(), "request_batch_result.json not written"
+    import json
+    data = json.loads(result_json.read_text())
+    assert data["project"] == "GameRewritten"
+    assert "records" in data
