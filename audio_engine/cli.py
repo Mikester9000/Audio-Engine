@@ -24,7 +24,7 @@ Execute a generation-request batch file (factory workflow):
 Run batch QA on all WAV files in a directory:
     audio-engine qa-batch --input-dir /tmp/output/drafts/sfx --output-report qa_report.json
 
-Export approved draft assets to the GameRewritten layout:
+Export draft assets to the GameRewritten layout:
     audio-engine export-drafts --output-dir /tmp/factory_output
 
 Generate ALL assets for the Game Engine for Teaching:
@@ -233,8 +233,7 @@ def _cmd_qa_batch(args: argparse.Namespace) -> None:
 
     wav_files = sorted(input_dir.rglob("*.wav") if args.recursive else input_dir.glob("*.wav"))
     if not wav_files:
-        print(f"No WAV files found in {input_dir}", file=sys.stderr)
-        return
+        raise FileNotFoundError(f"No WAV files found in {input_dir}")
 
     results = []
     n_passed = 0

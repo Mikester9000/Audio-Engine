@@ -736,11 +736,13 @@ class TestRequestBatchPipeline:
             EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
         )
 
-        # Pre-create one output file as a sentinel.
+        # Pre-create one output file as a sentinel using the request_id stem convention.
         first_request = batch.requests[0]
         type_dir = tmp_path / "drafts" / first_request.type
         type_dir.mkdir(parents=True)
-        sentinel_name = Path(first_request.output.target_path).name
+        sentinel_name = (
+            first_request.request_id + "." + first_request.output.format.lower()
+        )
         sentinel = type_dir / sentinel_name
         sentinel.write_bytes(b"SENTINEL")
 
@@ -886,11 +888,13 @@ class TestRequestBatchPipeline:
         batch = load_generation_request_batch(
             EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
         )
-        # Pre-create the first output file as a sentinel.
+        # Pre-create the first output file as a sentinel using the request_id stem convention.
         first_request = batch.requests[0]
         type_dir = tmp_path / "drafts" / first_request.type
         type_dir.mkdir(parents=True)
-        sentinel_name = Path(first_request.output.target_path).name
+        sentinel_name = (
+            first_request.request_id + "." + first_request.output.format.lower()
+        )
         sentinel = type_dir / sentinel_name
         sentinel.write_bytes(b"SENTINEL")
 

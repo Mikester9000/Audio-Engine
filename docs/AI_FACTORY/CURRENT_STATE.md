@@ -25,6 +25,7 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Request-batch generation pipeline | Implemented | `audio_engine/integration/asset_pipeline.py` (`RequestBatchPipeline`), `audio_engine/cli.py` (`generate-request-batch`) |
 | Per-request provenance sidecar files | Implemented | `audio_engine/integration/asset_pipeline.py` (`_write_provenance`) | 2026-05-14 | `pytest`, smoke run | Each successfully generated audio file now has a `<stem>.provenance.json` sidecar with requestId, seed, backend, reviewStatus, generatedAt, and output paths. |
 | Batch QA gate command | Implemented | `audio_engine/cli.py` (`qa-batch`) | 2026-05-14 | `pytest`, smoke run | `qa-batch --input-dir <dir>` runs LoudnessMeter, ClippingDetector, optional LoopAnalyzer on all WAVs; writes JSON report; non-zero exit on failure. |
+| GameRewritten export profile | Implemented | `audio_engine/integration/asset_pipeline.py` (`DraftExportPipeline`), `audio_engine/cli.py` (`export-drafts`) | 2026-05-14 | `pytest`, smoke run | `export-drafts` copies `drafts/` audio to `exports/gamerewritten/Content/Audio/` using `targetImportPath` from provenance sidecars; writes `export_manifest.json`. |
 | Manifest validation docs + CI | Implemented | `docs/asset-manifest.md`, `.github/workflows/validate-assets.yml` |
 | Implementation matrix / codebase map / next PR sequence | Implemented (docs layer) | `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`, `docs/AI_FACTORY/CODEBASE_MAP.md`, `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` |
 | Example plan/request/review artifacts | Implemented (docs contracts) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` |
@@ -37,22 +38,24 @@ The repository contains a working Python audio engine with tests, a manifest val
 ```bash
 pip install -e ".[dev]"
 python -m pytest
-# 338 passed (was 334 before SESSION-003)
+# 370 passed (SESSION-002 through SESSION-005)
 python tools/validate-assets.py assets/examples/ --verbose
 # SFX batch smoke run (also writes provenance sidecars)
 audio-engine generate-request-batch \
   --batch-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json \
-  --output-dir /tmp/session003_smoke
+  --output-dir /tmp/session005_smoke
+# Export drafts smoke run
+audio-engine export-drafts --output-dir /tmp/session005_smoke
 ```
 
 Observed result in this session:
 
-- `338 passed` in pytest (up from 334 before SESSION-003)
+- `370 passed` in pytest (up from 345 before SESSION-005)
 - asset example manifests passed validation
-- SFX batch smoke run produced 5 WAV files + 5 `.provenance.json` sidecars in `/tmp/session003_smoke/drafts/sfx/`
+- SFX batch smoke run produced 5 WAV files + 5 `.provenance.json` sidecars in `/tmp/session005_smoke/drafts/sfx/`
 - each provenance file contained `requestId`, `seed`, `backend`, `reviewStatus`, `generatedAt`, `generatedOutputPath`, and `targetImportPath`
 - QA batch smoke run (SESSION-004): 5 SFX files checked; 4 pass, 1 fail (sfx_ui_cancel.wav at -6.37 LUFS)
-- test count: 345 passed (up from 338)
+- export-drafts smoke run (SESSION-005): 5 WAV files copied to `/tmp/session005_smoke/exports/gamerewritten/Content/Audio/`; `export_manifest.json` written
 
 ## Current repository structure
 
@@ -83,19 +86,17 @@ Observed result in this session:
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
 4. There is now a committed `GameRewritten`-oriented vertical-slice example plan and request set, but there is not yet full-game taxonomy coverage in executable code.
-7. The repo now has a session queue/autopilot layer; queued execution continues with SESSION-005.
-8. OGG export requires the optional `soundfile` dependency; the pipeline falls back to WAV when it is not installed.
-9. Per-request provenance sidecars are written with `reviewStatus: "draft"` from the request; there is not yet an approval/promotion workflow.
-10. The `qa-batch` command provides batch QA reports but is not yet wired into CI.
-11. Generated assets currently live in `drafts/` only; there is not yet an export step to place them in the downstream game's `Content/Audio/` layout.
+5. The repo now has a session queue/autopilot layer; the next queued session is SESSION-006.
+6. OGG export requires the optional `soundfile` dependency; the pipeline falls back to WAV when it is not installed.
+7. Per-request provenance sidecars are written with `reviewStatus: "draft"` from the request; there is not yet an approval/promotion workflow.
+8. The `qa-batch` command provides batch QA reports but is not yet wired into CI.
 
 ## Current blockers
 
 | Blocker | Why it matters | Suggested next move |
 |---|---|---|
-| No export step to game layout | Factory cannot produce a deployable deliverable | Implement GameRewritten export profile (SESSION-005) |
-| No approval/promotion workflow | Provenance reviews remain at `"draft"` with no path to `approved/` | Add approval command after export profile exists |
-| No QA gate wired into CI | QA is manual/local only | Wire `qa-batch` into CI workflow after export is established |
+| No approval/promotion workflow | Provenance reviews remain at `"draft"` with no path to `approved/` | Add approval command (SESSION-006) |
+| No QA gate wired into CI | QA is manual/local only | Wire `qa-batch` into CI workflow (SESSION-007) |
 
 ## Existing GitHub Actions state
 
@@ -107,4 +108,4 @@ That workflow validates manifests, but there is currently no workflow that valid
 
 ## Immediate interpretation
 
-This repo is now a capable **procedural audio generation toolkit** with typed loading for committed factory-input artifacts, a working deterministic request-batch generation command, per-request provenance sidecar files, and a batch QA gate command. The next gap is an export step that places approved assets into the downstream game's `Content/Audio/` layout (SESSION-005).
+This repo is now a capable **procedural audio generation toolkit** with typed loading for committed factory-input artifacts, a working deterministic request-batch generation command, per-request provenance sidecar files, a batch QA gate command, and a GameRewritten export step (`export-drafts`). The next gap is an approval/promotion workflow so that draft assets can be marked as reviewed and promoted to `approved/` (SESSION-006).

@@ -371,8 +371,8 @@ def test_cli_qa_batch_quiet_suppresses_per_file_output(tmp_path, capsys):
     captured = capsys.readouterr()
     # Summary line should still appear.
     assert "passed" in captured.out or "QA batch" in captured.out
-    # Per-file checkmarks should NOT appear (✓ or ✗ symbols, or [✓]).
-    assert "✓" not in captured.out or "QA batch" in captured.out
+    # Per-file checkmarks must NOT appear when --quiet suppresses them.
+    assert "✓" not in captured.out and "✗" not in captured.out
 
 
 # ---------------------------------------------------------------------------

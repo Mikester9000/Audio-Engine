@@ -746,17 +746,26 @@ def _convert_channels(audio: np.ndarray, target_channels: int) -> np.ndarray:
     ----------
     audio:
         Input array: 1-D (mono) or shape ``(N, 2)`` (stereo).
-        A shape of ``(N, 1)`` is treated as mono.  Arrays with more than 2
-        channels are passed through unchanged.
+        A shape of ``(N, 1)`` is treated as mono.
     target_channels:
-        Desired number of output channels (1 or 2).  Values other than 1 or 2
-        result in a pass-through without conversion.
+        Desired number of output channels.  Only 1 (mono) and 2 (stereo)
+        are supported.
 
     Returns
     -------
     np.ndarray
         Audio in the requested channel layout.
+
+    Raises
+    ------
+    ValueError
+        If *target_channels* is not 1 or 2.
     """
+    if target_channels not in (1, 2):
+        raise ValueError(
+            f"unsupported channel count {target_channels}; supported values are 1 or 2"
+        )
+
     # Normalise (N, 1) to 1-D mono before conversion.
     if audio.ndim == 2 and audio.shape[1] == 1:
         audio = audio[:, 0]
@@ -768,12 +777,10 @@ def _convert_channels(audio: np.ndarray, target_channels: int) -> np.ndarray:
         if is_stereo:
             return audio.mean(axis=1).astype(audio.dtype)
         return audio
-    elif target_channels == 2:
+    else:  # target_channels == 2
         if is_mono:
             return np.column_stack([audio, audio])
         return audio
-    # Unsupported channel count: return audio unchanged (caller's responsibility).
-    return audio
 
 
 # ---------------------------------------------------------------------------
@@ -785,7 +792,11 @@ class RequestBatchPipeline:
 
     Each request in the batch is generated using the request's own ``seed``,
     ``prompt``, ``format``, ``sampleRate``, and ``channels``.  Outputs are
-    written to ``<output_dir>/drafts/<type>/<basename_of_targetPath>``.
+    written to ``<output_dir>/drafts/<type>/<request_id>.<format>``, using the
+    request ID as the stem so that two requests with different directory prefixes
+    but the same basename never collide.  The original ``targetImportPath`` is
+    preserved in the ``.provenance.json`` sidecar for use by
+    :class:`DraftExportPipeline`.
 
     Parameters
     ----------
@@ -842,8 +853,10 @@ class RequestBatchPipeline:
             type_dir = output_dir / "drafts" / request.type
             type_dir.mkdir(parents=True, exist_ok=True)
 
-            # Derive output filename from targetPath basename.
-            target_name = Path(request.output.target_path).name
+            # Use request_id as the stem to guarantee uniqueness across requests
+            # that share a targetPath basename but differ in directory prefix.
+            target_ext = f".{request.output.format.lower().lstrip('.')}"
+            target_name = request.request_id + target_ext
             output_path = type_dir / target_name
 
             if self.skip_existing and output_path.exists():
@@ -1117,10 +1130,12 @@ class DraftExportPipeline:
         Reads the ``.provenance.json`` sidecar to get ``targetImportPath`` if
         available.  Falls back to the audio file's own name.
 
-        The final destination is always rooted at *audio_root*; only the
-        **basename** of ``targetImportPath`` is used so that factory-internal
-        paths such as ``Content/Audio/sfx_ui_confirm.wav`` resolve cleanly
-        regardless of the running environment.
+        The destination is rooted at *audio_root*.  The ``targetImportPath``
+        value is expected to carry a ``Content/Audio/`` prefix (the canonical
+        GameRewritten convention); that prefix is stripped and the remainder
+        is used as a safe relative path under *audio_root*, preserving any
+        intended subdirectories.  A containment check ensures that no path
+        with ``..`` components can escape *audio_root*.
 
         Parameters
         ----------
@@ -1134,13 +1149,32 @@ class DraftExportPipeline:
         Path
             Absolute destination path for the exported file.
         """
+        from pathlib import PurePosixPath
+
         provenance_path = audio_path.with_name(audio_path.stem + ".provenance.json")
         if provenance_path.exists():
             try:
                 provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
                 raw_target = provenance.get("targetImportPath", "")
                 if raw_target:
-                    return audio_root / Path(raw_target).name
+                    p = PurePosixPath(raw_target)
+                    # Strip the canonical Content/Audio prefix if present so the
+                    # remainder is the path relative to audio_root.
+                    try:
+                        rel = Path(*p.relative_to("Content/Audio").parts)
+                    except ValueError:
+                        rel = Path(p.name)
+
+                    if not rel.is_absolute() and ".." not in rel.parts:
+                        candidate = audio_root / rel
+                        root_r = str(audio_root.resolve(strict=False))
+                        cand_r = str(candidate.resolve(strict=False))
+                        try:
+                            is_safe = os.path.commonpath([root_r, cand_r]) == root_r
+                        except ValueError:
+                            is_safe = False
+                        if is_safe:
+                            return candidate
             except Exception:
                 pass  # Fall through to default
         return audio_root / audio_path.name
