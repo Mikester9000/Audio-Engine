@@ -10,6 +10,8 @@ Current code supports WAV export by default and optional OGG export with extra d
 
 Generated assets should be organized by gameplay function first, not by implementation detail.
 
+For the long-term factory directory contract, use `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md` as the canonical reference.
+
 ### Current batch layout
 
 ```text

@@ -7,8 +7,10 @@
 1. Read this file before choosing work.
 2. Only execute the top-most `ready` session unless the user explicitly overrides the queue.
 3. Treat `NEXT_PR_SEQUENCE.md` as the longer-range roadmap and this file as the single-session execution controller.
-4. If the current session becomes blocked or partially completed, update this file, `HANDOFF.md`, and `SESSION_STATE.json` in the same PR.
-5. If facts are missing, follow `FAILSAFE_RULES.md` instead of improvising.
+4. Treat `CURRENT_SESSION.json` as the detailed machine-readable companion to this file for the single active session.
+5. Before marking work done, satisfy `SESSION_GATE_RULES.md` and the relevant profile in `VERIFICATION_PROFILES.md`.
+6. If the current session becomes blocked or partially completed, update this file, `HANDOFF.md`, `SESSION_STATE.json`, and `CURRENT_SESSION.json` in the same PR.
+7. If facts are missing, follow `BLOCKER_PROTOCOL.md` and `FAILSAFE_RULES.md` instead of improvising.
 
 ## Current next session
 
@@ -23,14 +25,19 @@
   2. `docs/AI_FACTORY/CURRENT_STATE.md`
   3. `docs/AI_FACTORY/HANDOFF.md`
   4. `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md`
-  5. `docs/AI_FACTORY/NO_DECISION_ZONES.md`
-  6. `docs/AI_FACTORY/FAILSAFE_RULES.md`
-  7. `docs/AI_FACTORY/SCHEMAS/AUDIO_PLAN_SCHEMA.md`
-  8. `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`
-  9. `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/README.md`
-  10. `docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md`
-  11. `audio_engine/integration/asset_pipeline.py`
-  12. `tests/test_integration.py`
+  5. `docs/AI_FACTORY/CURRENT_SESSION.json`
+  6. `docs/AI_FACTORY/SESSION_GATE_RULES.md`
+  7. `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`
+  8. `docs/AI_FACTORY/VERIFICATION_PROFILES.md`
+  9. `docs/AI_FACTORY/NO_DECISION_ZONES.md`
+  10. `docs/AI_FACTORY/FAILSAFE_RULES.md`
+  11. `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md`
+  12. `docs/AI_FACTORY/SCHEMAS/AUDIO_PLAN_SCHEMA.md`
+  13. `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`
+  14. `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/README.md`
+  15. `docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md`
+  16. `audio_engine/integration/asset_pipeline.py`
+  17. `tests/test_integration.py`
 - **Exact or likely files to modify:**
   - `audio_engine/integration/*` (add loader/parser support)
   - `audio_engine/cli.py` only if a validation/listing hook is required
@@ -56,6 +63,7 @@
   - `docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md`
   - `docs/AI_FACTORY/SESSION_QUEUE.md`
   - `docs/AI_FACTORY/SESSION_HISTORY.md`
+  - `docs/AI_FACTORY/CURRENT_SESSION.json`
   - `docs/AI_FACTORY/SESSION_STATE.json`
 - **Explicit done criteria:**
   1. The committed example audio plan loads into a typed runtime structure.
@@ -65,10 +73,11 @@
   5. Docs are updated so implemented behavior is no longer described as docs-only in the affected areas.
 - **Enqueue next session after completion:** `SESSION-002 — Add request-batch generation command`
 - **If uncertain or blocked:**
+  - follow `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`
   - do not invent unsupported schema fields
   - support the committed example artifacts first before generalizing
   - choose the smallest additive loader design that preserves current CLI behavior
-  - record blockers in `HANDOFF.md`, `SESSION_QUEUE.md`, and `SESSION_STATE.json`
+  - record blockers in `HANDOFF.md`, `SESSION_QUEUE.md`, `SESSION_STATE.json`, and `CURRENT_SESSION.json`
 
 ## Upcoming queued sessions
 

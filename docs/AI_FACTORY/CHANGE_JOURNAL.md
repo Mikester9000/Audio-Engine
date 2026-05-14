@@ -30,3 +30,10 @@
 - Added `SESSION_TEMPLATE.md`, `DONE_CRITERIA.md`, `NO_DECISION_ZONES.md`, `TASK_OUTPUT_CONTRACTS.md`, `FILE_TOUCH_MATRIX.md`, `FAILSAFE_RULES.md`, and `PR_AUTOPILOT_CHECKLIST.md`.
 - Added continuity tracking artifacts `SESSION_HISTORY.md` and `SESSION_STATE.json`.
 - Updated repo entrypoints and workflow docs so future agents can execute one explicit session with less ambiguity and less improvisation.
+
+## 2026-05-14 — Add final hardening layer for low-prompt AI execution
+
+- Added `CURRENT_SESSION.json` so future agents can read the single active session contract mechanically without scraping markdown.
+- Added `SESSION_GATE_RULES.md`, `BLOCKER_PROTOCOL.md`, `VERIFICATION_PROFILES.md`, and `MINIMUM_TEST_EXPANSION_RULES.md` to reduce false completion, under-testing, and blocker ambiguity.
+- Added `CANONICAL_OUTPUT_LAYOUT.md`, `FULL_GAME_AUDIO_CHECKLIST.md`, and `HUMAN_COMMANDS.md` so future sessions target a stable output shape, full game-audio coverage, and a simple low-prompt interaction model.
+- Updated AI-factory indexes, status JSON, session-control docs, and handoff/state docs to integrate the new hardening layer cleanly into the existing `docs/AI_FACTORY` system.

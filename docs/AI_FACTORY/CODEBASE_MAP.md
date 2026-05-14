@@ -61,9 +61,11 @@
 | Need | Primary files |
 |---|---|
 | Mission/state/handoff | `docs/AI_FACTORY/PROJECT_MISSION.md`, `CURRENT_STATE.md`, `SESSION_QUEUE.md`, `ACTIVE_WORK.md`, `HANDOFF.md` |
-| Session rules and machine-readable next-session snapshot | `docs/AI_FACTORY/DONE_CRITERIA.md`, `NO_DECISION_ZONES.md`, `TASK_OUTPUT_CONTRACTS.md`, `FILE_TOUCH_MATRIX.md`, `FAILSAFE_RULES.md`, `PR_AUTOPILOT_CHECKLIST.md`, `SESSION_STATE.json` |
+| Session rules and machine-readable next-session snapshot | `docs/AI_FACTORY/CURRENT_SESSION.json`, `DONE_CRITERIA.md`, `SESSION_GATE_RULES.md`, `BLOCKER_PROTOCOL.md`, `NO_DECISION_ZONES.md`, `TASK_OUTPUT_CONTRACTS.md`, `FILE_TOUCH_MATRIX.md`, `FAILSAFE_RULES.md`, `VERIFICATION_PROFILES.md`, `MINIMUM_TEST_EXPANSION_RULES.md`, `PR_AUTOPILOT_CHECKLIST.md`, `SESSION_STATE.json` |
 | Implementation truth table | `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md` |
 | Mechanical build order | `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` |
 | Known constraints | `docs/AI_FACTORY/KNOWN_ISSUES.md` |
 | Refactor/stability guardrails | `docs/AI_FACTORY/STABILITY_RULES.md` |
+| Canonical output target and full coverage scope | `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md`, `docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md` |
+| Intended low-prompt human command surface | `docs/AI_FACTORY/HUMAN_COMMANDS.md` |
 | Example plan/request artifacts | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` |

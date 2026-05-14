@@ -5,10 +5,15 @@
 ## Before changing files
 
 - [ ] Read `docs/AI_FACTORY/SESSION_QUEUE.md`
+- [ ] Read `docs/AI_FACTORY/CURRENT_SESSION.json`
+- [ ] Read `docs/AI_FACTORY/SESSION_GATE_RULES.md`
+- [ ] Read `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`
 - [ ] Read `docs/AI_FACTORY/CURRENT_STATE.md`
 - [ ] Read `docs/AI_FACTORY/HANDOFF.md`
 - [ ] Read `docs/AI_FACTORY/NO_DECISION_ZONES.md`
 - [ ] Read `docs/AI_FACTORY/FAILSAFE_RULES.md`
+- [ ] Read `docs/AI_FACTORY/VERIFICATION_PROFILES.md`
+- [ ] Read `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md`
 - [ ] Read task-specific subsystem/style/schema docs
 - [ ] Run the existing verification commands appropriate for the scope before editing code
 
@@ -30,5 +35,5 @@
 - [ ] `CHANGE_JOURNAL.md` appended for substantial PRs
 - [ ] `SESSION_QUEUE.md` advanced if the active session was completed or blocked
 - [ ] `SESSION_HISTORY.md` appended for completed sessions
-- [ ] `SESSION_STATE.json` updated to reflect the new current/next session
+- [ ] `SESSION_STATE.json` and `CURRENT_SESSION.json` updated to reflect the new current/next session
 - [ ] Relevant subsystem/schema/QA/integration docs updated

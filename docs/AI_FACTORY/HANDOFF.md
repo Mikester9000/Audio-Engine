@@ -4,7 +4,7 @@
 
 ## Last completed change
 
-This PR adds a **session control / autopilot layer** on top of the existing AI-factory docs: `SESSION_QUEUE.md`, `SESSION_TEMPLATE.md`, `DONE_CRITERIA.md`, `NO_DECISION_ZONES.md`, `TASK_OUTPUT_CONTRACTS.md`, `FILE_TOUCH_MATRIX.md`, `FAILSAFE_RULES.md`, `PR_AUTOPILOT_CHECKLIST.md`, `SESSION_HISTORY.md`, and `SESSION_STATE.json`.
+This PR adds the **final hardening / execution-safety docs layer** needed before low-prompt implementation sessions: `CURRENT_SESSION.json`, `SESSION_GATE_RULES.md`, `BLOCKER_PROTOCOL.md`, `VERIFICATION_PROFILES.md`, `CANONICAL_OUTPUT_LAYOUT.md`, `FULL_GAME_AUDIO_CHECKLIST.md`, `MINIMUM_TEST_EXPANSION_RULES.md`, and `HUMAN_COMMANDS.md`, plus integration updates to the existing AI-factory/session-control docs.
 
 ## Verified in this session
 
@@ -12,12 +12,16 @@ This PR adds a **session control / autopilot layer** on top of the existing AI-f
 pip install -e ".[dev]"
 pytest
 python tools/validate-assets.py assets/examples/ --verbose
+python -m json.tool docs/AI_FACTORY/FACTORY_STATUS.json
+python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
+python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
 ```
 
 Observed result:
 
 - `314 passed`
 - asset-manifest examples validated successfully
+- machine-readable AI-factory JSON state files parsed successfully
 
 ## Immediate next best task
 
@@ -48,5 +52,6 @@ Execute `SESSION-001` from `docs/AI_FACTORY/SESSION_QUEUE.md`: implement code-si
 - [x] Session queue + template added
 - [x] Done criteria, no-decision zones, task-output contracts, file-touch matrix, and failsafe rules added
 - [x] PR autopilot checklist + session history + machine-readable session state added
+- [x] Final execution-safety hardening layer added (current-session JSON, session gates, blocker protocol, verification profiles, canonical output layout, full game-audio checklist, minimum test-expansion rules, human command guide)
 - [ ] Batch generation request format implemented in code
 - [ ] Audio QA/review automation added

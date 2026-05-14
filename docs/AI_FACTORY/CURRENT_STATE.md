@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, and now a stronger repo-memory plus session-autopilot layer for low-prompt AI execution.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, and now a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution.
 
 ## What is implemented today
 
@@ -24,7 +24,8 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Manifest validation docs + CI | Implemented | `docs/asset-manifest.md`, `.github/workflows/validate-assets.yml` |
 | Implementation matrix / codebase map / next PR sequence | Implemented (docs layer) | `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`, `docs/AI_FACTORY/CODEBASE_MAP.md`, `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` |
 | Example plan/request/review artifacts | Implemented (docs contracts) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` |
-| Session queue / autopilot control docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_QUEUE.md`, `docs/AI_FACTORY/SESSION_STATE.json` |
+| Session queue / autopilot control docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_QUEUE.md`, `docs/AI_FACTORY/SESSION_STATE.json`, `docs/AI_FACTORY/CURRENT_SESSION.json` |
+| Final execution-safety hardening docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_GATE_RULES.md`, `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`, `docs/AI_FACTORY/VERIFICATION_PROFILES.md`, `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md`, `docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md`, `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md` |
 | Automated test suite | Implemented | `tests/` |
 
 ### Commands verified in this session
@@ -71,8 +72,9 @@ Observed result in this session:
 5. The repo now has a session queue/autopilot layer, but queued execution still depends on future agents implementing the queued code sessions.
 6. Audio-plan and generation-request formats exist in docs/examples, but request ingestion and orchestration are not yet implemented in code.
 7. There is not yet automated audio-quality acceptance gating in CI.
-8. Windows/Visual Studio support is not the primary development path today.
-9. There is not yet code-level provenance/review-log generation for request-driven workflows.
+8. The new execution-safety layer is documentation/control guidance; it reduces ambiguity but does not replace missing code-side orchestration features.
+9. Windows/Visual Studio support is not the primary development path today.
+10. There is not yet code-level provenance/review-log generation for request-driven workflows.
 
 ## Current blockers
 
