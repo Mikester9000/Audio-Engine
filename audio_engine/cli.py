@@ -412,7 +412,6 @@ def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
 
     request_file = Path(args.request_file)
     if not request_file.exists():
-        print(f"Error: request file not found: {request_file}", file=sys.stderr)
         raise FileNotFoundError(f"request file not found: {request_file}")
 
     batch = load_generation_request_batch(request_file)

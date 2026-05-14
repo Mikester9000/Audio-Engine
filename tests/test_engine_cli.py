@@ -154,6 +154,8 @@ def test_cli_generate_request_batch_missing_file(tmp_path, capsys):
         "--output-dir", str(tmp_path),
     ])
     assert rc != 0
+    captured = capsys.readouterr()
+    assert captured.err.count("Error: request file not found:") == 1
 
 
 def test_cli_generate_request_batch_writes_result_json(tmp_path, capsys):

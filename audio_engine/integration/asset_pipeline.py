@@ -36,10 +36,13 @@ AudioSystem can verify all assets are present at startup.
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING, Callable
+
+import numpy as np
 
 from audio_engine.integration.game_state_map import (
     MUSIC_MANIFEST,
@@ -495,30 +498,35 @@ class AssetPipeline:
         t_start = time.monotonic()
 
         for request in batch.requests:
-            output_path = output_dir / request.output.target_path
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-
-            if not force and output_path.exists():
-                self.progress_callback(f"  [skip] {request.request_id} → {output_path}")
-                result.records.append(
-                    RequestBatchRecord(
-                        request_id=request.request_id,
-                        asset_id=request.asset_id,
-                        type=request.type,
-                        seed=request.seed,
-                        output_path=str(output_path),
-                        status="skipped",
-                    )
-                )
-                continue
+            exported_path = str(output_dir / request.output.target_path)
 
             try:
+                output_path = self._resolve_request_output_path(
+                    output_dir=output_dir,
+                    target_path=request.output.target_path,
+                )
+                exported_path = output_path.with_suffix(f".{request.output.format}")
+
+                if not force and exported_path.exists():
+                    self.progress_callback(f"  [skip] {request.request_id} → {exported_path}")
+                    result.records.append(
+                        RequestBatchRecord(
+                            request_id=request.request_id,
+                            asset_id=request.asset_id,
+                            type=request.type,
+                            seed=request.seed,
+                            output_path=str(exported_path),
+                            status="skipped",
+                        )
+                    )
+                    continue
+
                 if request.type == "music":
-                    self._execute_music_request(request, output_path, default_music_duration)
+                    exported_path = self._execute_music_request(request, output_path, default_music_duration)
                 elif request.type == "sfx":
-                    self._execute_sfx_request(request, output_path, default_sfx_duration)
+                    exported_path = self._execute_sfx_request(request, output_path, default_sfx_duration)
                 elif request.type == "voice":
-                    self._execute_voice_request(request, output_path)
+                    exported_path = self._execute_voice_request(request, output_path)
                 else:
                     raise ValueError(f"unsupported request type: {request.type!r}")
 
@@ -528,11 +536,11 @@ class AssetPipeline:
                         asset_id=request.asset_id,
                         type=request.type,
                         seed=request.seed,
-                        output_path=str(output_path),
+                        output_path=str(exported_path),
                         status="ok",
                     )
                 )
-                self.progress_callback(f"  [ok]   {request.request_id} → {output_path}")
+                self.progress_callback(f"  [ok]   {request.request_id} → {exported_path}")
 
             except Exception as exc:  # noqa: BLE001
                 msg = str(exc)
@@ -542,7 +550,7 @@ class AssetPipeline:
                         asset_id=request.asset_id,
                         type=request.type,
                         seed=request.seed,
-                        output_path=str(output_path),
+                        output_path=str(exported_path),
                         status="error",
                         error=msg,
                     )
@@ -557,15 +565,17 @@ class AssetPipeline:
         request: "GenerationRequest",
         output_path: Path,
         default_duration: float,
-    ) -> None:
+    ) -> Path:
         """Generate and export one music request using per-request seed."""
         from audio_engine.ai.music_gen import MusicGen
 
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         gen = MusicGen(
             sample_rate=request.output.sample_rate,
+            backend=request.backend,
             seed=request.seed,
         )
-        gen.generate_to_file(
+        return gen.generate_to_file(
             prompt=request.prompt,
             output_path=output_path,
             duration=default_duration,
@@ -578,34 +588,68 @@ class AssetPipeline:
         request: "GenerationRequest",
         output_path: Path,
         default_duration: float,
-    ) -> None:
+    ) -> Path:
         """Generate and export one SFX request using per-request seed."""
         from audio_engine.ai.sfx_gen import SFXGen
+        from audio_engine.export.audio_exporter import AudioExporter
 
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         gen = SFXGen(
             sample_rate=request.output.sample_rate,
+            backend=request.backend,
             seed=request.seed,
         )
-        gen.generate_to_file(
+        audio = gen.generate(
             prompt=request.prompt,
-            output_path=output_path,
             duration=default_duration,
         )
+        audio = self._normalize_request_channels(audio, request.output.channels)
+        exporter = AudioExporter(sample_rate=request.output.sample_rate, bit_depth=16)
+        return exporter.export(audio, output_path, fmt=request.output.format)
 
     def _execute_voice_request(
         self,
         request: "GenerationRequest",
         output_path: Path,
-    ) -> None:
+    ) -> Path:
         """Generate and export one voice request using per-request seed."""
         from audio_engine.ai.voice_gen import VoiceGen
         from audio_engine.export.audio_exporter import AudioExporter
 
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         voice_sr = request.output.sample_rate
-        gen = VoiceGen(sample_rate=voice_sr, seed=request.seed)
+        gen = VoiceGen(sample_rate=voice_sr, backend=request.backend, seed=request.seed)
         audio = gen.generate(request.prompt)
+        audio = self._normalize_request_channels(audio, request.output.channels)
         exporter = AudioExporter(sample_rate=voice_sr, bit_depth=16)
-        exporter.export(audio, output_path, fmt="wav")
+        return exporter.export(audio, output_path, fmt=request.output.format)
+
+    @staticmethod
+    def _resolve_request_output_path(*, output_dir: Path, target_path: str) -> Path:
+        """Resolve and validate a request target path under ``output_dir``."""
+        requested = Path(target_path)
+        if requested.is_absolute() or PureWindowsPath(target_path).is_absolute():
+            raise ValueError(f"unsafe targetPath (absolute paths are not allowed): {target_path}")
+        if ".." in requested.parts:
+            raise ValueError(f"unsafe targetPath (path traversal is not allowed): {target_path}")
+
+        candidate = output_dir / requested
+        root = output_dir.resolve()
+        resolved_candidate = candidate.resolve(strict=False)
+        if os.path.commonpath([str(root), str(resolved_candidate)]) != str(root):
+            raise ValueError(f"unsafe targetPath escapes output directory: {target_path}")
+        return candidate
+
+    @staticmethod
+    def _normalize_request_channels(audio: np.ndarray, channels: int) -> np.ndarray:
+        """Normalize mono generator output to the requested channel count."""
+        if channels == 1:
+            return audio
+        if channels == 2:
+            if audio.ndim == 1:
+                return np.column_stack((audio, audio))
+            return audio
+        raise ValueError(f"unsupported channel count {channels}; supported values are 1 or 2")
 
     # ------------------------------------------------------------------
     # Private helpers

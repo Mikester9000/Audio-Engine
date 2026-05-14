@@ -13,8 +13,10 @@ These tests verify:
 
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 from pathlib import Path
+import wave
 
 import pytest
 
@@ -837,3 +839,142 @@ class TestRequestBatchExecution:
         assert data["records"][0]["seed"] == 42
         assert data["records"][0]["status"] == "ok"
 
+    def test_execute_request_batch_rejects_unsafe_target_path(self, tmp_path):
+        """Unsafe targetPath values should be rejected and recorded as errors."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        bad_request = replace(
+            batch.requests[0],
+            output=replace(batch.requests[0].output, target_path="../escape.wav"),
+        )
+        single_request_batch = replace(batch, requests=[bad_request])
+
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            single_request_batch,
+            tmp_path,
+            default_sfx_duration=0.1,
+        )
+
+        assert len(result.records) == 1
+        assert result.records[0].status == "error"
+        assert "unsafe targetPath" in (result.records[0].error or "")
+
+    def test_music_request_uses_request_backend(self, tmp_path):
+        """Music request backend must be respected for request-batch execution."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        wav_requests = [r for r in batch.requests if r.output.format == "wav"]
+        assert wav_requests, "No WAV-format music requests found in fixture"
+        bad_backend_request = replace(wav_requests[0], backend="nonexistent_backend_for_test")
+        single_request_batch = replace(batch, requests=[bad_backend_request])
+
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            single_request_batch,
+            tmp_path,
+            default_music_duration=0.1,
+        )
+
+        assert len(result.records) == 1
+        assert result.records[0].status == "error"
+        assert "Unknown backend 'nonexistent_backend_for_test'" in (result.records[0].error or "")
+
+    def test_execute_sfx_request_honors_channels_and_actual_export_path(self, tmp_path):
+        """SFX requests should honor channels and record the path actually written by exporter."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        request = replace(
+            batch.requests[0],
+            output=replace(
+                batch.requests[0].output,
+                target_path="Content/Audio/custom_sfx_path.ogg",
+                format="wav",
+                channels=2,
+            ),
+        )
+        single_request_batch = replace(batch, requests=[request])
+
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            single_request_batch,
+            tmp_path,
+            default_sfx_duration=0.1,
+        )
+
+        assert len(result.records) == 1
+        record = result.records[0]
+        assert record.status == "ok", record.error
+        assert record.output_path.endswith(".wav")
+        output_path = Path(record.output_path)
+        assert output_path.exists()
+        with wave.open(str(output_path), "rb") as wav_file:
+            assert wav_file.getnchannels() == 2
+
+    def test_execute_voice_request_honors_channels_and_actual_export_path(self, tmp_path):
+        """Voice requests should honor channels/format and record the actual exporter path."""
+        batch = parse_generation_request_batch(
+            {
+                "requestBatchVersion": "1.0.0",
+                "project": "GameRewritten",
+                "scope": "tests",
+                "requests": [
+                    {
+                        "requestVersion": "1.0.0",
+                        "requestId": "req_voice_test_v1",
+                        "assetId": "voice_test",
+                        "type": "voice",
+                        "backend": "procedural",
+                        "seed": 12,
+                        "prompt": "Welcome to the dungeon.",
+                        "styleFamily": "fantasy-rpg",
+                        "output": {
+                            "targetPath": "Content/Audio/voice_test.ogg",
+                            "format": "wav",
+                            "sampleRate": 22050,
+                            "channels": 2,
+                        },
+                        "qa": {
+                            "loopRequired": False,
+                            "reviewStatus": "draft",
+                        },
+                    }
+                ],
+            },
+            source="voice_test_batch",
+        )
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(batch, tmp_path)
+
+        assert len(result.records) == 1
+        record = result.records[0]
+        assert record.status == "ok", record.error
+        assert record.output_path.endswith(".wav")
+        output_path = Path(record.output_path)
+        assert output_path.exists()
+        with wave.open(str(output_path), "rb") as wav_file:
+            assert wav_file.getnchannels() == 2
+
+    def test_execute_request_batch_rejects_unsupported_channel_count(self, tmp_path):
+        """Unsupported channel counts should fail with a clear per-request error."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        bad_request = replace(
+            batch.requests[0],
+            output=replace(batch.requests[0].output, channels=3),
+        )
+        single_request_batch = replace(batch, requests=[bad_request])
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            single_request_batch,
+            tmp_path,
+            default_sfx_duration=0.1,
+        )
+
+        assert len(result.records) == 1
+        assert result.records[0].status == "error"
+        assert "unsupported channel count 3" in (result.records[0].error or "")
