@@ -2,106 +2,16 @@
   "version": "1.1.0",
   "lastUpdated": "2026-05-14",
   "currentSession": {
-    "id": "SESSION-005",
-    "title": "Implement GameRewritten export profile",
+    "id": "SESSION-006",
+    "title": "Add approval workflow (promote drafts to approved/)",
     "status": "ready",
-    "taskType": "export",
-    "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
-    "queueDoc": "docs/AI_FACTORY/SESSION_QUEUE.md",
-    "gateRulesDoc": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
-    "blockerProtocolDoc": "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
-    "verificationProfilesDoc": "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
-    "readFirst": [
-      "docs/AI_FACTORY/SESSION_QUEUE.md",
-      "docs/AI_FACTORY/CURRENT_SESSION.json",
-      "docs/AI_FACTORY/SESSION_GATE_RULES.md",
-      "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
-      "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
-      "docs/AI_FACTORY/CURRENT_STATE.md",
-      "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/NO_DECISION_ZONES.md",
-      "docs/AI_FACTORY/FAILSAFE_RULES.md",
-      "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
-      "docs/AI_FACTORY/INTEGRATION/GAMEREWRITTEN.md",
-      "audio_engine/integration/asset_pipeline.py",
-      "audio_engine/cli.py",
-      "tests/test_integration.py"
-    ],
-    "likelyModify": [
-      "audio_engine/integration/asset_pipeline.py",
-      "audio_engine/cli.py",
-      "tests/test_integration.py"
-    ],
-    "avoidModify": [
-      "audio_engine/dsp/*",
-      "audio_engine/render/*",
-      "audio_engine/composer/*",
-      "assets/schema/*",
-      "audio_engine/integration/factory_inputs.py"
-    ],
-    "verification": [
-      "pip install -e \".[dev]\"",
-      "python -m pytest",
-      "python tools/validate-assets.py assets/examples/ --verbose",
-      "one /tmp smoke run confirming export files land in Content/Audio/<type>/ by targetImportPath name"
-    ],
-    "docsToUpdate": [
-      "docs/AI_FACTORY/CURRENT_STATE.md",
-      "docs/AI_FACTORY/ACTIVE_WORK.md",
-      "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/CHANGE_JOURNAL.md",
-      "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
-      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
-      "docs/AI_FACTORY/SESSION_QUEUE.md",
-      "docs/AI_FACTORY/SESSION_HISTORY.md",
-      "docs/AI_FACTORY/SESSION_STATE.json",
-      "docs/AI_FACTORY/CURRENT_SESSION.json"
-    ],
-    "doneCriteriaSummary": [
-      "CLI command copies drafts/<type>/ to exports/gamerewritten/Content/Audio/<type>/ using targetImportPath from provenance sidecars.",
-      "Command writes an export manifest listing source and destination paths.",
-      "Existing drafts/ content is not modified or deleted.",
-      "Tests verify file copying, destination names, and export manifest.",
-      "Command returns non-zero if no drafts exist to export.",
-      "Docs describe export behavior truthfully."
-    ],
-    "nextSession": {
-      "id": "SESSION-006",
-      "title": "Add approval workflow (promote drafts to approved/)"
-    },
-    "failsafeDoc": "docs/AI_FACTORY/FAILSAFE_RULES.md"
+    "taskType": "workflow"
   },
-  "upcomingSessions": [
-    {
-      "id": "SESSION-006",
-      "title": "Add approval workflow (promote drafts to approved/)",
-      "status": "queued-after-SESSION-005"
-    }
-  ],
   "completedSessions": [
-    {
-      "id": "SESSION-001",
-      "title": "Implement audio plan + request loading primitives",
-      "status": "completed",
-      "completedDate": "2026-05-14"
-    },
-    {
-      "id": "SESSION-002",
-      "title": "Add request-batch generation command",
-      "status": "completed",
-      "completedDate": "2026-05-14"
-    },
-    {
-      "id": "SESSION-003",
-      "title": "Write provenance + review logs per request",
-      "status": "completed",
-      "completedDate": "2026-05-14"
-    },
-    {
-      "id": "SESSION-004",
-      "title": "Add batch QA gate command for generated outputs",
-      "status": "completed",
-      "completedDate": "2026-05-14"
-    }
+    {"id": "SESSION-001", "status": "completed", "completedDate": "2026-05-14"},
+    {"id": "SESSION-002", "status": "completed", "completedDate": "2026-05-14"},
+    {"id": "SESSION-003", "status": "completed", "completedDate": "2026-05-14"},
+    {"id": "SESSION-004", "status": "completed", "completedDate": "2026-05-14"},
+    {"id": "SESSION-005", "status": "completed", "completedDate": "2026-05-14"}
   ]
 }

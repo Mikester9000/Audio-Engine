@@ -73,3 +73,13 @@
 - Added 7 new CLI tests covering: subcommand presence, valid audio pass, silent audio fail, JSON report output, required check keys, missing directory, quiet flag.
 - Smoke run: 5 SFX files checked; 4 pass, 1 fail (`sfx_ui_cancel.wav` at −6.37 LUFS exceeds −9.0 ceiling).
 - Test count: 345 passed (up from 338).
+
+## 2026-05-14 — Complete SESSION-005 with GameRewritten export profile
+
+- Added `DraftExportPipeline` class to `audio_engine/integration/asset_pipeline.py` that copies draft audio files to `<factory_root>/exports/gamerewritten/Content/Audio/` using `targetImportPath` from `.provenance.json` sidecars as the downstream filename.
+- Exported `DraftExportPipeline` from `audio_engine.integration`.
+- Added `export-drafts --output-dir <factory_root>` CLI command to `audio_engine/cli.py`.
+- Added 7 integration tests for `DraftExportPipeline` (files created, provenance names used, manifest written, manifest fields, drafts not modified, ValueError on empty drafts, fallback without provenance).
+- Added 3 CLI tests for `export-drafts` (subcommand registered, missing dir fails, smoke).
+- Smoke run: 5 SFX files from `/tmp/session003_smoke/drafts/sfx/` exported to `/tmp/session003_smoke/exports/gamerewritten/Content/Audio/` using stable `targetImportPath` filenames.
+- Test count: 355 passed (up from 345).

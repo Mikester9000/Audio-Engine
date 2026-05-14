@@ -97,6 +97,7 @@
 
 ### SESSION-006 — Add approval workflow (promote drafts to approved/)
 
-- **Status:** `queued-after-SESSION-005`
+- **Status:** `ready`
 - **Task type:** `workflow`
-- **Short objective:** Let an agent or human mark a draft asset as `approved` (updating its `.provenance.json` `reviewStatus`) and copy it to `approved/<type>/`.
+- **Objective:** Allow a draft asset to be explicitly marked as `approved` — update its `.provenance.json` `reviewStatus` field and copy it to `<factory_root>/approved/<type>/`.
+- **Enqueue next session after completion:** `SESSION-007 — Wire qa-batch into CI`

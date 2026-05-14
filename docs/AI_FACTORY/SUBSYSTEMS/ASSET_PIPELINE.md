@@ -11,6 +11,7 @@
 - CLI supports `generate-request-batch --batch-file <json> --output-dir <dir>` for factory-driven generation
 - each successful generation writes a `.provenance.json` sidecar file alongside the audio file containing `provenanceVersion`, `requestId`, `assetId`, `type`, `backend`, `seed`, `prompt`, `styleFamily`, `generatedOutputPath`, `targetImportPath`, `reviewStatus`, and `generatedAt`
 - `qa-batch --input-dir <dir> [--output-report <path>] [--check-loop] [--recursive] [--quiet]` runs `LoudnessMeter`, `ClippingDetector`, and optionally `LoopAnalyzer` on all WAVs in a directory and writes a JSON report with per-file pass/fail status
+- `export-drafts --output-dir <factory_root>` copies draft audio files to `exports/gamerewritten/Content/Audio/` using the `targetImportPath` filename from provenance sidecars; writes `export_manifest.json`
 
 ## Current constraint
 
@@ -24,4 +25,4 @@ The existing pipeline has two modes: the legacy fixed-map `AssetPipeline` for th
 
 ## Near-term goal
 
-Implement the `GameRewritten` export profile (`SESSION-005`) so approved draft assets can be copied into the downstream game's `Content/Audio/` layout automatically.
+Add an approval workflow (`SESSION-006`) so draft assets can be explicitly marked as `approved` (updating provenance `reviewStatus`) and copied to `approved/<type>/`, cleanly separating draft from approved downstream content.

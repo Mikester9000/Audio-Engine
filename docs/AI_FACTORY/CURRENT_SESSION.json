@@ -1,28 +1,16 @@
 {
   "version": "1.0.0",
   "lastUpdated": "2026-05-14",
-  "purpose": "Detailed machine-readable snapshot of the single current executable session.",
   "currentSession": {
-    "id": "SESSION-005",
-    "title": "Implement GameRewritten export profile",
+    "id": "SESSION-006",
+    "title": "Add approval workflow (promote drafts to approved/)",
     "status": "ready",
-    "taskType": "export",
-    "objective": "Copy all approved draft assets from <output_dir>/drafts/ into <output_dir>/exports/gamerewritten/Content/Audio/<type>/, using targetImportPath from .provenance.json sidecars as the canonical destination name.",
-    "whyItMatters": "Generated assets currently live in drafts/ only. The GameRewritten consuming repo needs them placed in Content/Audio/ by stable name. Without an export step, the factory cannot produce a deployable deliverable.",
+    "taskType": "workflow",
+    "objective": "Allow a draft asset to be marked approved (updating provenance reviewStatus) and copied to approved/<type>/.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
-      "docs/AI_FACTORY/CURRENT_SESSION.json",
-      "docs/AI_FACTORY/SESSION_GATE_RULES.md",
-      "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
-      "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
-      "docs/AI_FACTORY/CURRENT_STATE.md",
       "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/NEXT_PR_SEQUENCE.md",
-      "docs/AI_FACTORY/NO_DECISION_ZONES.md",
-      "docs/AI_FACTORY/FAILSAFE_RULES.md",
-      "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
       "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
-      "docs/AI_FACTORY/INTEGRATION/GAMEREWRITTEN.md",
       "audio_engine/integration/asset_pipeline.py",
       "audio_engine/cli.py",
       "tests/test_integration.py"
@@ -31,59 +19,6 @@
       "audio_engine/integration/asset_pipeline.py",
       "audio_engine/cli.py",
       "tests/test_integration.py"
-    ],
-    "avoidModify": [
-      "audio_engine/dsp/*",
-      "audio_engine/render/*",
-      "audio_engine/composer/*",
-      "assets/schema/*",
-      "audio_engine/integration/factory_inputs.py"
-    ],
-    "verification": {
-      "profile": "export",
-      "minimum": [
-        "pip install -e \".[dev]\"",
-        "python -m pytest",
-        "python tools/validate-assets.py assets/examples/ --verbose",
-        "one /tmp smoke run confirming export files land in Content/Audio/<type>/ by targetImportPath name"
-      ]
-    },
-    "requiredDocsToUpdate": [
-      "docs/AI_FACTORY/CURRENT_STATE.md",
-      "docs/AI_FACTORY/ACTIVE_WORK.md",
-      "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/CHANGE_JOURNAL.md",
-      "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
-      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
-      "docs/AI_FACTORY/SESSION_QUEUE.md",
-      "docs/AI_FACTORY/SESSION_HISTORY.md",
-      "docs/AI_FACTORY/SESSION_STATE.json",
-      "docs/AI_FACTORY/CURRENT_SESSION.json"
-    ],
-    "doneCriteriaSummary": [
-      "CLI command copies drafts/<type>/ to exports/gamerewritten/Content/Audio/<type>/ using targetImportPath filename.",
-      "Command writes an export manifest listing source and destination paths.",
-      "Existing drafts/ content is not modified or deleted.",
-      "Tests verify file copying, destination names, and export manifest.",
-      "Command returns non-zero if no drafts exist to export.",
-      "Docs describe export behavior truthfully."
-    ],
-    "nextSession": {
-      "id": "SESSION-006",
-      "title": "Add approval workflow (promote drafts to approved/)"
-    },
-    "gateRulesDoc": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
-    "blockerProtocolDoc": "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
-    "verificationProfilesDoc": "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
-    "minimumTestRulesDoc": "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
-    "failsafeDoc": "docs/AI_FACTORY/FAILSAFE_RULES.md",
-    "fixturePolicy": [
-      "Use the committed example artifacts under docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/ as the default fixtures.",
-      "Use generated /tmp outputs (drafts/ + .provenance.json sidecars) as realistic export inputs where needed."
-    ],
-    "blockerNotes": [
-      "If docs/AI_FACTORY/INTEGRATION/GAMEREWRITTEN.md is absent or incomplete, use Content/Audio/<type>/ as the conservative target path layout.",
-      "Do not delete or overwrite drafts/ contents — export is a copy operation only."
     ]
   }
 }
