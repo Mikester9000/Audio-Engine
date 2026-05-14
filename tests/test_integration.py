@@ -1335,6 +1335,6 @@ class TestRequestBatchExecution:
             default_sfx_duration=0.1,
         )
 
-                assert len(result.records) == 1
+        assert len(result.records) == 1
         assert result.records[0].status == "error"
         assert "unsupported channel count 3" in (result.records[0].error or "")
