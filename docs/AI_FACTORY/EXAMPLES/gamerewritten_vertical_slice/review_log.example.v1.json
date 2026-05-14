@@ -1,0 +1,35 @@
+{
+  "reviewLogVersion": "1.0.0",
+  "project": "GameRewritten",
+  "scope": "vertical-slice",
+  "entries": [
+    {
+      "assetId": "bgm_field_day",
+      "requestId": "req_music_bgm_field_day_v1",
+      "seed": 204801,
+      "generatedOutputPath": "factory-output/drafts/music/bgm_field_day.ogg",
+      "targetImportPath": "Content/Audio/bgm_field_day.ogg",
+      "reviewStatus": "approved",
+      "reviewer": "agent",
+      "reviewedAt": "2026-05-14T19:40:00Z",
+      "notes": [
+        "Loop boundary acceptable.",
+        "Fits field exploration mood."
+      ]
+    },
+    {
+      "assetId": "sfx_spell_fire_small",
+      "requestId": "req_sfx_spell_fire_small_v1",
+      "seed": 305034,
+      "generatedOutputPath": "factory-output/drafts/sfx/sfx_spell_fire_small.wav",
+      "targetImportPath": "Content/Audio/sfx_spell_fire_small.wav",
+      "reviewStatus": "revise",
+      "reviewer": "agent",
+      "reviewedAt": "2026-05-14T19:43:00Z",
+      "notes": [
+        "Transient is readable but tail is too noisy for repeated combat use.",
+        "Regenerate with shorter decay and lower high-frequency fizz."
+      ]
+    }
+  ]
+}

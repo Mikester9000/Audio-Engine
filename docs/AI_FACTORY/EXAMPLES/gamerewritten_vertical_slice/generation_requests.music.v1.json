@@ -1,0 +1,95 @@
+{
+  "requestBatchVersion": "1.0.0",
+  "project": "GameRewritten",
+  "scope": "vertical-slice",
+  "requests": [
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_field_day_v1",
+      "assetId": "bgm_field_day",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204801,
+      "prompt": "uplifting exploration field theme, melancholic sci-fantasy undertone, clear melody, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_field_day.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_battle_standard_v1",
+      "assetId": "bgm_battle_standard",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204812,
+      "prompt": "urgent battle loop, synthetic-orchestral pulse, strong low strings and brass accents, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_battle_standard.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_town_evening_v1",
+      "assetId": "bgm_town_evening",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204823,
+      "prompt": "gentle evening town loop with piano and soft pad, reflective but safe mood, loopable",
+      "styleFamily": "melancholic-techno-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_town_evening.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_stinger_victory_short_v1",
+      "assetId": "stinger_victory_short",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204834,
+      "prompt": "short triumphant victory stinger with bright brass and clean ending",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/stinger_victory_short.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-stinger",
+        "notes": []
+      }
+    }
+  ]
+}

@@ -4,7 +4,7 @@
 
 ## Last completed change
 
-This PR adds a large AI-first documentation system under `docs/AI_FACTORY/`, updates root discoverability, and adds `.github/copilot-instructions.md` so future agents can resume work with minimal prompting.
+This PR adds the next repo-memory layer after the initial AI-factory docs: implementation matrix, next PR sequence, codebase map, known issues, stability rules, a machine-friendly status JSON, and committed `GameRewritten` vertical-slice plan/request/review examples.
 
 ## Verified in this session
 
@@ -12,23 +12,16 @@ This PR adds a large AI-first documentation system under `docs/AI_FACTORY/`, upd
 pip install -e ".[dev]"
 pytest
 python tools/validate-assets.py assets/examples/ --verbose
-audio-engine list-styles
-audio-engine generate-sfx --prompt "ui confirm click" --duration 0.15 --output /tmp/audio_factory_ui.wav
-audio-engine qa --input /tmp/audio_factory_ui.wav
-audio-engine generate-game-assets --output-dir /tmp/audio_factory_assets --only sfx --force --quiet
 ```
 
 Observed result:
 
 - `314 passed`
 - asset-manifest examples validated successfully
-- CLI style listing worked
-- one-off SFX generation worked
-- SFX-only batch generation produced 31 effects
 
 ## Immediate next best task
 
-Create a committed example project audio plan and generation request set for a `GameRewritten`-style game slice, including seeds, intended output paths, and review status fields.
+Implement code-side loading and execution for the committed example artifacts in `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/` so plan/request flows become executable rather than docs-only.
 
 ## Files future agents should read first
 
@@ -47,6 +40,8 @@ Create a committed example project audio plan and generation request set for a `
 - [x] Troubleshooting documented
 - [x] Style-family safety guidance documented
 - [x] Integration direction for `GameRewritten` documented
-- [ ] Project-level audio plan example implemented in repo
+- [x] Project-level audio plan example implemented in repo
+- [x] Generation request examples with seeds/output/review fields implemented in repo
+- [x] Implementation matrix + codebase map + next PR sequence implemented in repo
 - [ ] Batch generation request format implemented in code
 - [ ] Audio QA/review automation added

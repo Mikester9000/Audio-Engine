@@ -1,0 +1,117 @@
+{
+  "requestBatchVersion": "1.0.0",
+  "project": "GameRewritten",
+  "scope": "vertical-slice",
+  "requests": [
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_sfx_ui_confirm_v1",
+      "assetId": "sfx_ui_confirm",
+      "type": "sfx",
+      "backend": "procedural",
+      "seed": 305001,
+      "prompt": "clean menu confirm click, short and readable",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/sfx_ui_confirm.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "sfx-ui",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_sfx_ui_cancel_v1",
+      "assetId": "sfx_ui_cancel",
+      "type": "sfx",
+      "backend": "procedural",
+      "seed": 305012,
+      "prompt": "soft menu cancel tick with short tail",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/sfx_ui_cancel.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "sfx-ui",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_sfx_attack_light_v1",
+      "assetId": "sfx_attack_light",
+      "type": "sfx",
+      "backend": "procedural",
+      "seed": 305023,
+      "prompt": "light sword hit, clear transient, no long tail",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/sfx_attack_light.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "sfx-combat",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_sfx_spell_fire_small_v1",
+      "assetId": "sfx_spell_fire_small",
+      "type": "sfx",
+      "backend": "procedural",
+      "seed": 305034,
+      "prompt": "small fire spell cast with arcane start and flame burst",
+      "styleFamily": "melancholic-techno-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/sfx_spell_fire_small.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "sfx-magic",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_sfx_amb_wind_ruins_loop_v1",
+      "assetId": "amb_wind_ruins_loop",
+      "type": "sfx",
+      "backend": "procedural",
+      "seed": 305045,
+      "prompt": "ancient ruins wind ambience loop with airy tonal texture",
+      "styleFamily": "melancholic-techno-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/amb_wind_ruins_loop.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "ambience-loop",
+        "notes": []
+      }
+    }
+  ]
+}

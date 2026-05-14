@@ -1,0 +1,30 @@
+{
+  "statusVersion": "1.0.0",
+  "lastUpdated": "2026-05-14",
+  "repositoryRole": "GitHub-native audio asset factory for downstream game import",
+  "coverageGoal": [
+    "music",
+    "fanfare_stingers",
+    "ui_sfx",
+    "combat_sfx",
+    "spell_sfx",
+    "ambience",
+    "optional_voice"
+  ],
+  "priorityOrder": ["music", "sfx", "voice"],
+  "capabilityState": {
+    "generation_core": "implemented",
+    "fixed_map_batch_pipeline": "partial",
+    "project_audio_plan_ingestion": "planned",
+    "generation_request_batch_ingestion": "planned",
+    "provenance_review_logging": "planned",
+    "batch_qa_gate": "planned",
+    "gamerewritten_import_automation": "blocked"
+  },
+  "sourceDocs": {
+    "implementationMatrix": "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
+    "nextPrSequence": "docs/AI_FACTORY/NEXT_PR_SEQUENCE.md",
+    "knownIssues": "docs/AI_FACTORY/KNOWN_ISSUES.md",
+    "stabilityRules": "docs/AI_FACTORY/STABILITY_RULES.md"
+  }
+}

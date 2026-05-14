@@ -16,3 +16,10 @@
 - Procedural generation existed for music, SFX, and voice.
 - Asset pipeline existed for `Game Engine for Teaching`.
 - Asset-manifest documentation and validation workflow already existed.
+
+## 2026-05-14 — Add implementation matrix, PR build sequence, codebase map, and factory input examples
+
+- Added machine-guidance docs: `IMPLEMENTATION_MATRIX.md`, `NEXT_PR_SEQUENCE.md`, `CODEBASE_MAP.md`, `KNOWN_ISSUES.md`, and `STABILITY_RULES.md`.
+- Added committed example artifacts for `GameRewritten` vertical-slice planning and request-driven workflows under `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/`.
+- Added machine-friendly continuity snapshot `FACTORY_STATUS.json`.
+- Updated AI-factory indexes and continuity docs so future agents can distinguish implemented code from docs-only contracts and planned work.

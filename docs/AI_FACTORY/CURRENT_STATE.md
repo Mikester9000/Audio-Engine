@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-As of this documentation PR, the repository already contains a working Python audio engine with tests and an existing asset-manifest validation workflow.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, and now a stronger repo-memory layer for low-prompt AI execution.
 
 ## What is implemented today
 
@@ -22,6 +22,8 @@ As of this documentation PR, the repository already contains a working Python au
 | Export to WAV / optional OGG | Implemented | `audio_engine/export/audio_exporter.py` |
 | Batch game asset generation | Implemented | `audio_engine/integration/asset_pipeline.py` |
 | Manifest validation docs + CI | Implemented | `docs/asset-manifest.md`, `.github/workflows/validate-assets.yml` |
+| Implementation matrix / codebase map / next PR sequence | Implemented (docs layer) | `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`, `docs/AI_FACTORY/CODEBASE_MAP.md`, `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` |
+| Example plan/request/review artifacts | Implemented (docs contracts) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` |
 | Automated test suite | Implemented | `tests/` |
 
 ### Commands verified in this session
@@ -64,20 +66,20 @@ Observed result in this session:
 1. The default backend is still primarily procedural rather than modern neural generation.
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
-4. There is not yet a committed project-wide audio-plan manifest that describes every desired asset for a full game.
-5. There is not yet a batch request schema implemented in code for large-scale generation requests.
+4. There is now a committed `GameRewritten`-oriented vertical-slice example plan and request set, but there is not yet full-game taxonomy coverage in executable code.
+5. Audio-plan and generation-request formats exist in docs/examples, but request ingestion and orchestration are not yet implemented in code.
 6. There is not yet automated audio-quality acceptance gating in CI.
 7. Windows/Visual Studio support is not the primary development path today.
-8. There is not yet a persistent in-repo memory system for future agents beyond this new documentation tree.
+8. There is not yet code-level provenance/review-log generation for request-driven workflows.
 
 ## Current blockers
 
 | Blocker | Why it matters | Suggested next move |
 |---|---|---|
-| No `GameRewritten`-specific audio plan in repo | Limits downstream usefulness | Add project-level audio plan + mapping docs |
-| No broad asset taxonomy outside current integration map | Harder to scale beyond current manifest | Introduce canonical taxonomy and request schemas |
-| No deterministic seed/manifests process documented for new work | Makes regeneration inconsistent | Standardize request + seed capture |
-| No automated QA gate for generated audio | Agents may ship weak assets | Add scripted review/check workflow later |
+| Plan/request examples are not consumed by code | Keeps workflows partially manual | Implement loader + batch request execution path |
+| No broad full-game asset taxonomy beyond vertical slice | Harder to scale to complete game coverage | Expand taxonomy/checklists for all major audio families |
+| No deterministic provenance manifest emitted by pipeline | Makes regeneration/review continuity weaker | Persist request ID + seed + review status per output |
+| No automated QA gate for generated audio | Agents may ship weak assets | Add scripted review/check workflow and CI wiring |
 
 ## Existing GitHub Actions state
 

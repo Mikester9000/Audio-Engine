@@ -20,8 +20,12 @@ If you are a future AI agent, start here, then read the files below in order.
 2. [`CURRENT_STATE.md`](./CURRENT_STATE.md)
 3. [`ACTIVE_WORK.md`](./ACTIVE_WORK.md)
 4. [`HANDOFF.md`](./HANDOFF.md)
-5. [`PLAYBOOKS/AGENT_WORKFLOW.md`](./PLAYBOOKS/AGENT_WORKFLOW.md)
-6. Relevant subsystem/style/schema docs for the task you are about to change
+5. [`IMPLEMENTATION_MATRIX.md`](./IMPLEMENTATION_MATRIX.md)
+6. [`NEXT_PR_SEQUENCE.md`](./NEXT_PR_SEQUENCE.md)
+7. [`CODEBASE_MAP.md`](./CODEBASE_MAP.md)
+8. [`STABILITY_RULES.md`](./STABILITY_RULES.md)
+9. [`PLAYBOOKS/AGENT_WORKFLOW.md`](./PLAYBOOKS/AGENT_WORKFLOW.md)
+10. Relevant subsystem/style/schema docs for the task you are about to change
 
 ## Fast answers
 
@@ -30,6 +34,9 @@ If you are a future AI agent, start here, then read the files below in order.
 | What is this repo for? | [`PROJECT_MISSION.md`](./PROJECT_MISSION.md) |
 | What exists today? | [`CURRENT_STATE.md`](./CURRENT_STATE.md) |
 | What should happen next? | [`ACTIVE_WORK.md`](./ACTIVE_WORK.md), [`ROADMAP.md`](./ROADMAP.md) |
+| What is implemented vs docs-only vs planned? | [`IMPLEMENTATION_MATRIX.md`](./IMPLEMENTATION_MATRIX.md), [`FACTORY_STATUS.json`](./FACTORY_STATUS.json) |
+| What PR should I do next? | [`NEXT_PR_SEQUENCE.md`](./NEXT_PR_SEQUENCE.md) |
+| Where is the code for each subsystem? | [`CODEBASE_MAP.md`](./CODEBASE_MAP.md) |
 | How do I build/test/run it? | [`PLAYBOOKS/BUILD_AND_RUN.md`](./PLAYBOOKS/BUILD_AND_RUN.md) |
 | How do I avoid drift? | [`PLAYBOOKS/AGENT_WORKFLOW.md`](./PLAYBOOKS/AGENT_WORKFLOW.md) |
 | How should assets be named/organized? | [`QA/QUALITY_BARS.md`](./QA/QUALITY_BARS.md), [`INTEGRATION/GAMEREWRITTEN.md`](./INTEGRATION/GAMEREWRITTEN.md) |
@@ -47,6 +54,12 @@ If you are a future AI agent, start here, then read the files below in order.
 - [`HANDOFF.md`](./HANDOFF.md)
 - [`CHANGE_JOURNAL.md`](./CHANGE_JOURNAL.md)
 - [`GLOSSARY.md`](./GLOSSARY.md)
+- [`IMPLEMENTATION_MATRIX.md`](./IMPLEMENTATION_MATRIX.md)
+- [`NEXT_PR_SEQUENCE.md`](./NEXT_PR_SEQUENCE.md)
+- [`CODEBASE_MAP.md`](./CODEBASE_MAP.md)
+- [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md)
+- [`STABILITY_RULES.md`](./STABILITY_RULES.md)
+- [`FACTORY_STATUS.json`](./FACTORY_STATUS.json)
 
 ### Decisions and guardrails
 - [`DECISIONS/README.md`](./DECISIONS/README.md)
@@ -61,6 +74,7 @@ If you are a future AI agent, start here, then read the files below in order.
 ### Schemas and request formats
 - [`SCHEMAS/AUDIO_PLAN_SCHEMA.md`](./SCHEMAS/AUDIO_PLAN_SCHEMA.md)
 - [`SCHEMAS/GENERATION_REQUEST_SCHEMA.md`](./SCHEMAS/GENERATION_REQUEST_SCHEMA.md)
+- [`EXAMPLES/gamerewritten_vertical_slice/README.md`](./EXAMPLES/gamerewritten_vertical_slice/README.md)
 - Existing asset-manifest reference: [`../asset-manifest.md`](../asset-manifest.md)
 
 ### Audio design and quality

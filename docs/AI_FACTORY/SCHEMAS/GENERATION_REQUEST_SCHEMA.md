@@ -6,6 +6,12 @@
 
 A generation request is one concrete instruction to create or regenerate an asset.
 
+Committed examples:
+
+- `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json`
+- `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json`
+- `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json`
+
 ## Suggested shape
 
 ```json

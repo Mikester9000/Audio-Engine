@@ -4,8 +4,8 @@
 
 ## P0 — Highest value
 
-- [ ] Commit a `GameRewritten`-oriented project audio plan example
-- [ ] Commit generation request examples with seed and output metadata
+- [x] Commit a `GameRewritten`-oriented project audio plan example
+- [x] Commit generation request examples with seed and output metadata
 - [ ] Define approval workflow for generated assets
 - [ ] Define canonical downstream folder and filename rules
 

@@ -6,8 +6,8 @@
 
 | Phase | Name | Goal | Status |
 |---|---|---|---|
-| 0 | Documentation foundation | Make the repo resumable by AI agents | In progress with this PR |
-| 1 | Planning + taxonomy | Define complete asset universe and request schemas | Next |
+| 0 | Documentation foundation | Make the repo resumable by AI agents | Completed |
+| 1 | Planning + taxonomy | Define complete asset universe and request schemas | In progress |
 | 2 | Deterministic batch generation | Generate from manifests/plans with reproducible seeds | Planned |
 | 3 | QA + review loop | Add acceptance checks and review workflow | Planned |
 | 4 | `GameRewritten` integration | Align names, folders, and import contracts | Planned |
