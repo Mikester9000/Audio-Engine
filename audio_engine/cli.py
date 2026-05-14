@@ -445,7 +445,7 @@ def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
         print(f"Result written → {result_path}")
 
     if any(r.status == "error" for r in result.records):
-        return
+        raise SystemExit(1)
 
 
 def _cmd_generate_game_assets(args: argparse.Namespace) -> None:
