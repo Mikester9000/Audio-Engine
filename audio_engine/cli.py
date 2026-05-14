@@ -606,7 +606,7 @@ def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
     from audio_engine.integration.asset_pipeline import AssetPipeline
 
     # Support both --batch-file (RequestBatchPipeline path) and --request-file (AssetPipeline path)
-    batch_file = getattr(args, 'batch_file', None) or getattr(args, 'request_file', None)
+    batch_file = args.batch_file or args.request_file
     if not batch_file:
         raise ValueError("Either --batch-file or --request-file must be provided")
 
@@ -621,7 +621,7 @@ def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
             print(msg)
 
     # If --request-file was used, fall back to AssetPipeline path for backward compat
-    if getattr(args, 'request_file', None):
+    if args.request_file:
         pipeline = AssetPipeline(progress_callback=_progress)
         print(
             f"Executing request batch: {batch_path.name}"
@@ -631,12 +631,12 @@ def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
             batch,
             args.output_dir,
             force=args.force,
-            default_music_duration=getattr(args, 'music_duration', 30.0),
-            default_sfx_duration=getattr(args, 'sfx_duration', 2.0),
+            default_music_duration=args.music_duration,
+            default_sfx_duration=args.sfx_duration,
         )
         print()
         print(result.summary())
-        if getattr(args, 'write_result', False):
+        if args.write_result:
             result_path = Path(args.output_dir) / "request_batch_result.json"
             result_path.parent.mkdir(parents=True, exist_ok=True)
             result_path.write_text(result.to_json(), encoding="utf-8")

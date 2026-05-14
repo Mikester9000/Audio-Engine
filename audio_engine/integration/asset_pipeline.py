@@ -1,7 +1,7 @@
 """
 asset_pipeline.py – pre-generate the complete audio asset library for the
 Game Engine for Teaching, plus a request-batch execution pipeline for
-factory-driven generation workflows and execute factory generation-request batches.
+factory-driven generation workflows. Execute factory generation-request batches.
 
 Usage (from Python)
 -------------------
