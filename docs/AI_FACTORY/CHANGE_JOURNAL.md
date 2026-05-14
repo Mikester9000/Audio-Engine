@@ -44,3 +44,14 @@
 - Exported the new loader API from `audio_engine.integration` without changing existing CLI behavior.
 - Added fixture-driven integration tests for successful plan/request ingestion plus an invalid-input failure path.
 - Updated AI-factory continuity docs and session-control files to mark `SESSION-001` complete and advance the queue to `SESSION-002`.
+
+## 2026-05-14 — Complete SESSION-002 with request-batch generation command
+
+- Added `RequestBatchPipeline` class to `audio_engine/integration/asset_pipeline.py` with per-request seed execution, channel conversion, WAV/OGG export, and `batch_manifest.json` output.
+- Added `generate-request-batch --batch-file <json> --output-dir <dir>` CLI command to `audio_engine/cli.py`.
+- Exported `RequestBatchPipeline` from `audio_engine.integration`.
+- Added 7 integration tests for `RequestBatchPipeline` (SFX smoke, manifest fields, seed verification, skip_existing, manifest JSON, music batch, progress callback).
+- Added 5 CLI tests for `generate-request-batch` (subcommand presence, SFX smoke, missing file, quiet, manifest written).
+- Smoke-ran both committed fixtures: 5 SFX and 4 music files produced with seeds 305001–305045 and 204801–204834 respectively.
+- Test count: 334 passed (up from 321).
+

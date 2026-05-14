@@ -7,19 +7,20 @@
 - CLI supports `generate-game-assets` and `verify-game-assets`
 - committed plan/request/review example artifacts now exist under `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/`
 - typed loader code for the committed audio plan and music/SFX request fixtures now exists in `audio_engine/integration/factory_inputs.py`
-- the canonical current execution target is `SESSION-002` in `docs/AI_FACTORY/SESSION_QUEUE.md`
+- `RequestBatchPipeline` now exists in `audio_engine/integration/asset_pipeline.py`, executing any `GenerationRequestBatch` deterministically with per-request seeds; outputs land in `<output_dir>/drafts/<type>/`
+- CLI supports `generate-request-batch --batch-file <json> --output-dir <dir>` for factory-driven generation
 
 ## Current constraint
 
-The existing pipeline is still specialized toward the current integration target and is not yet a general asset-factory orchestration system that can execute the newly loaded plan/request artifacts directly.
+The existing pipeline has two modes: the legacy fixed-map `AssetPipeline` for the Game Engine for Teaching, and the new plan/request-driven `RequestBatchPipeline`. Provenance logs beyond the `batch_manifest.json` summary are not yet written per request.
 
 ## Missing capabilities
 
-- request-batch execution from the committed generation-request fixtures
-- provenance capture per output asset
+- provenance capture per output asset (request ID + seed + review status written per file)
 - approval/replacement workflow
 - generalized export targets for `GameRewritten`
+- automated QA gate for generated output sets
 
 ## Near-term goal
 
-Evolve the current `AssetPipeline` from a fixed mapping generator into a plan-driven batch system without losing the existing simple CLI path. The next step is to execute the new typed request loaders through an additive deterministic batch-generation command.
+Add per-request provenance/review logs (`SESSION-003`) so every generated file is traceable to its request ID, seed, and review state.

@@ -3,12 +3,12 @@
   "lastUpdated": "2026-05-14",
   "purpose": "Detailed machine-readable snapshot of the single current executable session. This complements SESSION_STATE.json rather than replacing it.",
   "currentSession": {
-    "id": "SESSION-002",
-    "title": "Add request-batch generation command",
+    "id": "SESSION-003",
+    "title": "Write provenance + review logs per request",
     "status": "ready",
-    "taskType": "batch_generation",
-    "objective": "Execute the committed music and SFX generation-request batches deterministically through an additive CLI and/or API path that uses the new typed loaders.",
-    "whyItMatters": "This is the first step that turns the newly loaded factory-input artifacts into reproducible practical output generation for the game-audio workflow.",
+    "taskType": "provenance",
+    "objective": "Persist request ID, seed, output path, backend, and review state in a machine-readable per-request provenance log alongside each generated batch output.",
+    "whyItMatters": "Without per-request provenance, regeneration decisions and review continuity rely on batch_manifest.json summaries only. A per-request log makes each asset independently traceable and supports future review/approval workflows.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/CURRENT_SESSION.json",
@@ -22,28 +22,22 @@
       "docs/AI_FACTORY/FAILSAFE_RULES.md",
       "docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md",
       "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
-      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/README.md",
-      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
+      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json",
+      "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
       "audio_engine/integration/factory_inputs.py",
       "audio_engine/integration/asset_pipeline.py",
       "audio_engine/cli.py",
-      "tests/test_integration.py",
-      "tests/test_engine_cli.py"
+      "tests/test_integration.py"
     ],
     "likelyModify": [
-      "audio_engine/cli.py",
       "audio_engine/integration/asset_pipeline.py",
-      "tests/test_integration.py",
-      "tests/test_engine_cli.py"
+      "audio_engine/cli.py",
+      "tests/test_integration.py"
     ],
     "conditionalModify": [
       {
         "path": "audio_engine/integration/factory_inputs.py",
-        "condition": "only if a small compatibility hook or normalization fix is required for batch execution"
-      },
-      {
-        "path": "tests/test_new_cli.py",
-        "condition": "only if the additive command surface is exercised there"
+        "condition": "only if a small normalization or dataclass hook is required for provenance writing"
       }
     ],
     "avoidModify": [
@@ -54,16 +48,16 @@
       "docs/AI_FACTORY/STYLES/*"
     ],
     "verification": {
-      "profile": "batch_generation",
+      "profile": "provenance",
       "minimum": [
         "pip install -e \".[dev]\"",
         "python -m pytest",
         "python tools/validate-assets.py assets/examples/ --verbose",
-        "one deterministic /tmp smoke run using the committed generation-request fixtures"
+        "one deterministic /tmp smoke run confirming per-request provenance files are written alongside generated audio"
       ],
       "additionalWhenApplicable": [
-        "verify expected output files exist for at least one music and one SFX request fixture",
-        "record seed and request-id usage clearly in the handoff notes"
+        "verify provenance JSON files contain request_id, seed, output_path, backend, review_status, generated_at",
+        "verify provenance files are written for both music and SFX committed fixtures"
       ]
     },
     "requiredDocsToUpdate": [
@@ -79,15 +73,15 @@
       "docs/AI_FACTORY/CURRENT_SESSION.json"
     ],
     "doneCriteriaSummary": [
-      "One additive CLI or API path executes at least the committed music and SFX request-batch fixtures.",
-      "Deterministic seeds remain explicit and are passed through the execution path.",
-      "Tests cover the new request-batch generation path.",
-      "Existing one-off CLI compatibility is preserved.",
-      "Affected docs describe batch generation truthfully without overstating provenance or QA automation."
+      "Every request in a batch produces a machine-readable provenance record alongside its output file.",
+      "Provenance records include at minimum: request_id, seed, output_path, backend, review_status, generated_at.",
+      "Tests verify provenance file existence and required fields for the committed SFX fixture.",
+      "Existing batch generation behavior (file output, batch_manifest.json) is preserved.",
+      "Docs describe the provenance behavior truthfully without overstating format stability."
     ],
     "nextSession": {
-      "id": "SESSION-003",
-      "title": "Write provenance + review logs per request"
+      "id": "SESSION-004",
+      "title": "Add batch QA gate command for generated outputs"
     },
     "gateRulesDoc": "docs/AI_FACTORY/SESSION_GATE_RULES.md",
     "blockerProtocolDoc": "docs/AI_FACTORY/BLOCKER_PROTOCOL.md",
