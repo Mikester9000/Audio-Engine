@@ -19,8 +19,8 @@
   "capabilityState": {
     "generation_core": "implemented",
     "fixed_map_batch_pipeline": "partial",
-    "project_audio_plan_ingestion": "planned",
-    "generation_request_batch_ingestion": "planned",
+    "project_audio_plan_ingestion": "implemented",
+    "generation_request_batch_ingestion": "implemented",
     "provenance_review_logging": "planned",
     "batch_qa_gate": "planned",
     "gamerewritten_import_automation": "blocked",
@@ -46,10 +46,10 @@
     "sessionState": "docs/AI_FACTORY/SESSION_STATE.json"
   },
   "currentSession": {
-    "id": "SESSION-001",
+    "id": "SESSION-002",
     "status": "ready",
-    "title": "Implement audio plan + request loading primitives",
+    "title": "Add request-batch generation command",
     "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
-    "next": "SESSION-002"
+    "next": "SESSION-003"
   }
 }

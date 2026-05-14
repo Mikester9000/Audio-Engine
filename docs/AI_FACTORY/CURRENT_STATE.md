@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, and now a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, and now typed loader primitives for committed audio-plan and generation-request artifacts.
 
 ## What is implemented today
 
@@ -21,6 +21,7 @@ The repository contains a working Python audio engine with tests, a manifest val
 | DSP/mastering/QA | Implemented | `audio_engine/dsp/*`, `audio_engine/render/*`, `audio_engine/qa/*` |
 | Export to WAV / optional OGG | Implemented | `audio_engine/export/audio_exporter.py` |
 | Batch game asset generation | Implemented | `audio_engine/integration/asset_pipeline.py` |
+| Typed audio plan + generation request loading | Implemented | `audio_engine/integration/factory_inputs.py`, `tests/test_integration.py` |
 | Manifest validation docs + CI | Implemented | `docs/asset-manifest.md`, `.github/workflows/validate-assets.yml` |
 | Implementation matrix / codebase map / next PR sequence | Implemented (docs layer) | `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`, `docs/AI_FACTORY/CODEBASE_MAP.md`, `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` |
 | Example plan/request/review artifacts | Implemented (docs contracts) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` |
@@ -32,14 +33,24 @@ The repository contains a working Python audio engine with tests, a manifest val
 
 ```bash
 pip install -e ".[dev]"
-pytest
+python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
+python - <<'PY'
+from pathlib import Path
+from audio_engine.integration import load_audio_plan, load_generation_request_batch
+root = Path("docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice")
+plan = load_audio_plan(root / "audio_plan.vertical_slice.v1.json")
+music = load_generation_request_batch(root / "generation_requests.music.v1.json")
+sfx = load_generation_request_batch(root / "generation_requests.sfx.v1.json")
+print(plan.project, len(plan.asset_groups), len(music.requests), len(sfx.requests))
+PY
 ```
 
 Observed result in this session:
 
-- `314 passed` in pytest
+- `318 passed` in pytest
 - asset example manifests passed validation
+- focused loader smoke check loaded the committed plan plus music/SFX request batches (`GameRewritten 2 4 5`)
 
 ## Current repository structure
 
@@ -70,7 +81,7 @@ Observed result in this session:
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
 4. There is now a committed `GameRewritten`-oriented vertical-slice example plan and request set, but there is not yet full-game taxonomy coverage in executable code.
 5. The repo now has a session queue/autopilot layer, but queued execution still depends on future agents implementing the queued code sessions.
-6. Audio-plan and generation-request formats exist in docs/examples, but request ingestion and orchestration are not yet implemented in code.
+6. Audio-plan and generation-request formats now load into typed runtime structures, but request-batch execution and orchestration are not yet implemented in code.
 7. There is not yet automated audio-quality acceptance gating in CI.
 8. The new execution-safety layer is documentation/control guidance; it reduces ambiguity but does not replace missing code-side orchestration features.
 9. Windows/Visual Studio support is not the primary development path today.
@@ -80,7 +91,7 @@ Observed result in this session:
 
 | Blocker | Why it matters | Suggested next move |
 |---|---|---|
-| Plan/request examples are not consumed by code | Keeps workflows partially manual | Implement loader + batch request execution path |
+| No request-batch execution path for loaded factory inputs | Prevents low-prompt deterministic generation from committed request fixtures | Implement request-batch generation command |
 | No broad full-game asset taxonomy beyond vertical slice | Harder to scale to complete game coverage | Expand taxonomy/checklists for all major audio families |
 | No deterministic provenance manifest emitted by pipeline | Makes regeneration/review continuity weaker | Persist request ID + seed + review status per output |
 | No automated QA gate for generated audio | Agents may ship weak assets | Add scripted review/check workflow and CI wiring |
@@ -95,4 +106,4 @@ That workflow validates manifests, but there is currently no workflow that valid
 
 ## Immediate interpretation
 
-This repo is already a capable **procedural audio generation toolkit**. The main gap is not “does any code exist?”; the gap is “how do we evolve the existing code into a reliable, AI-operable, full game-audio asset factory with persistent continuity and session-level autopilot?”
+This repo is already a capable **procedural audio generation toolkit** with typed loading for committed factory-input artifacts. The main gap is no longer basic input ingestion; the next gap is turning those loaded request batches into a reliable, AI-operable, deterministic generation path with provenance and QA continuity.
