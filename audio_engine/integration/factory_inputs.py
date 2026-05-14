@@ -1,9 +1,16 @@
+"""Typed loaders for AI_FACTORY audio-plan and generation-request JSON artifacts."""
+
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+_ALLOWED_REQUEST_TYPES = {"music", "sfx", "voice"}
+_ALLOWED_OUTPUT_FORMATS = {"wav", "ogg"}
+_ALLOWED_REVIEW_STATUSES = {"draft", "approved", "revise", "rejected", "overridden"}
 
 
 class FactoryInputError(ValueError):
@@ -117,6 +124,7 @@ def parse_audio_plan(data: Any, *, source: str = "<memory>") -> AudioPlan:
         _parse_audio_plan_asset_group(group, index=index, source=source)
         for index, group in enumerate(asset_groups_data)
     ]
+    _validate_audio_plan_target_uniqueness(asset_groups, source=source)
 
     return AudioPlan(
         plan_version=_require_str(root.get("planVersion"), "planVersion", source),
@@ -138,6 +146,7 @@ def parse_generation_request_batch(data: Any, *, source: str = "<memory>") -> Ge
         _parse_generation_request(request, index=index, source=source)
         for index, request in enumerate(requests_data)
     ]
+    _validate_generation_request_uniqueness(requests, source=source)
 
     return GenerationRequestBatch(
         request_batch_version=_require_str(root.get("requestBatchVersion"), "requestBatchVersion", source),
@@ -180,7 +189,11 @@ def _parse_audio_plan_target(data: Any, *, index: int, source: str) -> AudioPlan
         gameplay_role=_require_str(mapping.get("gameplayRole"), "gameplayRole", context),
         target_path=_require_str(mapping.get("targetPath"), "targetPath", context),
         loop=_require_bool(mapping.get("loop"), "loop", context),
-        duration_target_seconds=_require_number(mapping.get("durationTargetSeconds"), "durationTargetSeconds", context),
+        duration_target_seconds=_require_positive_finite_number(
+            mapping.get("durationTargetSeconds"),
+            "durationTargetSeconds",
+            context,
+        ),
         mood=_optional_str_list(mapping.get("mood"), "mood", context),
         review_priority=_optional_str(mapping.get("reviewPriority"), "reviewPriority", context),
         notes=_optional_str_list(mapping.get("notes"), "notes", context),
@@ -197,20 +210,25 @@ def _parse_generation_request(data: Any, *, index: int, source: str) -> Generati
         request_version=_require_str(mapping.get("requestVersion"), "requestVersion", context),
         request_id=_require_str(mapping.get("requestId"), "requestId", context),
         asset_id=_require_str(mapping.get("assetId"), "assetId", context),
-        type=_require_str(mapping.get("type"), "type", context),
+        type=_require_value_in_set(mapping.get("type"), "type", context, _ALLOWED_REQUEST_TYPES),
         backend=_require_str(mapping.get("backend"), "backend", context),
-        seed=_require_int(mapping.get("seed"), "seed", context),
+        seed=_require_non_negative_int(mapping.get("seed"), "seed", context),
         prompt=_require_str(mapping.get("prompt"), "prompt", context),
         style_family=_require_str(mapping.get("styleFamily"), "styleFamily", context),
         output=GenerationRequestOutput(
             target_path=_require_str(output_data.get("targetPath"), "targetPath", f"{context}.output"),
-            format=_require_str(output_data.get("format"), "format", f"{context}.output"),
-            sample_rate=_require_int(output_data.get("sampleRate"), "sampleRate", f"{context}.output"),
-            channels=_require_int(output_data.get("channels"), "channels", f"{context}.output"),
+            format=_require_output_format(output_data.get("format"), "format", f"{context}.output"),
+            sample_rate=_require_positive_int(output_data.get("sampleRate"), "sampleRate", f"{context}.output"),
+            channels=_require_positive_int(output_data.get("channels"), "channels", f"{context}.output"),
         ),
         qa=GenerationRequestQA(
             loop_required=_require_bool(qa_data.get("loopRequired"), "loopRequired", f"{context}.qa"),
-            review_status=_require_str(qa_data.get("reviewStatus"), "reviewStatus", f"{context}.qa"),
+            review_status=_require_value_in_set(
+                qa_data.get("reviewStatus"),
+                "reviewStatus",
+                f"{context}.qa",
+                _ALLOWED_REVIEW_STATUSES,
+            ),
             notes=_optional_str_list(qa_data.get("notes"), "notes", f"{context}.qa"),
             acceptance_profile=_optional_str(qa_data.get("acceptanceProfile"), "acceptanceProfile", f"{context}.qa"),
             loudness_target=_optional_str(qa_data.get("loudnessTarget"), "loudnessTarget", f"{context}.qa"),
@@ -218,6 +236,41 @@ def _parse_generation_request(data: Any, *, index: int, source: str) -> Generati
         replace_existing=_optional_bool(mapping.get("replaceExisting"), "replaceExisting", context),
         supersedes_request_id=_optional_str(mapping.get("supersedesRequestId"), "supersedesRequestId", context),
     )
+
+
+def _validate_audio_plan_target_uniqueness(asset_groups: list[AudioPlanAssetGroup], *, source: str) -> None:
+    seen_asset_ids: set[str] = set()
+    seen_target_paths: set[str] = set()
+    for group_index, group in enumerate(asset_groups):
+        for target_index, target in enumerate(group.targets):
+            asset_id_context = f"{source}.assetGroups[{group_index}].targets[{target_index}].assetId"
+            target_path_context = f"{source}.assetGroups[{group_index}].targets[{target_index}].targetPath"
+            if target.asset_id in seen_asset_ids:
+                raise FactoryInputError(f"{asset_id_context} duplicates an existing assetId: {target.asset_id}")
+            seen_asset_ids.add(target.asset_id)
+            if target.target_path in seen_target_paths:
+                raise FactoryInputError(
+                    f"{target_path_context} duplicates an existing targetPath: {target.target_path}"
+                )
+            seen_target_paths.add(target.target_path)
+
+
+def _validate_generation_request_uniqueness(requests: list[GenerationRequest], *, source: str) -> None:
+    seen_request_ids: set[str] = set()
+    seen_target_paths: set[str] = set()
+    for request_index, request in enumerate(requests):
+        request_id_context = f"{source}.requests[{request_index}].requestId"
+        target_path_context = f"{source}.requests[{request_index}].output.targetPath"
+        if request.request_id in seen_request_ids:
+            raise FactoryInputError(
+                f"{request_id_context} duplicates an existing requestId: {request.request_id}"
+            )
+        seen_request_ids.add(request.request_id)
+        if request.output.target_path in seen_target_paths:
+            raise FactoryInputError(
+                f"{target_path_context} duplicates an existing targetPath: {request.output.target_path}"
+            )
+        seen_target_paths.add(request.output.target_path)
 
 
 def _require_mapping(value: Any, context: str) -> dict[str, Any]:
@@ -262,10 +315,47 @@ def _require_int(value: Any, field_name: str, context: str) -> int:
     return value
 
 
+def _require_non_negative_int(value: Any, field_name: str, context: str) -> int:
+    parsed = _require_int(value, field_name, context)
+    if parsed < 0:
+        raise FactoryInputError(f"{context}.{field_name} must be a non-negative integer")
+    return parsed
+
+
+def _require_positive_int(value: Any, field_name: str, context: str) -> int:
+    parsed = _require_int(value, field_name, context)
+    if parsed <= 0:
+        raise FactoryInputError(f"{context}.{field_name} must be a positive integer")
+    return parsed
+
+
 def _require_number(value: Any, field_name: str, context: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise FactoryInputError(f"{context}.{field_name} must be a number")
     return float(value)
+
+
+def _require_positive_finite_number(value: Any, field_name: str, context: str) -> float:
+    parsed = _require_number(value, field_name, context)
+    if not math.isfinite(parsed) or parsed <= 0:
+        raise FactoryInputError(f"{context}.{field_name} must be a finite positive number")
+    return parsed
+
+
+def _require_value_in_set(value: Any, field_name: str, context: str, allowed: set[str]) -> str:
+    parsed = _require_str(value, field_name, context)
+    if parsed not in allowed:
+        allowed_values = ", ".join(sorted(allowed))
+        raise FactoryInputError(f"{context}.{field_name} must be one of: {allowed_values}")
+    return parsed
+
+
+def _require_output_format(value: Any, field_name: str, context: str) -> str:
+    parsed = _require_str(value, field_name, context)
+    if parsed.lower() not in _ALLOWED_OUTPUT_FORMATS:
+        allowed_values = ", ".join(sorted(format_name.upper() for format_name in _ALLOWED_OUTPUT_FORMATS))
+        raise FactoryInputError(f"{context}.{field_name} must be one of: {allowed_values}")
+    return parsed
 
 
 def _require_str_list(value: Any, field_name: str, context: str) -> list[str]:

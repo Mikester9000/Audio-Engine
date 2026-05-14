@@ -32,6 +32,7 @@ from audio_engine.integration import (
     VoiceAsset,
     load_audio_plan,
     load_generation_request_batch,
+    parse_audio_plan,
     parse_generation_request_batch,
 )
 from audio_engine.integration.game_state_map import (
@@ -232,6 +233,10 @@ class TestFactoryInputLoaders:
         assert len(batch.requests) == expected_request_count
         assert all(request.type == expected_type for request in batch.requests)
         assert all(request.qa.review_status == "draft" for request in batch.requests)
+        assert all(request.seed >= 0 for request in batch.requests)
+        assert all(request.output.target_path for request in batch.requests)
+        assert all(request.output.sample_rate > 0 for request in batch.requests)
+        assert all(request.output.channels > 0 for request in batch.requests)
 
     def test_generation_request_loader_rejects_missing_request_id(self):
         invalid_batch = {
@@ -264,6 +269,152 @@ class TestFactoryInputLoaders:
 
         with pytest.raises(FactoryInputError, match="requestId"):
             parse_generation_request_batch(invalid_batch, source="invalid_generation_request")
+
+    @staticmethod
+    def _base_generation_request_batch() -> dict:
+        return {
+            "requestBatchVersion": "1.0.0",
+            "project": "GameRewritten",
+            "scope": "vertical-slice",
+            "requests": [
+                {
+                    "requestVersion": "1.0.0",
+                    "requestId": "req_music_field_day_v1",
+                    "assetId": "bgm_field_day",
+                    "type": "music",
+                    "backend": "procedural",
+                    "seed": 42,
+                    "prompt": "loopable field theme",
+                    "styleFamily": "heroic-sci-fantasy",
+                    "output": {
+                        "targetPath": "Content/Audio/bgm_field_day.ogg",
+                        "format": "ogg",
+                        "sampleRate": 44100,
+                        "channels": 2,
+                    },
+                    "qa": {
+                        "loopRequired": True,
+                        "reviewStatus": "draft",
+                        "notes": [],
+                    },
+                }
+            ],
+        }
+
+    def test_generation_request_loader_rejects_invalid_constraints(self):
+        invalid_cases = [
+            ("requests[0].seed", -1, "non-negative"),
+            ("requests[0].type", "muisc", "one of"),
+            ("requests[0].output.sampleRate", 0, "positive integer"),
+            ("requests[0].output.channels", -2, "positive integer"),
+            ("requests[0].output.format", "mp3", "one of"),
+            ("requests[0].qa.reviewStatus", "drfat", "one of"),
+        ]
+
+        for path, value, expected_error in invalid_cases:
+            invalid_batch = self._base_generation_request_batch()
+            cursor = invalid_batch
+            parts = path.split(".")
+            for part in parts[:-1]:
+                if "[" in part and part.endswith("]"):
+                    key, index = part[:-1].split("[")
+                    cursor = cursor[key][int(index)]
+                else:
+                    cursor = cursor[part]
+            cursor[parts[-1]] = value
+
+            with pytest.raises(FactoryInputError, match=expected_error):
+                parse_generation_request_batch(invalid_batch, source="invalid_generation_request")
+
+    def test_generation_request_loader_rejects_duplicates(self):
+        invalid_batch = self._base_generation_request_batch()
+        duplicate_request = json.loads(json.dumps(invalid_batch["requests"][0]))
+        duplicate_request["requestId"] = invalid_batch["requests"][0]["requestId"]
+        duplicate_request["output"]["targetPath"] = "Content/Audio/bgm_field_night.ogg"
+        invalid_batch["requests"].append(duplicate_request)
+
+        with pytest.raises(FactoryInputError, match="duplicates an existing requestId"):
+            parse_generation_request_batch(invalid_batch, source="invalid_generation_request")
+
+        invalid_batch = self._base_generation_request_batch()
+        duplicate_path_request = json.loads(json.dumps(invalid_batch["requests"][0]))
+        duplicate_path_request["requestId"] = "req_music_field_day_v2"
+        invalid_batch["requests"].append(duplicate_path_request)
+
+        with pytest.raises(FactoryInputError, match="duplicates an existing targetPath"):
+            parse_generation_request_batch(invalid_batch, source="invalid_generation_request")
+
+    def test_audio_plan_loader_rejects_invalid_duration_and_duplicates(self):
+        invalid_plan = {
+            "planVersion": "1.0.0",
+            "project": "GameRewritten",
+            "scope": "vertical-slice",
+            "priorities": {"music": "high", "sfx": "high", "voice": "low"},
+            "styleFamilies": ["heroic-sci-fantasy"],
+            "assetGroups": [
+                {
+                    "groupId": "music-field",
+                    "type": "music",
+                    "required": True,
+                    "targets": [
+                        {
+                            "assetId": "bgm_field_day",
+                            "gameplayRole": "field exploration",
+                            "targetPath": "Content/Audio/bgm_field_day.ogg",
+                            "loop": True,
+                            "durationTargetSeconds": 0,
+                        }
+                    ],
+                }
+            ],
+        }
+
+        with pytest.raises(FactoryInputError, match="finite positive number"):
+            parse_audio_plan(invalid_plan, source="invalid_audio_plan")
+
+        duplicate_plan = json.loads(json.dumps(invalid_plan))
+        duplicate_plan["assetGroups"][0]["targets"][0]["durationTargetSeconds"] = 90
+        duplicate_plan["assetGroups"].append(
+            {
+                "groupId": "music-combat",
+                "type": "music",
+                "required": True,
+                "targets": [
+                    {
+                        "assetId": "bgm_field_day",
+                        "gameplayRole": "combat",
+                        "targetPath": "Content/Audio/bgm_combat.ogg",
+                        "loop": True,
+                        "durationTargetSeconds": 60,
+                    }
+                ],
+            }
+        )
+
+        with pytest.raises(FactoryInputError, match="duplicates an existing assetId"):
+            parse_audio_plan(duplicate_plan, source="invalid_audio_plan")
+
+        duplicate_path_plan = json.loads(json.dumps(invalid_plan))
+        duplicate_path_plan["assetGroups"][0]["targets"][0]["durationTargetSeconds"] = 90
+        duplicate_path_plan["assetGroups"].append(
+            {
+                "groupId": "music-combat",
+                "type": "music",
+                "required": True,
+                "targets": [
+                    {
+                        "assetId": "bgm_combat",
+                        "gameplayRole": "combat",
+                        "targetPath": "Content/Audio/bgm_field_day.ogg",
+                        "loop": True,
+                        "durationTargetSeconds": 60,
+                    }
+                ],
+            }
+        )
+
+        with pytest.raises(FactoryInputError, match="duplicates an existing targetPath"):
+            parse_audio_plan(duplicate_path_plan, source="invalid_audio_plan")
 
 
 # ---------------------------------------------------------------------------

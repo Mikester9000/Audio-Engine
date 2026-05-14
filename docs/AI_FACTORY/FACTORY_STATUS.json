@@ -19,8 +19,8 @@
   "capabilityState": {
     "generation_core": "implemented",
     "fixed_map_batch_pipeline": "partial",
-    "project_audio_plan_ingestion": "implemented",
-    "generation_request_batch_ingestion": "implemented",
+    "project_audio_plan_ingestion": "partial",
+    "generation_request_batch_ingestion": "partial",
     "provenance_review_logging": "planned",
     "batch_qa_gate": "planned",
     "gamerewritten_import_automation": "blocked",
