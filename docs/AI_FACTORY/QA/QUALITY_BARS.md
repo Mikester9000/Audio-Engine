@@ -24,6 +24,8 @@ For the long-term factory directory contract, use `docs/AI_FACTORY/CANONICAL_OUT
 
 ### Target extended layout
 
+> **Superseded by `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md`.** The category folders below (`music/`, `sfx/`, etc.) are still valid sub-directories; they now live inside the `drafts/`, `approved/`, `provenance/`, and `exports/` top-level layers defined in the canonical layout. Do not use this flat structure as the authoritative target; defer to `CANONICAL_OUTPUT_LAYOUT.md` instead.
+
 ```text
 <output_dir>/
 ├── music/

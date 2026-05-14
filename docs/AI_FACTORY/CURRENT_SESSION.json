@@ -30,10 +30,12 @@
     ],
     "likelyModify": [
       "audio_engine/integration/*",
-      "audio_engine/cli.py",
-      "tests/test_integration.py",
-      "tests/test_engine_cli.py",
-      "tests/test_new_cli.py"
+      "tests/test_integration.py"
+    ],
+    "conditionalModify": [
+      { "path": "audio_engine/cli.py", "condition": "only if a validation/listing hook is required" },
+      { "path": "tests/test_engine_cli.py", "condition": "only if CLI behavior changes" },
+      { "path": "tests/test_new_cli.py", "condition": "only if CLI behavior changes" }
     ],
     "avoidModify": [
       "audio_engine/dsp/*",

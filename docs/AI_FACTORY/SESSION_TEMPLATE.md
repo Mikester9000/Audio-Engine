@@ -25,7 +25,7 @@
 - **Verification commands:**
   - `pytest`
   - add any task-specific commands here
-- **Verification profile:** `docs/AI_FACTORY/VERIFICATION_PROFILES.md#pick-the-right-profile`
+- **Verification profile:** `docs/AI_FACTORY/VERIFICATION_PROFILES.md#profile-summary`
 - **Minimum test-expansion rules:** `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md`
 - **Docs that must be updated:**
   - `docs/AI_FACTORY/CURRENT_STATE.md`

@@ -57,9 +57,9 @@ Do not use `partially-complete` as a softer spelling of `completed`.
 
 | Session result | Required file updates |
 |---|---|
-| `completed` | `HANDOFF.md`, `CHANGE_JOURNAL.md`, `SESSION_QUEUE.md`, `SESSION_HISTORY.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, affected implementation/subsystem docs |
-| `blocked` | `HANDOFF.md`, `SESSION_QUEUE.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, plus any affected state docs |
-| `partially-complete` | `HANDOFF.md`, `SESSION_QUEUE.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, and any docs that would otherwise misstate implementation status |
+| `completed` | `CURRENT_STATE.md`, `ACTIVE_WORK.md`, `HANDOFF.md`, `CHANGE_JOURNAL.md`, `SESSION_QUEUE.md`, `SESSION_HISTORY.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, affected implementation/subsystem docs |
+| `blocked` | `CURRENT_STATE.md`, `ACTIVE_WORK.md`, `HANDOFF.md`, `SESSION_QUEUE.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, plus any affected state docs |
+| `partially-complete` | `CURRENT_STATE.md`, `ACTIVE_WORK.md`, `HANDOFF.md`, `SESSION_QUEUE.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, and any docs that would otherwise misstate implementation status |
 
 ## Hard stop rules
 
