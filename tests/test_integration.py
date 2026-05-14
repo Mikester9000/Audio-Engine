@@ -666,7 +666,7 @@ class TestIntegrationArtefacts:
 # ---------------------------------------------------------------------------
 
 class TestRequestBatchPipeline:
-    """Tests for the request-batch generation pipeline (SESSION-002)."""
+    """Tests for the request-batch generation pipeline."""
 
     def test_imports_cleanly(self):
         from audio_engine.integration import RequestBatchPipeline

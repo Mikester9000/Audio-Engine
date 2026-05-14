@@ -435,14 +435,21 @@ def _convert_channels(audio: np.ndarray, target_channels: int) -> np.ndarray:
     ----------
     audio:
         Input array: 1-D (mono) or shape ``(N, 2)`` (stereo).
+        A shape of ``(N, 1)`` is treated as mono.  Arrays with more than 2
+        channels are passed through unchanged.
     target_channels:
-        Desired number of output channels (1 or 2).
+        Desired number of output channels (1 or 2).  Values other than 1 or 2
+        result in a pass-through without conversion.
 
     Returns
     -------
     np.ndarray
         Audio in the requested channel layout.
     """
+    # Normalise (N, 1) to 1-D mono before conversion.
+    if audio.ndim == 2 and audio.shape[1] == 1:
+        audio = audio[:, 0]
+
     is_stereo = audio.ndim == 2 and audio.shape[1] == 2
     is_mono = audio.ndim == 1
 
@@ -454,7 +461,8 @@ def _convert_channels(audio: np.ndarray, target_channels: int) -> np.ndarray:
         if is_mono:
             return np.column_stack([audio, audio])
         return audio
-    return audio  # pass-through for unsupported channel counts
+    # Unsupported channel count: return audio unchanged (caller's responsibility).
+    return audio
 
 
 # ---------------------------------------------------------------------------
