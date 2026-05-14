@@ -1,5 +1,16 @@
 # Audio Engine
 
+> **AI-first repository note:** this repository now operates as a **GitHub-native audio asset factory** for generating reusable game audio assets, especially for downstream projects like `GameRewritten`. Start with [`docs/AI_FACTORY/README.md`](docs/AI_FACTORY/README.md) and [`.github/copilot-instructions.md`](.github/copilot-instructions.md) for the current mission, state, roadmap, and handoff rules. Music and SFX are higher priority than voice, and inspiration targets must be treated as style families rather than copyrighted copying targets.
+
+## AI-First Documentation Quick Start
+
+- Mission and non-goals: [`docs/AI_FACTORY/PROJECT_MISSION.md`](docs/AI_FACTORY/PROJECT_MISSION.md)
+- Current implementation status: [`docs/AI_FACTORY/CURRENT_STATE.md`](docs/AI_FACTORY/CURRENT_STATE.md)
+- Next priorities: [`docs/AI_FACTORY/ACTIVE_WORK.md`](docs/AI_FACTORY/ACTIVE_WORK.md)
+- Handoff / what changed last: [`docs/AI_FACTORY/HANDOFF.md`](docs/AI_FACTORY/HANDOFF.md)
+- Build/run/test workflow: [`docs/AI_FACTORY/PLAYBOOKS/BUILD_AND_RUN.md`](docs/AI_FACTORY/PLAYBOOKS/BUILD_AND_RUN.md)
+- Style safety and inspiration guidance: [`docs/AI_FACTORY/STYLES/STYLE_FAMILIES.md`](docs/AI_FACTORY/STYLES/STYLE_FAMILIES.md)
+
 **Audio Engine** – a Python library that rapidly generates production-quality
 music, sound effects, and voice for games, using a local AI pipeline.
 Inspired by cinematic RPG soundtracks (*Final Fantasy XV*-calibre output),
