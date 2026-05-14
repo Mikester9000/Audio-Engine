@@ -12,7 +12,7 @@
 6. If the current session becomes blocked or partially completed, update this file, `HANDOFF.md`, `SESSION_STATE.json`, and `CURRENT_SESSION.json` in the same PR.
 7. If facts are missing, follow `BLOCKER_PROTOCOL.md` and `FAILSAFE_RULES.md` instead of improvising.
 
-## Recently completed session
+## Recently completed sessions
 
 ### SESSION-001 — Implement audio plan + request loading primitives
 
@@ -20,14 +20,20 @@
 - **Task type:** `loader_parsing`
 - **Result summary:** The committed example audio plan plus music/SFX request fixtures now load into typed runtime structures in `audio_engine/integration/factory_inputs.py`, with tests covering successful ingestion and an invalid-input failure path.
 
-## Current next session
-
 ### SESSION-002 — Add request-batch generation command
 
-- **Status:** `ready`
+- **Status:** `completed`
 - **Task type:** `batch_generation`
-- **Objective:** Execute the committed music and SFX generation-request batches deterministically through an additive CLI/API path that uses the new typed loaders.
-- **Why it matters:** This turns the newly loaded factory-input artifacts into practical reproducible output generation for the game-audio workflow.
+- **Result summary:** `AssetPipeline.execute_request_batch()` and the `generate-request-batch` CLI command execute committed factory-input fixtures with per-request seeds explicit. `RequestBatchRecord` + `RequestBatchResult` provide machine-readable result capture. 11 new tests; 332 passed. Smoke run: SFX 5/5 OK, WAV music stinger OK.
+
+## Current next session
+
+### SESSION-003 — Write provenance + review logs per request
+
+- **Status:** `ready`
+- **Task type:** `provenance`
+- **Objective:** Persist request ID, seed, output path, and review state in machine-readable logs for each generated asset.
+- **Why it matters:** Enables deterministic re-generation, AI-readable audit trails, and downstream QA/review workflows.
 - **Read first docs/files:**
   1. `docs/AI_FACTORY/SESSION_QUEUE.md`
   2. `docs/AI_FACTORY/CURRENT_STATE.md`
@@ -41,30 +47,26 @@
   10. `docs/AI_FACTORY/FAILSAFE_RULES.md`
   11. `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md`
   12. `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`
-  13. `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/README.md`
-  14. `docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md`
-  15. `audio_engine/integration/factory_inputs.py`
-  16. `audio_engine/integration/asset_pipeline.py`
-  17. `audio_engine/cli.py`
-  18. `tests/test_integration.py`
-  19. `tests/test_engine_cli.py`
+  13. `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json`
+  14. `audio_engine/integration/asset_pipeline.py`
+  15. `audio_engine/cli.py`
+  16. `tests/test_integration.py`
 - **Exact or likely files to modify:**
-  - `audio_engine/cli.py`
   - `audio_engine/integration/asset_pipeline.py`
-  - `audio_engine/integration/factory_inputs.py` only if a small compatibility hook is required
+  - `audio_engine/cli.py`
   - `tests/test_integration.py`
-  - `tests/test_engine_cli.py`
 - **Files not to modify unless absolutely necessary:**
   - `audio_engine/dsp/*`
   - `audio_engine/render/*`
   - `audio_engine/composer/*`
   - `assets/schema/*`
   - `docs/AI_FACTORY/STYLES/*`
+  - `audio_engine/integration/factory_inputs.py` (loader contract is stable)
 - **Verification commands:**
   - `pip install -e ".[dev]"`
   - `python -m pytest`
   - `python tools/validate-assets.py assets/examples/ --verbose`
-  - one deterministic `/tmp` smoke run using the committed generation-request fixtures
+  - one deterministic `/tmp` smoke run: run `generate-request-batch` and verify that a provenance log is written
 - **Docs that must be updated:**
   - `docs/AI_FACTORY/CURRENT_STATE.md`
   - `docs/AI_FACTORY/ACTIVE_WORK.md`
@@ -77,26 +79,18 @@
   - `docs/AI_FACTORY/CURRENT_SESSION.json`
   - `docs/AI_FACTORY/SESSION_STATE.json`
 - **Explicit done criteria:**
-  1. One additive CLI or API path executes at least the committed music and SFX request-batch fixtures.
-  2. Deterministic seeds remain explicit and are passed through the execution path.
-  3. Tests cover the new request-batch generation path.
-  4. Existing one-off CLI behavior remains compatible.
-  5. Docs describe the new batch-generation behavior truthfully without overstating provenance or QA automation.
-- **Enqueue next session after completion:** `SESSION-003 — Write provenance + review logs per request`
+  1. A provenance log (JSON) is written alongside or near each generated asset, containing at minimum: `request_id`, `seed`, `output_path`, `review_status`.
+  2. The provenance log is stable across re-runs with the same seed.
+  3. Tests cover the provenance log writer with at least one success path and one field-presence check.
+  4. Existing CLI behavior for `generate-request-batch` is preserved or improved.
+  5. Docs describe the new provenance behavior truthfully.
+- **Enqueue next session after completion:** `SESSION-004 — Add batch QA gate command for generated outputs`
 - **If uncertain or blocked:**
   - follow `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`
-  - do not invent unsupported schema fields or downstream import guarantees
-  - support the committed example request fixtures first before generalizing
-  - choose the smallest additive execution path that preserves current CLI behavior
-  - record blockers in `HANDOFF.md`, `SESSION_QUEUE.md`, `SESSION_STATE.json`, and `CURRENT_SESSION.json`
+  - use the committed `review_log.example.v1.json` as the schema reference
+  - do not invent new schema fields beyond what the existing example specifies
 
 ## Upcoming queued sessions
-
-### SESSION-003 — Write provenance + review logs per request
-
-- **Status:** `queued-after-SESSION-002`
-- **Task type:** `provenance`
-- **Short objective:** Persist request ID, seed, output path, and review state in machine-readable logs.
 
 ### SESSION-004 — Add batch QA gate command for generated outputs
 

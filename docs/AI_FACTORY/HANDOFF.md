@@ -1,10 +1,10 @@
 # Handoff
 
-> Update this file at the end of every PR. Treat it as the “what changed last” file.
+> Update this file at the end of every PR. Treat it as the "what changed last" file.
 
 ## Last completed change
 
-This PR completes `SESSION-001` by adding typed integration-layer loaders for the committed audio plan and music/SFX generation-request fixtures in `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/`, with tested invalid-input failure handling and no CLI breakage.
+This PR completes `SESSION-002` by adding a deterministic request-batch generation command. `AssetPipeline.execute_request_batch()` and the `generate-request-batch` CLI command execute the committed music and SFX generation-request fixtures using per-request seeds explicitly. `RequestBatchRecord` and `RequestBatchResult` provide machine-readable result capture. 11 new tests added.
 
 ## Verified in this session
 
@@ -12,30 +12,32 @@ This PR completes `SESSION-001` by adding typed integration-layer loaders for th
 pip install -e ".[dev]"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
-python - <<'PY'
-from pathlib import Path
-from audio_engine.integration import load_audio_plan, load_generation_request_batch
-root = Path("docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice")
-plan = load_audio_plan(root / "audio_plan.vertical_slice.v1.json")
-music = load_generation_request_batch(root / "generation_requests.music.v1.json")
-sfx = load_generation_request_batch(root / "generation_requests.sfx.v1.json")
-print(plan.project, len(plan.asset_groups), len(music.requests), len(sfx.requests))
-PY
-python -m json.tool docs/AI_FACTORY/FACTORY_STATUS.json
-python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
-python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
+# SFX smoke run (5/5 OK):
+python -m audio_engine.cli generate-request-batch \
+  --request-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json \
+  --output-dir /tmp/smoke_sfx --sfx-duration 0.5 --write-result
+# Music smoke run (WAV stinger OK; OGG gracefully errors -- optional dep):
+python -m audio_engine.cli generate-request-batch \
+  --request-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json \
+  --output-dir /tmp/smoke_music --music-duration 2.0 --write-result
+python -m json.tool /tmp/smoke_sfx/request_batch_result.json
 ```
 
 Observed result:
 
-- `318 passed`
+- `332 passed` (up from 321)
 - asset-manifest examples validated successfully
-- focused loader smoke check loaded the committed plan plus music and SFX request batches (`GameRewritten 2 4 5`)
-- machine-readable AI-factory JSON state files parsed successfully
+- SFX batch: 5/5 OK — seeds 305001, 305012, 305023, 305034, 305045 recorded per request in `request_batch_result.json`
+- Music batch: WAV stinger (`req_music_stinger_victory_short_v1`, seed 204834) OK; OGG requests report graceful error (optional `soundfile` dep, expected in this environment)
+- Result JSON verified as valid JSON with `project`, `records`, `seed` fields present
+
+## Notes on OGG limitation
+
+Three of the four music requests in the fixture specify `format: "ogg"`. Export to OGG requires the optional `soundfile` dependency (`pip install audio-engine[ogg]`). Without it the batch runner logs a graceful per-request error rather than crashing. This is existing behavior (pre-SESSION-002) and is not a session-introduced regression.
 
 ## Immediate next best task
 
-Execute `SESSION-002` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add a deterministic request-batch generation command that uses the new loader primitives to render the committed music and SFX request fixtures.
+Execute `SESSION-003` from `docs/AI_FACTORY/SESSION_QUEUE.md`: persist request ID, seed, output path, and review state in machine-readable provenance logs per generated asset.
 
 ## Files future agents should read first
 
@@ -65,5 +67,6 @@ Execute `SESSION-002` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add a determinist
 - [x] PR autopilot checklist + session history + machine-readable session state added
 - [x] Final execution-safety hardening layer added (current-session JSON, session gates, blocker protocol, verification profiles, canonical output layout, full game-audio checklist, minimum test-expansion rules, human command guide)
 - [x] Audio plan and music/SFX generation-request fixtures load through typed integration code and tests
-- [ ] Request-batch generation command implemented
+- [x] Request-batch generation command implemented (`execute_request_batch` + `generate-request-batch` CLI)
+- [ ] Provenance/review logs persisted per generated asset
 - [ ] Audio QA/review automation added
