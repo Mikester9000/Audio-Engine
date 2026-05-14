@@ -24,6 +24,8 @@ from audio_engine.integration import (
     FactoryInputError,
     GenerationManifest,
     GenerationRequestBatch,
+    RequestBatchRecord,
+    RequestBatchResult,
     MUSIC_MANIFEST,
     SFX_MANIFEST,
     VOICE_MANIFEST,
@@ -659,3 +661,179 @@ class TestIntegrationArtefacts:
         assert hasattr(integration, "MUSIC_MANIFEST")
         assert hasattr(integration, "SFX_MANIFEST")
         assert hasattr(integration, "VOICE_MANIFEST")
+        assert hasattr(integration, "RequestBatchRecord")
+        assert hasattr(integration, "RequestBatchResult")
+
+
+# ---------------------------------------------------------------------------
+# RequestBatch execution
+# ---------------------------------------------------------------------------
+
+class TestRequestBatchExecution:
+    """Smoke tests for AssetPipeline.execute_request_batch() using committed fixtures."""
+
+    def test_execute_sfx_batch_from_fixture(self, tmp_path):
+        """All SFX requests in the committed fixture should produce output files."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            batch,
+            tmp_path,
+            default_sfx_duration=0.1,  # short for test speed
+        )
+
+        assert isinstance(result, RequestBatchResult)
+        assert result.project == "GameRewritten"
+        assert result.scope == "vertical-slice"
+        assert len(result.records) == len(batch.requests)
+
+        errors = [r for r in result.records if r.status == "error"]
+        assert not errors, f"SFX batch had errors: {[r.error for r in errors]}"
+
+        for record in result.records:
+            assert record.status == "ok"
+            assert Path(record.output_path).exists(), f"Missing output: {record.output_path}"
+
+    def test_execute_music_batch_first_request(self, tmp_path):
+        """At least the WAV-format music request (stinger) should produce a non-empty output file."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        # Use the stinger request which outputs WAV (no optional soundfile dep needed).
+        wav_requests = [r for r in batch.requests if r.output.format == "wav"]
+        assert wav_requests, "No WAV-format music requests found in fixture"
+
+        from audio_engine.integration.factory_inputs import GenerationRequestBatch
+
+        single_request_batch = GenerationRequestBatch(
+            request_batch_version=batch.request_batch_version,
+            project=batch.project,
+            scope=batch.scope,
+            requests=[wav_requests[0]],
+        )
+
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            single_request_batch,
+            tmp_path,
+            default_music_duration=2.0,  # short for test speed
+        )
+
+        assert len(result.records) == 1
+        record = result.records[0]
+        assert record.status == "ok", f"Music request failed: {record.error}"
+        assert Path(record.output_path).exists()
+        assert Path(record.output_path).stat().st_size > 0
+
+    def test_seeds_are_per_request(self, tmp_path):
+        """Each result record must carry the seed from its source request."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            batch,
+            tmp_path,
+            default_sfx_duration=0.1,
+        )
+
+        request_seeds = {req.request_id: req.seed for req in batch.requests}
+        for record in result.records:
+            assert record.seed == request_seeds[record.request_id], (
+                f"Seed mismatch for {record.request_id}: "
+                f"expected {request_seeds[record.request_id]}, got {record.seed}"
+            )
+
+    def test_skip_existing_files(self, tmp_path):
+        """force=False should skip files that already exist."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        first_request = batch.requests[0]
+        existing_path = tmp_path / first_request.output.target_path
+        existing_path.parent.mkdir(parents=True, exist_ok=True)
+        existing_path.write_bytes(b"PLACEHOLDER")
+        mtime_before = existing_path.stat().st_mtime
+
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            batch,
+            tmp_path,
+            force=False,
+            default_sfx_duration=0.1,
+        )
+
+        first_record = next(r for r in result.records if r.request_id == first_request.request_id)
+        assert first_record.status == "skipped"
+        assert existing_path.stat().st_mtime == mtime_before, "File was modified despite force=False"
+
+    def test_force_overwrites_existing_files(self, tmp_path):
+        """force=True should regenerate files that already exist."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        from audio_engine.integration.factory_inputs import GenerationRequestBatch
+
+        single_request_batch = GenerationRequestBatch(
+            request_batch_version=batch.request_batch_version,
+            project=batch.project,
+            scope=batch.scope,
+            requests=[batch.requests[0]],
+        )
+        first_request = single_request_batch.requests[0]
+        existing_path = tmp_path / first_request.output.target_path
+        existing_path.parent.mkdir(parents=True, exist_ok=True)
+        existing_path.write_bytes(b"STALE")
+
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            single_request_batch,
+            tmp_path,
+            force=True,
+            default_sfx_duration=0.1,
+        )
+
+        assert result.records[0].status == "ok"
+        assert existing_path.stat().st_size > 4, "File was not overwritten"
+
+    def test_result_summary_non_empty(self, tmp_path):
+        """RequestBatchResult.summary() should produce a non-empty string."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            batch,
+            tmp_path,
+            default_sfx_duration=0.1,
+        )
+        summary = result.summary()
+        assert "GameRewritten" in summary
+        assert "OK" in summary
+
+    def test_result_to_json_roundtrip(self):
+        """RequestBatchResult.to_json() should produce valid JSON."""
+        result = RequestBatchResult(
+            output_dir="/tmp/test",
+            project="TestProject",
+            scope="test",
+            records=[
+                RequestBatchRecord(
+                    request_id="req_test_1",
+                    asset_id="sfx_test",
+                    type="sfx",
+                    seed=42,
+                    output_path="/tmp/test/sfx.wav",
+                    status="ok",
+                )
+            ],
+            total_duration_seconds=0.5,
+        )
+        data = json.loads(result.to_json())
+        assert data["project"] == "TestProject"
+        assert len(data["records"]) == 1
+        assert data["records"][0]["seed"] == 42
+        assert data["records"][0]["status"] == "ok"
+

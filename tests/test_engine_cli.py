@@ -116,3 +116,68 @@ def test_cli_sfx(tmp_path, capsys):
 def test_cli_generate_unknown_style(capsys):
     rc = main(["generate", "--style", "nonexistent_xyz", "--output", "/tmp/x.wav"])
     assert rc != 0
+
+
+# ---------------------------------------------------------------------------
+# generate-request-batch CLI tests
+# ---------------------------------------------------------------------------
+
+_FIXTURE_DIR = (
+    Path(__file__).parent.parent
+    / "docs"
+    / "AI_FACTORY"
+    / "EXAMPLES"
+    / "gamerewritten_vertical_slice"
+)
+
+
+def test_cli_generate_request_batch_sfx(tmp_path, capsys):
+    """generate-request-batch should return 0 and create output files for the SFX fixture."""
+    rc = main([
+        "generate-request-batch",
+        "--request-file", str(_FIXTURE_DIR / "generation_requests.sfx.v1.json"),
+        "--output-dir", str(tmp_path),
+        "--sfx-duration", "0.1",
+        "--quiet",
+    ])
+    assert rc == 0
+    # At least one output file should exist under tmp_path
+    output_files = list(tmp_path.rglob("*.wav"))
+    assert output_files, "No output WAV files created"
+
+
+def test_cli_generate_request_batch_missing_file(tmp_path, capsys):
+    """generate-request-batch should return non-zero when the request file is missing."""
+    rc = main([
+        "generate-request-batch",
+        "--request-file", str(tmp_path / "nonexistent.json"),
+        "--output-dir", str(tmp_path),
+    ])
+    assert rc != 0
+
+
+def test_cli_generate_request_batch_writes_result_json(tmp_path, capsys):
+    """--write-result should create request_batch_result.json in the output directory."""
+    rc = main([
+        "generate-request-batch",
+        "--request-file", str(_FIXTURE_DIR / "generation_requests.sfx.v1.json"),
+        "--output-dir", str(tmp_path),
+        "--sfx-duration", "0.1",
+        "--write-result",
+        "--quiet",
+    ])
+    assert rc == 0
+    result_json = tmp_path / "request_batch_result.json"
+    assert result_json.exists(), "request_batch_result.json not written"
+    import json
+    data = json.loads(result_json.read_text())
+    assert data["project"] == "GameRewritten"
+    assert "records" in data
+
+
+def test_cli_generate_request_batch_help(capsys):
+    """generate-request-batch --help should print usage without error."""
+    import pytest
+    with pytest.raises(SystemExit) as exc_info:
+        main(["generate-request-batch", "--help"])
+    assert exc_info.value.code == 0
