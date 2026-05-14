@@ -48,6 +48,7 @@
 ## Template usage rules
 
 - Keep filenames and headings explicit for retrieval.
+- Treat the status values above as explicit tokens. Preserve spellings like `partially-complete` and `queued-after-SESSION-YYY` exactly instead of normalizing them ad hoc.
 - Use real repository paths.
 - Do not mark a session `completed` until verification commands have run.
 - If a session changes priority or cannot finish, update `SESSION_QUEUE.md`, `HANDOFF.md`, `SESSION_STATE.json`, and `CURRENT_SESSION.json` together.
