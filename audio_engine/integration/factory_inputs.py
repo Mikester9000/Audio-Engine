@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from typing import Any
 _ALLOWED_REQUEST_TYPES = {"music", "sfx", "voice"}
 _ALLOWED_OUTPUT_FORMATS = {"wav", "ogg"}
 _ALLOWED_REVIEW_STATUSES = {"draft", "approved", "revise", "rejected", "overridden"}
+_VARIANT_SUFFIX_RE = re.compile(r"^(?P<stem>.+)_var(?P<index>\d{2})$")
 
 
 class FactoryInputError(ValueError):
@@ -147,6 +149,7 @@ def parse_generation_request_batch(data: Any, *, source: str = "<memory>") -> Ge
         for index, request in enumerate(requests_data)
     ]
     _validate_generation_request_uniqueness(requests, source=source)
+    _validate_sfx_variation_strategy(requests, source=source)
 
     return GenerationRequestBatch(
         request_batch_version=_require_str(root.get("requestBatchVersion"), "requestBatchVersion", source),
@@ -271,6 +274,103 @@ def _validate_generation_request_uniqueness(requests: list[GenerationRequest], *
                 f"{target_path_context} duplicates an existing targetPath: {request.output.target_path}"
             )
         seen_target_paths.add(request.output.target_path)
+
+
+def _validate_sfx_variation_strategy(requests: list[GenerationRequest], *, source: str) -> None:
+    """Enforce executable repeated-SFX variation rules when variant families are present."""
+    sfx_requests = [request for request in requests if request.type == "sfx"]
+    if not sfx_requests:
+        return
+
+    by_family: dict[str, list[tuple[int, GenerationRequest]]] = {}
+    for request_index, request in enumerate(requests):
+        if request.type != "sfx":
+            continue
+        family = _variant_family_name(request.asset_id)
+        by_family.setdefault(family, []).append((request_index, request))
+
+    for family, members in by_family.items():
+        if len(members) < 2:
+            continue
+
+        seen_seed_values: set[int] = set()
+        seen_indices: set[int] = set()
+        for member_request_index, request in members:
+            context = f"{source}.requests[{member_request_index}]"
+            asset_variant = parse_variant_suffix(request.asset_id)
+            request_variant = parse_variant_suffix(request.request_id)
+            output_variant = parse_variant_suffix(Path(request.output.target_path).stem)
+
+            if asset_variant is None:
+                raise FactoryInputError(
+                    f"{context}.assetId must use `_varNN` suffix for repeated SFX family '{family}'"
+                )
+            if request_variant is None:
+                raise FactoryInputError(
+                    f"{context}.requestId must use `_varNN` suffix for repeated SFX family '{family}'"
+                )
+            if output_variant is None:
+                raise FactoryInputError(
+                    f"{context}.output.targetPath filename stem must use `_varNN` suffix for repeated SFX family '{family}'"
+                )
+
+            asset_stem, asset_index = asset_variant
+            _, request_index = request_variant
+            _, output_index = output_variant
+
+            if asset_stem != family:
+                raise FactoryInputError(
+                    f"{context}.assetId variant family mismatch: expected stem '{family}', got '{asset_stem}'"
+                )
+            if not (asset_index == request_index == output_index):
+                raise FactoryInputError(
+                    f"{context} variant index mismatch across assetId/requestId/output.targetPath"
+                )
+            if request.seed in seen_seed_values:
+                raise FactoryInputError(
+                    f"{context}.seed duplicates another variant seed in repeated SFX family '{family}'"
+                )
+            seen_seed_values.add(request.seed)
+            seen_indices.add(asset_index)
+
+        expected_indices = set(range(1, len(members) + 1))
+        if seen_indices != expected_indices:
+            raise FactoryInputError(
+                f"repeated SFX family '{family}' must use contiguous variant indices _var01.._var{len(members):02d}"
+            )
+
+
+def parse_variant_suffix(value: str) -> tuple[str, int] | None:
+    """Parse an asset/request stem with `_varNN` suffix into `(family_stem, index)`.
+
+    Parameters
+    ----------
+    value:
+        Identifier or filename stem potentially ending in a two-digit variant
+        suffix, such as ``sfx_ui_confirm_var01``.
+
+    Returns
+    -------
+    tuple[str, int] | None
+        ``(family_stem, variant_index)`` when a valid `_varNN` suffix is
+        present; otherwise ``None``.
+    """
+    match = _VARIANT_SUFFIX_RE.match(value)
+    if match is None:
+        return None
+    return match.group("stem"), int(match.group("index"))
+
+
+def _variant_family_name(asset_id: str) -> str:
+    """Return the repeated-SFX family stem for an asset identifier.
+
+    If *asset_id* contains a `_varNN` suffix, the suffix is removed and the
+    family stem is returned. Otherwise, the original identifier is returned.
+    """
+    parsed = parse_variant_suffix(asset_id)
+    if parsed is None:
+        return asset_id
+    return parsed[0]
 
 
 def _require_mapping(value: Any, context: str) -> dict[str, Any]:

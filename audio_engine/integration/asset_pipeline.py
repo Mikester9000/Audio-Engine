@@ -1005,6 +1005,14 @@ class RequestBatchPipeline:
             "reviewStatus": request.qa.review_status,
             "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
+        if request.type == "sfx":
+            from audio_engine.integration.factory_inputs import parse_variant_suffix
+
+            parsed_variant = parse_variant_suffix(request.asset_id)
+            if parsed_variant is not None:
+                variation_family, variation_index = parsed_variant
+                provenance["variationFamily"] = variation_family
+                provenance["variationIndex"] = variation_index
         provenance_path = output_path.with_name(output_path.stem + ".provenance.json")
         provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
 

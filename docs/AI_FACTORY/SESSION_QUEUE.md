@@ -62,12 +62,25 @@
 - Added backend discoverability via `list-backends` CLI and backend selection flags (`--backend`) on `generate-music`, `generate-sfx`, and `generate-voice`.
 - Added coverage tests for invalid-backend handling through request-batch execution paths.
 
+### SESSION-011 — Add backend evaluation notes
+- **Status:** `completed`
+- **Task type:** `cli`
+- Added executable backend evaluation metadata in `BackendRegistry.evaluate_backends()` and surfaced dependency/modality evaluation output in `audio-engine list-backends`.
+- Preserved truthful current backend reality (`procedural` implemented) while keeping future adapter-family quality claims out of runtime behavior.
+
+### SESSION-012 — Add variation strategy for repeated SFX categories
+- **Status:** `completed`
+- **Task type:** `loader_parsing + provenance`
+- Added executable repeated-SFX variant-family validation in generation-request parsing (`_varNN` naming, deterministic distinct seeds, contiguous variant indices).
+- Added per-asset variant provenance fields (`variationFamily`, `variationIndex`) for SFX variant requests in `RequestBatchPipeline`.
+- Runtime in-game variant selection remains downstream/out of scope; factory-side deterministic variant generation/tracking is now implemented.
+
 ## Current next session
 
-### SESSION-011 — Add backend evaluation notes
+### SESSION-013 — Define category-specific SFX loudness/readability targets
 
 - **Status:** `ready`
 - **Task type:** `docs_only`
-- **Objective:** Add explicit backend evaluation notes and dependency/availability guidance for local/open backend options (without claiming unimplemented model quality), aligned with the new backend selection/discovery CLI surfaces.
-- **Enqueue next session after completion:** `SESSION-012 — Add variation strategy for repeated SFX categories`
-- **Notes:** Keep implementation claims truthful; document what exists now (`procedural` + backend registry/selection hooks) versus future model adapters.
+- **Objective:** Define category-specific SFX loudness/readability target guidance and align it with existing QA/reporting surfaces so repeated-category variant assets can be reviewed consistently.
+- **Enqueue next session after completion:** `SESSION-014 — Add review/report template updates for variant-family QA decisions`
+- **Notes:** Keep guidance additive and truthful to existing checks (`qa`, `qa-batch`) without claiming new automated per-category enforcement.

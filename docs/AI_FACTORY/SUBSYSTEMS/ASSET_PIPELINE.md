@@ -28,4 +28,4 @@
 
 ## Near-term goal
 
-Execute `SESSION-011` to document backend evaluation and dependency/availability guidance so the current backend registry/selection surfaces can be used consistently by future sessions.
+Execute `SESSION-013` to define category-specific SFX loudness/readability targets and align those targets with existing QA/reporting surfaces.

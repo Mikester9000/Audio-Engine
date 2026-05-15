@@ -43,6 +43,7 @@
 | Responsibility | Primary files | Notes |
 |---|---|---|
 | Fixed-map generation pipeline | `audio_engine/integration/asset_pipeline.py` | Generates `music/`, `sfx/`, `voice/` sets and writes manifest. |
+| Factory-input parsing + validation | `audio_engine/integration/factory_inputs.py` | Typed loaders/validators for audio plans and generation requests, including repeated-SFX variant-family validation rules. |
 | Canonical event/state mapping | `audio_engine/integration/game_state_map.py` | Music/SFX/voice manifest tuples and prompts. |
 | Integration docs for consumer repo | `docs/AI_FACTORY/INTEGRATION/GAMEREWRITTEN.md` | Path/naming direction for `GameRewritten`. |
 

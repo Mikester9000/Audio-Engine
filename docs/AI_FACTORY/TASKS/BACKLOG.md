@@ -13,10 +13,10 @@
 
 ## P1 — Important next layer
 
-- [ ] Add scripted batch QA wrapper over existing QA tools
-- [ ] Add variation strategy for repeated SFX categories
+- [x] Add scripted batch QA wrapper over existing QA tools
+- [x] Add variation strategy for repeated SFX categories
 - [x] Add more explicit ambience/environment taxonomy
-- [ ] Add backend evaluation notes for local/open generation backends
+- [x] Add backend evaluation notes for local/open generation backends
 
 ## P2 — Valuable but not urgent
 

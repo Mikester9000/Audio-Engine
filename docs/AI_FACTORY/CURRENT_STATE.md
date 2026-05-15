@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, and taxonomy fixtures now cover ambience, fanfares/stingers, expanded UI/combat/spell SFX, tension/sadness music, optional voice placeholders, key BGM OST request entries, and required fanfare request fixtures.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths.
 
 ## What is implemented today
 
@@ -37,25 +37,27 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Final execution-safety hardening docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_GATE_RULES.md`, `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`, `docs/AI_FACTORY/VERIFICATION_PROFILES.md`, `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md`, `docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md`, `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md` |
 | Full-game taxonomy fixture coverage | Implemented (docs fixtures) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json`, `generation_requests.music.v1.json`, `generation_requests.sfx.v1.json`, `generation_requests.voice.v1.json`, `docs/AI_FACTORY/TASKS/BACKLOG.md` |
 | Backend discoverability and selection CLI | Implemented | `audio_engine/cli.py` (`list-backends`, `--backend` on `generate-music`/`generate-sfx`/`generate-voice`) |
+| Backend evaluation and availability guidance | Implemented | `audio_engine/ai/backend.py` (`BackendRegistry.evaluate_backends`), `audio_engine/cli.py` (`list-backends`) |
+| Repeated SFX variation strategy guidance | Implemented (factory-side) | `audio_engine/integration/factory_inputs.py` (variant-family validation), `audio_engine/integration/asset_pipeline.py` (variant provenance fields) |
 | Automated test suite | Implemented | `tests/` |
 
 ### Commands verified in this session
 
 ```bash
 pip install -e ".[dev]"
-pip install soundfile
 python -m pytest
-# 399 passed (SESSION-009 + SESSION-010)
+# 404 passed (SESSION-011 + SESSION-012 executable implementation update)
 python tools/validate-assets.py assets/examples/ --verbose
-python -m audio_engine.cli generate-plan-batch --plan-file /tmp/session009010_smoke/plan.smoke.json --request-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json --output-dir /tmp/session009010_smoke --force --quiet
+python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
+python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 ```
 
 Observed result in this session:
 
-- `399 passed` in pytest
+- `404 passed` in pytest
 - asset example manifests passed validation
-- deterministic plan-driven smoke run produced requested `.ogg` output plus provenance sidecar
-- SESSION-009 and SESSION-010 objectives completed
+- edited session-control JSON files parse cleanly
+- SESSION-011 and SESSION-012 objectives implemented in code and verified
 
 ## Current repository structure
 
@@ -102,4 +104,4 @@ None blocking the next session.
 
 ## Immediate interpretation
 
-This repo now has a complete draft-to-approved pipeline with both request-driven and plan-driven entrypoints: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are now strict in request-batch execution paths (no silent WAV fallback), and backend selection/discovery surfaces have been expanded for future neural/local model adapters.
+This repo now has a complete draft-to-approved pipeline with both request-driven and plan-driven entrypoints: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery now includes executable backend evaluation metadata, and repeated-SFX variation strategy now has executable request-validation and provenance tracking support while downstream runtime selection remains out of scope.

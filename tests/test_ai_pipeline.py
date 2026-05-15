@@ -158,6 +158,14 @@ class TestBackendRegistry:
         backend = BackendRegistry.get("_test_dummy", sample_rate=SR)
         assert isinstance(backend, _DummyBackend)
 
+    def test_evaluate_backends_includes_metadata(self):
+        evaluations = BackendRegistry.evaluate_backends(sample_rate=SR)
+        procedural = next(item for item in evaluations if item["name"] == "procedural")
+        assert procedural["available"] is True
+        assert procedural["availability_reason"] == "ready"
+        assert "sfx" in procedural["supported_modalities"]
+        assert "dependency_summary" in procedural
+
 
 # ---------------------------------------------------------------------------
 # MusicGen
