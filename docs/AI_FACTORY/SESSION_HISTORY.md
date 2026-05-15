@@ -13,3 +13,5 @@
 | `SESSION-003` | 2026-05-14 | completed | Added per-request `.provenance.json` sidecar files to `RequestBatchPipeline`; 5 new tests; 338 total pass. | this PR |
 | `SESSION-004` | 2026-05-14 | completed | Added `qa-batch` CLI command with JSON report; 7 new tests; 345 total pass. `sfx_ui_cancel.wav` correctly flagged at -6.37 LUFS. | this PR |
 | `SESSION-005` | 2026-05-14 | completed | Added `DraftExportPipeline` and `export-drafts` CLI command; 10 new tests; 355 total pass. SFX files exported to `Content/Audio/` using provenance `targetImportPath` names. | this PR |
+| `SESSION-006` | 2026-05-15 | completed | Added `ApprovalWorkflow` class and `approve-draft` CLI command; promotes draft assets to `approved/<type>/`, updates `reviewStatus` in provenance to `"approved"`, writes `approvedAt` timestamp. 13 new tests; 383 total pass. | this PR |
+| `SESSION-007` | 2026-05-15 | completed | Wired `qa-batch` into CI via `.github/workflows/audio-qa.yml`; generates SFX batch and runs QA gate on every push/PR touching audio engine source or examples. | this PR |

@@ -92,11 +92,38 @@ voice/npc_shopkeeper_greeting__take01__seed0007.wav
 
 | Family | Typical contents | Preferred working format | Common downstream format |
 |---|---|---|---|
-| `music/` | loops, state themes, layered BGM | `wav` or `ogg` | often `ogg`, sometimes `wav` |
+| `music/` | loops, state themes, layered BGM, long-form OST variants | `wav` or `ogg` | often `ogg`, sometimes `wav` |
 | `fanfares_stingers/` | victory, level-up, save, discovery cues | `wav` or `ogg` | `ogg` or `wav` |
 | `sfx/` | UI, combat, spells, pickups, impacts, footsteps | `wav` | usually `wav` |
 | `ambience/` | weather, room tone, biome loops, transitions | `wav` or `ogg` | often `ogg` |
 | `voice/` | placeholder narration, barks, callouts | `wav` | format depends on downstream need |
+
+## Music duration expectations
+
+Different music sub-types have different appropriate durations.  This is the
+canonical reference for agents generating or reviewing music assets:
+
+| Music sub-type | Loop | Target duration | Notes |
+|---|---|---|---|
+| Major themes (title, ending, credits) | optional | 120–300 s | Full-length pieces; qualify as long-form game audio |
+| Gameplay BGM (field, town, dungeon, combat) | **yes** | 60–120 s | Must loop cleanly at a natural loop point |
+| Boss battle BGM | **yes** | 90–180 s | Longer loops preferred for sustained engagement |
+| Story cutscene underscore | no | 30–120 s | Non-loopable; matches scene length |
+| Stingers and fanfares | no | 2–12 s | Short punchy reward / event cues |
+| Save / level-up cues | no | 2–8 s | Very short; a few seconds maximum |
+| UI / system cues | no | 0.1–2 s | As short as possible; never loopable |
+
+### Long-form OST variants
+
+For key in-game BGM loops, a corresponding longer **OST-style variant** may be
+generated or planned alongside the gameplay loop.  The OST variant:
+
+- uses an `_ost` suffix (e.g. `bgm_field_day_ost.ogg`) and is stored in the
+  same `music/` sub-directory
+- targets 120–300 s (up to 5 minutes) from the same seed and prompt
+- is not required for game functionality but supports soundtrack releases
+- should be noted in the `audio_plan.*.json` with
+  `"gameplayRole": "ost-variant"` and `"loop": false`
 
 ## Practical format rules
 

@@ -94,3 +94,26 @@
 - Added 3 CLI tests for `export-drafts` (subcommand registered, missing dir fails, smoke).
 - Smoke run: 5 SFX files from `/tmp/session003_smoke/drafts/sfx/` exported to `/tmp/session003_smoke/exports/gamerewritten/Content/Audio/` using stable `targetImportPath` filenames.
 - Test count: 355 passed (up from 345).
+
+## 2026-05-15 — Complete SESSION-006 (approval workflow) + SESSION-007 (CI QA gate) + music-duration policy
+
+### SESSION-006 — Add approval workflow
+
+- Added `ApprovalWorkflow` class to `audio_engine/integration/asset_pipeline.py` with `approve()` (single file) and `approve_batch()` (multiple files) methods.
+- `approve()` copies the audio file to `<factory_root>/approved/<type>/`, reads or synthesises the `.provenance.json` sidecar, updates `reviewStatus` to `"approved"`, adds `approvedAt` timestamp and `approvedPath`, and writes updated provenance to both the approved directory and the original draft location.
+- Added `approve-draft --factory-root <dir> --draft-file <path> [--output-report <path>] [--quiet]` CLI command.
+- Exported `ApprovalWorkflow` from `audio_engine.integration`.
+- Added 13 new integration tests covering: file copy, approved directory placement, provenance update in approved and draft locations, required record fields, FileNotFoundError on missing file, ValueError on unsupported extension, fallback without provenance sidecar, `approve_batch` multi-file, `approve_batch` error recording, CLI approval, CLI report output, CLI missing file.
+- Test count: 383 passed (up from 370).
+
+### SESSION-007 — Wire qa-batch into CI
+
+- Added `.github/workflows/audio-qa.yml` that triggers on push/PR to `audio_engine/**`, `tests/**`, `docs/AI_FACTORY/EXAMPLES/**`, and the workflow file itself.
+- The workflow: installs the package, runs `pytest`, generates the committed SFX fixture to `/tmp/ci_qa_batch`, and runs `qa-batch` over the output; fails the CI step if any file fails loudness/peak/clipping checks.
+
+### Music-duration policy
+
+- Updated `docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md` with a canonical music duration table (major themes 120–300 s, gameplay BGM 60–120 s, boss loops 90–180 s, stingers/fanfares 2–12 s, UI cues <2 s) and long-form OST support policy.
+- Updated `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md` with music duration expectations table and OST variant guidance.
+- Updated `docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md` with a duration key and duration annotations for every music checklist item; marked key BGM tracks `+ost`.
+- Updated `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json` with a `musicDurationPolicy` section and `ostVariant` entries for `bgm_field_day`, `bgm_town_evening`, `bgm_battle_standard`, and `bgm_boss_phase1`; boss target raised from 90 s to 120 s.

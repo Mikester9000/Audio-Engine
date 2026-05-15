@@ -321,6 +321,41 @@ def _cmd_qa_batch(args: argparse.Namespace) -> None:
         raise ValueError(f"{n_failed} file(s) failed QA checks")
 
 
+def _cmd_approve_draft(args: argparse.Namespace) -> None:
+    """Approve one or more draft audio files and promote them to approved/."""
+    from audio_engine.integration.asset_pipeline import ApprovalWorkflow
+
+    factory_root = Path(args.factory_root)
+    quiet = args.quiet
+
+    def _progress(msg: str) -> None:
+        if not quiet:
+            print(msg)
+
+    workflow = ApprovalWorkflow(progress_callback=_progress)
+
+    draft_paths = [Path(p) for p in args.draft_file]
+    if not draft_paths:
+        print("Error: at least one --draft-file path is required", file=sys.stderr)
+        raise ValueError("at least one --draft-file path is required")
+
+    records = workflow.approve_batch(factory_root, draft_paths)
+
+    n_ok = sum(1 for r in records if r.get("status") == "ok")
+    n_err = sum(1 for r in records if r.get("status") == "error")
+    print(f"\nApproval complete — {n_ok} approved, {n_err} error(s)")
+
+    if args.output_report:
+        import json
+        report_path = Path(args.output_report)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps({"approvals": records}, indent=2), encoding="utf-8")
+        print(f"Report written → {report_path}")
+
+    if n_err > 0:
+        raise ValueError(f"{n_err} file(s) failed approval")
+
+
 def _cmd_export_drafts(args: argparse.Namespace) -> None:
     """Copy draft audio files to the GameRewritten export surface."""
     from audio_engine.integration.asset_pipeline import DraftExportPipeline
@@ -473,6 +508,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="Recurse into subdirectories when searching for WAV files.",
     )
     qab.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-file progress messages.",
+    )
+
+    # --- approve-draft ---
+    apd = sub.add_parser(
+        "approve-draft",
+        help=(
+            "Approve one or more draft audio files: update provenance reviewStatus "
+            "to 'approved' and copy to <factory-root>/approved/<type>/."
+        ),
+    )
+    apd.add_argument(
+        "--factory-root", "-f", required=True,
+        help="Factory output root directory (contains the drafts/ sub-directory).",
+    )
+    apd.add_argument(
+        "--draft-file", "-d", nargs="+", required=True,
+        help="Path(s) to one or more draft audio file(s) to approve.",
+    )
+    apd.add_argument(
+        "--output-report", "-o",
+        help="Optional path to write a JSON approval report.",
+    )
+    apd.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress per-file progress messages.",
@@ -730,6 +791,7 @@ def main(argv: list[str] | None = None) -> int:
         "generate-voice": _cmd_generate_voice,
         "qa": _cmd_qa,
         "qa-batch": _cmd_qa_batch,
+        "approve-draft": _cmd_approve_draft,
         "export-drafts": _cmd_export_drafts,
         "sfx": _cmd_sfx,
         "list-styles": _cmd_list_styles,

@@ -1,0 +1,107 @@
+# ============================================================================
+# audio-qa.yml — Audio QA Gate CI Workflow (SESSION-007)
+# ============================================================================
+#
+# TEACHING NOTE — Automated Audio Quality Gate
+# --------------------------------------------
+# In a professional audio pipeline, generated audio assets should be validated
+# automatically on every change to ensure they meet loudness, clipping, and
+# loop-quality targets before they can be promoted.  This workflow is the
+# lightweight CI equivalent of that gate.
+#
+# What this workflow does:
+#   1. Installs the audio-engine Python package.
+#   2. Generates a small SFX batch to /tmp using the committed example fixture.
+#   3. Runs the `qa-batch` command over the generated outputs.
+#   4. Fails the CI step if any generated file does not meet the QA thresholds
+#      (loudness target: -30 to -9 LUFS, peak: ≤ -0.1 dBFS, no clipping).
+#
+# Trigger: any push or pull-request that touches audio engine source, tests,
+#           generation request fixtures, or this workflow file itself.
+#
+# On success: job passes, PR can be merged.
+# On failure: job fails with a per-file QA report so the author knows
+#             exactly which thresholds were exceeded.
+# ============================================================================
+
+name: Audio QA Gate
+
+on:
+  push:
+    paths:
+      - 'audio_engine/**'
+      - 'tests/**'
+      - 'docs/AI_FACTORY/EXAMPLES/**'
+      - '.github/workflows/audio-qa.yml'
+  pull_request:
+    paths:
+      - 'audio_engine/**'
+      - 'tests/**'
+      - 'docs/AI_FACTORY/EXAMPLES/**'
+      - '.github/workflows/audio-qa.yml'
+  # Allow manual trigger from the GitHub Actions UI.
+  workflow_dispatch:
+
+# TEACHING NOTE — Principle of Least Privilege
+# Grant only the minimum permissions required.
+permissions:
+  contents: read
+
+jobs:
+  audio-qa:
+    name: Generate sample assets and run QA gate
+    runs-on: ubuntu-latest
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Check out the repository
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Set up Python
+      # -----------------------------------------------------------------------
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # -----------------------------------------------------------------------
+      # 3. Install the audio-engine package in editable mode with dev extras
+      # -----------------------------------------------------------------------
+      - name: Install audio-engine
+        run: pip install -e ".[dev]"
+
+      # -----------------------------------------------------------------------
+      # 4. Run the full test suite (includes unit and integration tests)
+      # -----------------------------------------------------------------------
+      - name: Run pytest
+        run: python -m pytest --tb=short -q
+
+      # -----------------------------------------------------------------------
+      # 5. Generate a small SFX batch from the committed fixture
+      #    The SFX fixture is fast to execute and has no optional dependencies,
+      #    making it a reliable smoke target in CI.
+      # -----------------------------------------------------------------------
+      - name: Generate SFX batch (committed fixture)
+        run: |
+          audio-engine generate-request-batch \
+            --batch-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json \
+            --output-dir /tmp/ci_qa_batch \
+            --quiet
+
+      # -----------------------------------------------------------------------
+      # 6. Run the QA gate over the generated SFX files
+      #    The command exits non-zero if any file fails loudness, peak, or
+      #    clipping checks — this fails the CI step.
+      # -----------------------------------------------------------------------
+      - name: Run QA gate on generated SFX
+        run: |
+          audio-engine qa-batch \
+            --input-dir /tmp/ci_qa_batch/drafts/sfx \
+            --output-report /tmp/ci_qa_batch/qa_report.json \
+            --recursive \
+            || (echo "QA gate failed — see report below:" && \
+                python -m json.tool /tmp/ci_qa_batch/qa_report.json && \
+                exit 1)

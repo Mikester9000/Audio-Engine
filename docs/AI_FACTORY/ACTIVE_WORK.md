@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-export pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → GameRewritten `Content/Audio/` layout. The next executable session is `SESSION-006` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add an approval workflow that promotes drafts to `approved/`.
+The repository now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate (`audio-qa.yml`) validates generated outputs on every push. Music-duration policy is clearly documented. The next executable session is `SESSION-008` in `docs/AI_FACTORY/SESSION_QUEUE.md`: expand full-game taxonomy coverage.
 
 ## Now
 
@@ -21,17 +21,20 @@ The repository now has a complete draft-to-export pipeline: `generate-request-ba
 - [x] Execute `SESSION-003` from `docs/AI_FACTORY/SESSION_QUEUE.md`
 - [x] Execute `SESSION-004` from `docs/AI_FACTORY/SESSION_QUEUE.md`
 - [x] Execute `SESSION-005` from `docs/AI_FACTORY/SESSION_QUEUE.md`
-- [ ] Execute `SESSION-006` — add approval workflow (promote drafts to approved/)
-- [ ] Add approval/review workflow for generated assets
+- [x] Execute `SESSION-006` — add approval workflow (promote drafts to approved/)
+- [x] Execute `SESSION-007` — wire qa-batch into CI
+- [x] Update music-duration policy across docs, checklist, layout, and example plan
+- [ ] Execute `SESSION-008` — expand full-game taxonomy coverage
 
 ## Recommended next PRs
 
-1. **Execute `SESSION-006` — add approval workflow (promote drafts to approved/)**
-   - Mark a draft asset as `approved` (update provenance `reviewStatus`) and copy it to `approved/<type>/`.
-2. **Wire `qa-batch` into CI**
-   - Run QA gate on generated outputs in GitHub Actions.
-3. **Expand full-game taxonomy**
-   - Add ambience, fanfares, UI, and combat audio coverage beyond the vertical slice.
+1. **Execute `SESSION-008` — expand full-game taxonomy coverage**
+   - Add committed backlog/request fixtures for ambience, fanfares/stingers, UI, combat/spell SFX, tension, sadness, and optional voice.
+   - Add long-form OST variant request entries for the key BGM tracks already marked `+ost` in `FULL_GAME_AUDIO_CHECKLIST.md` and `audio_plan.vertical_slice.v1.json`.
+2. **Add plan-driven batch orchestration (SESSION-009)**
+   - Wire the audio plan loader into the batch execution path.
+3. **Expand neural backend support**
+   - Add a switchable backend for local model generation.
 
 ## Do not deprioritize
 
