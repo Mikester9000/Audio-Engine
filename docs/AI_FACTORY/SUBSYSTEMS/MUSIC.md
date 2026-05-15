@@ -6,14 +6,24 @@
 - prompt-driven generation through `MusicGen`
 - mastering through `OfflineBounce`
 - CLI access through `generate` and `generate-music`
+- backend selection/discovery surfaces through `generate-music --backend` and `list-backends`
 - existing integration mapping for multiple game states in `audio_engine/integration/game_state_map.py`
 
 ## What is missing
 
-- project-level plan-driven music generation
-- explicit review status tracking per music asset
+- per-target duration enforcement from plan metadata in execution paths
 - richer style-preset registry beyond current built-in styles
-- `GameRewritten`-specific music backlog committed in this repo
+- verified non-procedural backend adapters and quality benchmarks
+
+## Backend evaluation notes (SESSION-011)
+
+- **Current implemented backend reality:** the only shipped backend is `procedural` (`audio_engine/ai/backend.py`).
+- **Current selection/discovery surfaces:** users can list registered backends with `audio-engine list-backends` and select one with `--backend` on music/SFX/voice generation commands.
+- **Availability behavior:** backend availability is dependency-driven (`is_available()`); missing runtime dependencies should be treated as unavailable/failing execution rather than as quality regressions.
+- **Future local/open backend guidance (docs, not implementation):**
+  - acceptable adapter families include local ONNX-runtime wrappers, ggml/llama.cpp-style local wrappers, or local-files-only Hugging Face adapters
+  - evaluate by deterministic reproducibility, dependency footprint, and command-line operability first
+  - do not claim production quality or parity with commercial systems until implemented and verified in this repo
 
 ## Music duration policy
 

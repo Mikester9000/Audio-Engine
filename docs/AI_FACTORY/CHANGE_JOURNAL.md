@@ -148,3 +148,21 @@
   - `python -m pytest` → 399 passed
   - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
   - deterministic `/tmp` smoke run with `generate-plan-batch` produced requested `.ogg` output after installing `soundfile`.
+
+## 2026-05-15 — Complete SESSION-011 (backend evaluation notes) + SESSION-012 (SFX variation strategy docs)
+
+- Added backend evaluation and dependency/availability guidance in:
+  - `docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md`
+  - `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`
+- Added deterministic repeated-SFX variation strategy guidance in:
+  - `docs/AI_FACTORY/SUBSYSTEMS/SFX.md`
+  - `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`
+- Clarified docs-contract boundaries (truthful current implementation vs future adapter/runtime behavior) to avoid overclaiming.
+- Updated continuity and session-control docs to mark `SESSION-011` and `SESSION-012` completed and advance current session to `SESSION-013`.
+- Synced queue/state/history/handoff surfaces: `SESSION_QUEUE.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, `SESSION_HISTORY.md`, `ACTIVE_WORK.md`, `CURRENT_STATE.md`, `HANDOFF.md`, `IMPLEMENTATION_MATRIX.md`.
+- Verification:
+  - `pip install -e ".[dev]"` → PASS
+  - `python -m pytest` → 400 passed
+  - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
+  - `python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json` → PASS
+  - `python -m json.tool docs/AI_FACTORY/SESSION_STATE.json` → PASS

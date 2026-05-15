@@ -62,12 +62,24 @@
 - Added backend discoverability via `list-backends` CLI and backend selection flags (`--backend`) on `generate-music`, `generate-sfx`, and `generate-voice`.
 - Added coverage tests for invalid-backend handling through request-batch execution paths.
 
+### SESSION-011 — Add backend evaluation notes
+- **Status:** `completed`
+- **Task type:** `docs_only`
+- Added explicit backend evaluation notes and dependency/availability guidance aligned with backend registry/selection CLI surfaces.
+- Documented current backend reality (`procedural` implemented) and future local/open adapter families without claiming unimplemented quality.
+
+### SESSION-012 — Add variation strategy for repeated SFX categories
+- **Status:** `completed`
+- **Task type:** `docs_only`
+- Added deterministic request-level SFX variation strategy guidance (stable naming, explicit seed capture, variant-per-request flow).
+- Clarified this is currently docs-contract guidance and not implemented runtime variation selection logic.
+
 ## Current next session
 
-### SESSION-011 — Add backend evaluation notes
+### SESSION-013 — Define category-specific SFX loudness/readability targets
 
 - **Status:** `ready`
 - **Task type:** `docs_only`
-- **Objective:** Add explicit backend evaluation notes and dependency/availability guidance for local/open backend options (without claiming unimplemented model quality), aligned with the new backend selection/discovery CLI surfaces.
-- **Enqueue next session after completion:** `SESSION-012 — Add variation strategy for repeated SFX categories`
-- **Notes:** Keep implementation claims truthful; document what exists now (`procedural` + backend registry/selection hooks) versus future model adapters.
+- **Objective:** Define category-specific SFX loudness/readability target guidance and align it with existing QA/reporting surfaces so repeated-category variant assets can be reviewed consistently.
+- **Enqueue next session after completion:** `SESSION-014 — Add review/report template updates for variant-family QA decisions`
+- **Notes:** Keep guidance additive and truthful to existing checks (`qa`, `qa-batch`) without claiming new automated per-category enforcement.

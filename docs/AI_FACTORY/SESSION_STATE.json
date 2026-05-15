@@ -1,9 +1,9 @@
 {
-  "version": "1.2.0",
+  "version": "1.3.0",
   "lastUpdated": "2026-05-15",
   "currentSession": {
-    "id": "SESSION-011",
-    "title": "Add backend evaluation notes",
+    "id": "SESSION-013",
+    "title": "Define category-specific SFX loudness/readability targets",
     "status": "ready",
     "taskType": "docs_only"
   },
@@ -17,6 +17,8 @@
     {"id": "SESSION-007", "status": "completed", "completedDate": "2026-05-15"},
     {"id": "SESSION-008", "status": "completed", "completedDate": "2026-05-15"},
     {"id": "SESSION-009", "status": "completed", "completedDate": "2026-05-15"},
-    {"id": "SESSION-010", "status": "completed", "completedDate": "2026-05-15"}
+    {"id": "SESSION-010", "status": "completed", "completedDate": "2026-05-15"},
+    {"id": "SESSION-011", "status": "completed", "completedDate": "2026-05-15"},
+    {"id": "SESSION-012", "status": "completed", "completedDate": "2026-05-15"}
   ]
 }
