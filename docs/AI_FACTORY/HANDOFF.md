@@ -11,13 +11,13 @@ SESSION-009 + SESSION-010: Added plan-driven orchestration (`PlanBatchOrchestrat
 ```bash
 pip install -e ".[dev]"
 pip install soundfile
-python -m pytest  # 397 passed
+python -m pytest  # 399 passed
 python tools/validate-assets.py assets/examples/ --verbose  # PASS
 python -m audio_engine.cli generate-plan-batch --plan-file /tmp/session009010_smoke/plan.smoke.json --request-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json --output-dir /tmp/session009010_smoke --force --quiet  # PASS
 ```
 
 Observed result:
-- `397 passed` in pytest
+- `399 passed` in pytest
 - all asset-manifest examples passed validation
 - deterministic plan-driven smoke run produced requested `.ogg` output and provenance sidecar
 - required fanfare requests were added to committed music request fixture to satisfy required plan targets

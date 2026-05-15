@@ -76,6 +76,8 @@ if TYPE_CHECKING:
 
 __all__ = ["ApprovalWorkflow", "AssetPipeline", "GenerationManifest", "RequestBatchPipeline", "PlanBatchOrchestrator", "DraftExportPipeline", "RequestBatchRecord", "RequestBatchResult"]
 
+_SUPPORTED_REQUEST_FORMATS = frozenset({"wav", "ogg"})
+
 
 # ---------------------------------------------------------------------------
 # GenerationManifest
@@ -902,7 +904,8 @@ class RequestBatchPipeline:
         Returns
         -------
         Path
-            Actual path of the written file.
+            Actual path of the written file in the requested format.
+            Raises ``ImportError`` if the required encoder dependency is unavailable.
         """
         from audio_engine.export.audio_exporter import AudioExporter
 
@@ -1084,13 +1087,13 @@ class PlanBatchOrchestrator:
                     )
 
                 plan_format = Path(target.target_path).suffix.lower().lstrip(".")
-                if plan_format not in {"wav", "ogg"}:
+                if plan_format not in _SUPPORTED_REQUEST_FORMATS:
                     raise ValueError(
                         f"unsupported plan target format for assetId {target.asset_id}: .{plan_format}"
                     )
 
                 request_target_format = Path(request.output.target_path).suffix.lower().lstrip(".")
-                if request_target_format not in {"wav", "ogg"}:
+                if request_target_format not in _SUPPORTED_REQUEST_FORMATS:
                     raise ValueError(
                         f"unsupported request target format for assetId {target.asset_id}: .{request_target_format}"
                     )

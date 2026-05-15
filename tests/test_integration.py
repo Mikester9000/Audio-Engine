@@ -843,7 +843,7 @@ class TestRequestBatchPipeline:
             requests=[ogg_requests[0]],
         )
 
-        def _simulate_missing_encoder(self, _audio, _path):  # pragma: no cover - injected behavior
+        def _simulate_missing_encoder(self, audio, path):  # pragma: no cover - injected behavior
             raise ImportError("soundfile missing for test")
 
         monkeypatch.setattr(AudioExporter, "_write_ogg", _simulate_missing_encoder)
@@ -855,6 +855,25 @@ class TestRequestBatchPipeline:
         assert "soundfile missing for test" in manifest.errors[0]
         expected_wav_fallback = tmp_path / "drafts" / "music" / f"{ogg_requests[0].request_id}.wav"
         assert not expected_wav_fallback.exists(), "Unexpected WAV fallback file was written"
+
+    def test_execute_music_batch_full_fixture_without_encoder_dependency(self, tmp_path, monkeypatch):
+        """Execute the full committed music fixture with a patched OGG writer for broad integration coverage."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+        from audio_engine.export.audio_exporter import AudioExporter
+
+        def _fake_write_ogg(self, audio, path):  # pragma: no cover - injected behavior
+            return self._write_wav(audio, path)
+
+        monkeypatch.setattr(AudioExporter, "_write_ogg", _fake_write_ogg)
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        assert len(manifest.errors) == 0, manifest.errors
+        assert len(manifest.music) == len(batch.requests)
 
     def test_request_batch_pipeline_uses_request_backend(self, tmp_path):
         """RequestBatchPipeline must respect request.backend for generation."""
