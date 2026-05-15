@@ -244,6 +244,21 @@ class TestFactoryInputLoaders:
         assert all(request.output.sample_rate > 0 for request in batch.requests)
         assert all(request.output.channels > 0 for request in batch.requests)
 
+    def test_music_fixture_includes_required_fanfare_requests(self):
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        fanfare_requests = {
+            request.asset_id: request
+            for request in batch.requests
+            if request.asset_id in {"fanfare_item_obtain", "fanfare_quest_complete"}
+        }
+        assert set(fanfare_requests) == {"fanfare_item_obtain", "fanfare_quest_complete"}
+        for request in fanfare_requests.values():
+            assert request.type == "music"
+            assert request.output.format == "wav"
+            assert request.qa.loop_required is False
+
     def test_generation_request_loader_rejects_missing_request_id(self):
         invalid_batch = {
             "requestBatchVersion": "1.0.0",
@@ -828,10 +843,10 @@ class TestRequestBatchPipeline:
             requests=[ogg_requests[0]],
         )
 
-        def _raise_missing_soundfile(self, _audio, _path):  # pragma: no cover - injected behavior
+        def _simulate_missing_encoder(self, _audio, _path):  # pragma: no cover - injected behavior
             raise ImportError("soundfile missing for test")
 
-        monkeypatch.setattr(AudioExporter, "_write_ogg", _raise_missing_soundfile)
+        monkeypatch.setattr(AudioExporter, "_write_ogg", _simulate_missing_encoder)
 
         pipeline = RequestBatchPipeline(skip_existing=False)
         manifest = pipeline.execute(batch, tmp_path)
