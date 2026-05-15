@@ -419,7 +419,11 @@ def _cmd_write_review_log(args: argparse.Namespace) -> None:
         audio_files.extend(sorted(default_dir.rglob("*.ogg")))
 
     # deterministic unique list preserving sorted order
-    unique_audio_files = sorted({str(path.resolve()): path.resolve() for path in audio_files}.values())
+    resolved_map: dict[str, Path] = {}
+    for path in audio_files:
+        resolved = path.resolve()
+        resolved_map[str(resolved)] = resolved
+    unique_audio_files = sorted(resolved_map.values())
     if not unique_audio_files:
         raise ValueError("no audio files found for review-log writing")
 
