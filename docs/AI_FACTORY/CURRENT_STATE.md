@@ -52,7 +52,7 @@ python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/genera
 
 Observed result in this session:
 
-- `385 passed` in pytest
+- `386 passed` in pytest
 - asset example manifests passed validation
 - all edited taxonomy fixture JSON files parsed successfully
 - SESSION-008 taxonomy objective completed in docs fixtures and backlog coverage

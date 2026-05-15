@@ -10,7 +10,7 @@ SESSION-008: Expanded committed taxonomy coverage across AI-factory fixtures and
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest  # 385 passed
+python -m pytest  # 386 passed
 python tools/validate-assets.py assets/examples/ --verbose  # PASS
 python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json  # PASS
 python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json  # PASS
@@ -19,7 +19,7 @@ python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/genera
 ```
 
 Observed result:
-- `385 passed` in pytest
+- `386 passed` in pytest
 - all asset-manifest examples passed validation
 - all edited AI-factory JSON fixtures parsed successfully
 - committed taxonomy coverage now includes ambience, fanfares/stingers, expanded UI/combat/spell SFX, tension/sadness music, optional voice placeholders, and OST request entries for `field`, `town`, `dungeon`, `battle`, and `boss` BGM tracks
