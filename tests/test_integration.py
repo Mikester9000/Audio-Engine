@@ -365,6 +365,98 @@ class TestFactoryInputLoaders:
         with pytest.raises(FactoryInputError, match="duplicates an existing targetPath"):
             parse_generation_request_batch(invalid_batch, source="invalid_generation_request")
 
+    def test_generation_request_loader_accepts_valid_sfx_variant_family(self):
+        batch = {
+            "requestBatchVersion": "1.0.0",
+            "project": "GameRewritten",
+            "scope": "variation-tests",
+            "requests": [
+                {
+                    "requestVersion": "1.0.0",
+                    "requestId": "req_sfx_ui_confirm_var01",
+                    "assetId": "sfx_ui_confirm_var01",
+                    "type": "sfx",
+                    "backend": "procedural",
+                    "seed": 101,
+                    "prompt": "ui confirm click variant one",
+                    "styleFamily": "heroic-sci-fantasy",
+                    "output": {
+                        "targetPath": "Content/Audio/sfx_ui_confirm_var01.wav",
+                        "format": "wav",
+                        "sampleRate": 44100,
+                        "channels": 1,
+                    },
+                    "qa": {"loopRequired": False, "reviewStatus": "draft"},
+                },
+                {
+                    "requestVersion": "1.0.0",
+                    "requestId": "req_sfx_ui_confirm_var02",
+                    "assetId": "sfx_ui_confirm_var02",
+                    "type": "sfx",
+                    "backend": "procedural",
+                    "seed": 102,
+                    "prompt": "ui confirm click variant two",
+                    "styleFamily": "heroic-sci-fantasy",
+                    "output": {
+                        "targetPath": "Content/Audio/sfx_ui_confirm_var02.wav",
+                        "format": "wav",
+                        "sampleRate": 44100,
+                        "channels": 1,
+                    },
+                    "qa": {"loopRequired": False, "reviewStatus": "draft"},
+                },
+            ],
+        }
+
+        parsed = parse_generation_request_batch(batch, source="valid_variant_batch")
+        assert len(parsed.requests) == 2
+
+    def test_generation_request_loader_rejects_variant_family_seed_reuse(self):
+        batch = {
+            "requestBatchVersion": "1.0.0",
+            "project": "GameRewritten",
+            "scope": "variation-tests",
+            "requests": [
+                {
+                    "requestVersion": "1.0.0",
+                    "requestId": "req_sfx_ui_confirm_var01",
+                    "assetId": "sfx_ui_confirm_var01",
+                    "type": "sfx",
+                    "backend": "procedural",
+                    "seed": 101,
+                    "prompt": "ui confirm click variant one",
+                    "styleFamily": "heroic-sci-fantasy",
+                    "output": {
+                        "targetPath": "Content/Audio/sfx_ui_confirm_var01.wav",
+                        "format": "wav",
+                        "sampleRate": 44100,
+                        "channels": 1,
+                    },
+                    "qa": {"loopRequired": False, "reviewStatus": "draft"},
+                },
+                {
+                    "requestVersion": "1.0.0",
+                    "requestId": "req_sfx_ui_confirm_var02",
+                    "assetId": "sfx_ui_confirm_var02",
+                    "type": "sfx",
+                    "backend": "procedural",
+                    "seed": 101,
+                    "prompt": "ui confirm click variant two",
+                    "styleFamily": "heroic-sci-fantasy",
+                    "output": {
+                        "targetPath": "Content/Audio/sfx_ui_confirm_var02.wav",
+                        "format": "wav",
+                        "sampleRate": 44100,
+                        "channels": 1,
+                    },
+                    "qa": {"loopRequired": False, "reviewStatus": "draft"},
+                },
+            ],
+        }
+
+        with pytest.raises(FactoryInputError, match="duplicates another variant seed"):
+            parse_generation_request_batch(batch, source="invalid_variant_batch")
+
     def test_audio_plan_loader_rejects_invalid_duration_and_duplicates(self):
         invalid_plan = {
             "planVersion": "1.0.0",
@@ -977,6 +1069,64 @@ class TestRequestBatchPipeline:
             assert data["seed"] == request_seeds[data["requestId"]], (
                 f"Provenance seed mismatch for {data['requestId']}"
             )
+
+    def test_provenance_includes_sfx_variant_metadata(self, tmp_path):
+        """SFX variant requests should record variation family/index in provenance."""
+        from audio_engine.integration import RequestBatchPipeline
+
+        variant_batch = parse_generation_request_batch(
+            {
+                "requestBatchVersion": "1.0.0",
+                "project": "GameRewritten",
+                "scope": "variation-tests",
+                "requests": [
+                    {
+                        "requestVersion": "1.0.0",
+                        "requestId": "req_sfx_ui_confirm_var01",
+                        "assetId": "sfx_ui_confirm_var01",
+                        "type": "sfx",
+                        "backend": "procedural",
+                        "seed": 101,
+                        "prompt": "ui confirm click variant one",
+                        "styleFamily": "heroic-sci-fantasy",
+                        "output": {
+                            "targetPath": "Content/Audio/sfx_ui_confirm_var01.wav",
+                            "format": "wav",
+                            "sampleRate": 44100,
+                            "channels": 1,
+                        },
+                        "qa": {"loopRequired": False, "reviewStatus": "draft"},
+                    },
+                    {
+                        "requestVersion": "1.0.0",
+                        "requestId": "req_sfx_ui_confirm_var02",
+                        "assetId": "sfx_ui_confirm_var02",
+                        "type": "sfx",
+                        "backend": "procedural",
+                        "seed": 102,
+                        "prompt": "ui confirm click variant two",
+                        "styleFamily": "heroic-sci-fantasy",
+                        "output": {
+                            "targetPath": "Content/Audio/sfx_ui_confirm_var02.wav",
+                            "format": "wav",
+                            "sampleRate": 44100,
+                            "channels": 1,
+                        },
+                        "qa": {"loopRequired": False, "reviewStatus": "draft"},
+                    },
+                ],
+            },
+            source="variant_provenance_batch",
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(variant_batch, tmp_path)
+        assert not manifest.errors
+
+        for record in manifest.sfx:
+            provenance_path = Path(record["file"]).with_name(Path(record["file"]).stem + ".provenance.json")
+            data = json.loads(provenance_path.read_text())
+            assert data["variationFamily"] == "sfx_ui_confirm"
+            assert data["variationIndex"] in {1, 2}
 
     def test_provenance_not_written_for_skipped(self, tmp_path):
         """No provenance file should be written for skipped (already-existing) files."""

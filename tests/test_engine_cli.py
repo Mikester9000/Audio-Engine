@@ -481,6 +481,7 @@ def test_cli_list_backends(capsys):
     assert rc == 0
     captured = capsys.readouterr()
     assert "procedural" in captured.out
+    assert "supports:" in captured.out
 
 
 def test_cli_generate_plan_batch_subcommand_registered(capsys):

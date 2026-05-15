@@ -396,10 +396,13 @@ def _cmd_list_backends(_args: argparse.Namespace) -> None:
     from audio_engine.ai.backend import BackendRegistry
 
     print("Available generation backends:")
-    for name in BackendRegistry.available_backends():
-        backend = BackendRegistry.get(name)
-        status = "available" if backend.is_available() else "unavailable"
-        print(f"  {name} ({status})")
+    for evaluation in BackendRegistry.evaluate_backends():
+        status = "available" if evaluation["available"] else "unavailable"
+        modalities = ", ".join(evaluation["supported_modalities"])
+        print(
+            f"  {evaluation['name']} ({status})"
+            f" — supports: {modalities}; deps: {evaluation['dependency_summary']}"
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:

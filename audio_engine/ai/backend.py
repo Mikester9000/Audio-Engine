@@ -134,6 +134,20 @@ class InferenceBackend(ABC):
         """Return ``True`` if this backend's dependencies are installed."""
         return True
 
+    def supported_modalities(self) -> tuple[str, ...]:
+        """Return supported generator modalities for this backend."""
+        return ("music", "sfx", "voice")
+
+    def dependency_summary(self) -> str:
+        """Return short dependency/availability guidance for this backend."""
+        return "no additional runtime dependencies"
+
+    def availability_reason(self) -> str:
+        """Return a human-readable availability reason."""
+        if self.is_available():
+            return "ready"
+        return "required runtime dependencies are unavailable"
+
 
 class ProceduralBackend(InferenceBackend):
     """Fully-local procedural synthesis backend (no external models needed).
@@ -153,6 +167,9 @@ class ProceduralBackend(InferenceBackend):
     @property
     def name(self) -> str:
         return "procedural"
+
+    def dependency_summary(self) -> str:
+        return "numpy/scipy procedural pipeline (bundled dependency set)"
 
     def generate_music_audio(
         self,
@@ -266,3 +283,20 @@ class BackendRegistry:
     def available_backends(cls) -> list[str]:
         """Return sorted list of registered backend names."""
         return sorted(cls._registry)
+
+    @classmethod
+    def evaluate_backends(cls, **kwargs) -> list[dict[str, object]]:
+        """Return backend evaluation metadata for CLI/reporting surfaces."""
+        evaluations: list[dict[str, object]] = []
+        for name in cls.available_backends():
+            backend = cls.get(name, **kwargs)
+            evaluations.append(
+                {
+                    "name": name,
+                    "available": backend.is_available(),
+                    "availability_reason": backend.availability_reason(),
+                    "supported_modalities": list(backend.supported_modalities()),
+                    "dependency_summary": backend.dependency_summary(),
+                }
+            )
+        return evaluations
