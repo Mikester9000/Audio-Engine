@@ -843,7 +843,7 @@ class TestRequestBatchPipeline:
             requests=[ogg_requests[0]],
         )
 
-        def _simulate_missing_encoder(self, audio, path):  # pragma: no cover - injected behavior
+        def _simulate_missing_encoder(_exporter, audio, path):  # pragma: no cover - injected behavior
             raise ImportError("soundfile missing for test")
 
         monkeypatch.setattr(AudioExporter, "_write_ogg", _simulate_missing_encoder)
@@ -861,8 +861,8 @@ class TestRequestBatchPipeline:
         from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
         from audio_engine.export.audio_exporter import AudioExporter
 
-        def _fake_write_ogg(self, audio, path):  # pragma: no cover - injected behavior
-            return self._write_wav(audio, path)
+        def _fake_write_ogg(_exporter, audio, path):  # pragma: no cover - injected behavior
+            return _exporter._write_wav(audio, path)
 
         monkeypatch.setattr(AudioExporter, "_write_ogg", _fake_write_ogg)
 
