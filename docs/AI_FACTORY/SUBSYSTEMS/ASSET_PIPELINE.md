@@ -16,6 +16,10 @@
   - `qa-batch`
   - `export-drafts`
   - `approve-draft`
+- Machine-readable review-log writing is executable:
+  - `write-review-log`
+  - optional review-log update flags on `approve-draft` and `export-drafts`
+  - review entries are sourced from provenance sidecars and can optionally include `qa-batch` snapshot fields
 - Request format behavior is strict:
   - requested `.ogg` outputs must be produced as `.ogg`
   - no silent OGG→WAV fallback in request-batch execution paths
@@ -28,4 +32,4 @@
 
 ## Near-term goal
 
-Execute `SESSION-013` to define category-specific SFX loudness/readability targets and align those targets with existing QA/reporting surfaces.
+Define and queue the next executable session (`SESSION-017`) after review-log writing and handoff integration.

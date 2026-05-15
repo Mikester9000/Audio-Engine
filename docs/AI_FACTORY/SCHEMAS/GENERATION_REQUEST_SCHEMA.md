@@ -91,6 +91,7 @@ Current executable enforcement:
 - Existing executable QA checks remain global (`-30..-9` LUFS band, peak `<= -0.1 dBFS`) in `qa` / `qa-batch`.
 - `qa.acceptanceProfile` should still be populated for category intent (`sfx-ui`, `sfx-combat`, `sfx-magic`, `ambience-loop`) so review logs can apply category-specific loudness/readability guidance consistently.
 - Variant-family review decisions are tracked in review/report artifacts, not in request schema enforcement.
+- Executable review-log writing is available via `audio-engine write-review-log` and optional handoff flags on `approve-draft` / `export-drafts`; these paths consume provenance plus optional `qa-batch` report snapshots.
 
 ## Deterministic seed rule
 

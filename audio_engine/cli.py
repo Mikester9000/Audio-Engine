@@ -339,7 +339,15 @@ def _cmd_approve_draft(args: argparse.Namespace) -> None:
         print("Error: at least one --draft-file path is required", file=sys.stderr)
         raise ValueError("at least one --draft-file path is required")
 
-    records = workflow.approve_batch(factory_root, draft_paths)
+    records = workflow.approve_batch(
+        factory_root,
+        draft_paths,
+        review_log_path=args.review_log,
+        reviewer=args.reviewer,
+        qa_report_path=args.qa_report,
+        project=args.project,
+        scope=args.scope,
+    )
 
     n_ok = sum(1 for r in records if r.get("status") == "ok")
     n_err = sum(1 for r in records if r.get("status") == "error")
@@ -369,10 +377,77 @@ def _cmd_export_drafts(args: argparse.Namespace) -> None:
             print(msg)
 
     pipeline = DraftExportPipeline(progress_callback=_progress)
-    manifest = pipeline.export(factory_root)
+    manifest = pipeline.export(
+        factory_root,
+        review_log_path=args.review_log,
+        reviewer=args.reviewer,
+        qa_report_path=args.qa_report,
+        project=args.project,
+        scope=args.scope,
+    )
 
     n_total = manifest["summary"]["total"]
     print(f"\nExport complete — {n_total} file(s) → {factory_root / 'exports' / 'gamerewritten'}")
+
+
+def _cmd_write_review_log(args: argparse.Namespace) -> None:
+    """Write/update machine-readable review logs from audio+provenance surfaces."""
+    import json
+
+    from audio_engine.integration.asset_pipeline import ReviewLogWriter
+
+    factory_root = Path(args.factory_root)
+    review_log_path = Path(args.review_log)
+
+    audio_files: list[Path] = []
+    if args.audio_file:
+        audio_files.extend(Path(p) for p in args.audio_file)
+    if args.audio_dir:
+        audio_dir = Path(args.audio_dir)
+        if not audio_dir.exists():
+            raise FileNotFoundError(f"audio directory not found: {audio_dir}")
+        audio_files.extend(sorted(audio_dir.rglob("*.wav")))
+        audio_files.extend(sorted(audio_dir.rglob("*.ogg")))
+
+    if not audio_files:
+        default_dir = factory_root / "drafts"
+        if not default_dir.exists():
+            raise FileNotFoundError(
+                "no --audio-file/--audio-dir provided and default drafts/ directory not found"
+            )
+        audio_files.extend(sorted(default_dir.rglob("*.wav")))
+        audio_files.extend(sorted(default_dir.rglob("*.ogg")))
+
+    # deterministic unique list preserving sorted order
+    unique_audio_files = sorted({str(path.resolve()): path.resolve() for path in audio_files}.values())
+    if not unique_audio_files:
+        raise ValueError("no audio files found for review-log writing")
+
+    variation_family_decisions = None
+    if args.variation_family_decisions:
+        variation_family_decisions = json.loads(
+            Path(args.variation_family_decisions).read_text(encoding="utf-8")
+        )
+        if not isinstance(variation_family_decisions, list):
+            raise ValueError("--variation-family-decisions JSON must be a list")
+
+    writer = ReviewLogWriter(progress_callback=(lambda msg: print(msg) if not args.quiet else None))
+    log = writer.append_from_audio_files(
+        factory_root=factory_root,
+        audio_paths=unique_audio_files,
+        review_log_path=review_log_path,
+        project=args.project,
+        scope=args.scope,
+        reviewer=args.reviewer,
+        qa_report_path=args.qa_report,
+        notes=args.note or [],
+        variation_family_decisions=variation_family_decisions,
+    )
+
+    print(
+        f"Review log updated — {len(log.get('entries', []))} entries, "
+        f"{len(log.get('variationFamilyDecisions', []))} family decision(s)"
+    )
 
 
 def _cmd_list_styles(_args: argparse.Namespace) -> None:
@@ -566,6 +641,27 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Suppress per-file progress messages.",
     )
+    apd.add_argument(
+        "--review-log",
+        help="Optional path to update a machine-readable review log from approved outputs.",
+    )
+    apd.add_argument(
+        "--reviewer",
+        default="agent",
+        help="Reviewer label written to review-log entries (default: agent).",
+    )
+    apd.add_argument(
+        "--qa-report",
+        help="Optional qa-batch JSON report path used to enrich review-log qaSnapshot fields.",
+    )
+    apd.add_argument(
+        "--project",
+        help="Optional project value to set/override in the review log.",
+    )
+    apd.add_argument(
+        "--scope",
+        help="Optional scope value to set/override in the review log.",
+    )
 
     # --- export-drafts ---
     exportdrafts = sub.add_parser(
@@ -584,6 +680,80 @@ def build_parser() -> argparse.ArgumentParser:
         "--quiet",
         action="store_true",
         help="Suppress per-file progress messages.",
+    )
+    exportdrafts.add_argument(
+        "--review-log",
+        help="Optional path to update a machine-readable review log from exported draft assets.",
+    )
+    exportdrafts.add_argument(
+        "--reviewer",
+        default="agent",
+        help="Reviewer label written to review-log entries (default: agent).",
+    )
+    exportdrafts.add_argument(
+        "--qa-report",
+        help="Optional qa-batch JSON report path used to enrich review-log qaSnapshot fields.",
+    )
+    exportdrafts.add_argument(
+        "--project",
+        help="Optional project value to set/override in the review log.",
+    )
+    exportdrafts.add_argument(
+        "--scope",
+        help="Optional scope value to set/override in the review log.",
+    )
+
+    # --- write-review-log ---
+    wrl = sub.add_parser(
+        "write-review-log",
+        help="Write/update a machine-readable review log from audio files and provenance sidecars.",
+    )
+    wrl.add_argument(
+        "--factory-root", "-f", required=True,
+        help="Factory output root directory (used for default drafts lookup).",
+    )
+    wrl.add_argument(
+        "--review-log", "-o", required=True,
+        help="Path to write/update the machine-readable review log JSON file.",
+    )
+    wrl.add_argument(
+        "--audio-file", "-a", nargs="+",
+        help="Optional explicit audio file path(s) to include.",
+    )
+    wrl.add_argument(
+        "--audio-dir",
+        help="Optional directory to scan recursively for .wav/.ogg files (defaults to <factory-root>/drafts).",
+    )
+    wrl.add_argument(
+        "--reviewer",
+        default="agent",
+        help="Reviewer label written to each entry (default: agent).",
+    )
+    wrl.add_argument(
+        "--qa-report",
+        help="Optional qa-batch JSON report path used to enrich qaSnapshot fields.",
+    )
+    wrl.add_argument(
+        "--project",
+        help="Optional project value to set/override in the review log.",
+    )
+    wrl.add_argument(
+        "--scope",
+        help="Optional scope value to set/override in the review log.",
+    )
+    wrl.add_argument(
+        "--variation-family-decisions",
+        help="Optional JSON file containing a list of variationFamilyDecisions entries.",
+    )
+    wrl.add_argument(
+        "--note",
+        action="append",
+        help="Optional note line to include in every generated entry (repeatable).",
+    )
+    wrl.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress writer progress messages.",
     )
 
     # --- sfx (instrument-based) ---
@@ -888,6 +1058,7 @@ def main(argv: list[str] | None = None) -> int:
         "qa-batch": _cmd_qa_batch,
         "approve-draft": _cmd_approve_draft,
         "export-drafts": _cmd_export_drafts,
+        "write-review-log": _cmd_write_review_log,
         "sfx": _cmd_sfx,
         "list-styles": _cmd_list_styles,
         "list-instruments": _cmd_list_instruments,

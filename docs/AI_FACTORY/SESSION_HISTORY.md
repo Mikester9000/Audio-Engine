@@ -22,3 +22,5 @@
 | `SESSION-012` | 2026-05-15 | completed | Added executable repeated-SFX variation enforcement in request parsing (`_varNN` naming/index/seed rules) and SFX variant provenance fields (`variationFamily`, `variationIndex`), while keeping runtime variant selection out of scope. | this PR |
 | `SESSION-013` | 2026-05-15 | completed | Defined category-specific SFX/ambience loudness-readability target guidance aligned with existing `qa`/`qa-batch` reporting surfaces, without claiming new per-category automated enforcement. | this PR |
 | `SESSION-014` | 2026-05-15 | completed | Updated review/report templates for repeated-SFX variant-family QA decisions in `REVIEW_WORKFLOW.md` and `review_log.example.v1.json`. | this PR |
+| `SESSION-015` | 2026-05-15 | completed | Added executable machine-readable review-log writing via `ReviewLogWriter` and `audio-engine write-review-log`, aligned with provenance sidecars and optional `qa-batch` snapshot fields. | this PR |
+| `SESSION-016` | 2026-05-15 | completed | Integrated review-log updates into handoff operations with additive flags on `approve-draft` and `export-drafts`, preserving default compatibility behavior. | this PR |

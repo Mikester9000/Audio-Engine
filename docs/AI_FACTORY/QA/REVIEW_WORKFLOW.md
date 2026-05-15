@@ -65,7 +65,13 @@ Use a two-level review model for repeated SFX families:
 - `approvedVariantIds` and `reviseVariantIds`
 - `notes` describing readability separation and repetition-fatigue risk
 
-These are review/report template fields only. Current runtime behavior is unchanged: approval and export still operate per asset file.
+These fields now have executable writing paths:
+
+- `audio-engine write-review-log` can write/update per-asset entries and optional `variationFamilyDecisions`.
+- `audio-engine approve-draft --review-log ...` can update review logs during approval handoff.
+- `audio-engine export-drafts --review-log ...` can update review logs during export handoff.
+
+Existing per-asset approval/export behavior remains unchanged unless those additive flags are provided.
 
 ## Rule
 

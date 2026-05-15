@@ -2,10 +2,10 @@
   "version": "1.3.0",
   "lastUpdated": "2026-05-15",
   "currentSession": {
-    "id": "SESSION-015",
-    "title": "Add machine-readable review-log writer for QA decisions",
+    "id": "SESSION-017",
+    "title": "Define the next executable implementation session",
     "status": "ready",
-    "taskType": "provenance"
+    "taskType": "docs_only"
   },
   "completedSessions": [
     {
@@ -75,6 +75,16 @@
     },
     {
       "id": "SESSION-014",
+      "status": "completed",
+      "completedDate": "2026-05-15"
+    },
+    {
+      "id": "SESSION-015",
+      "status": "completed",
+      "completedDate": "2026-05-15"
+    },
+    {
+      "id": "SESSION-016",
       "status": "completed",
       "completedDate": "2026-05-15"
     }

@@ -1280,6 +1280,27 @@ class TestDraftExportPipeline:
         exported_name = Path(manifest["entries"][0]["destination"]).name
         assert exported_name == "test_no_provenance.wav"
 
+    def test_export_updates_review_log_when_requested(self, tmp_path):
+        """export() should optionally update machine-readable review-log entries."""
+        from audio_engine.integration import DraftExportPipeline
+
+        factory_root = self._make_factory_root_with_sfx(tmp_path)
+        review_log = tmp_path / "review_log.json"
+        pipeline = DraftExportPipeline()
+        manifest = pipeline.export(
+            factory_root,
+            review_log_path=review_log,
+            reviewer="qa-agent",
+            project="GameRewritten",
+            scope="tests",
+        )
+
+        assert review_log.exists()
+        data = json.loads(review_log.read_text())
+        assert data["project"] == "GameRewritten"
+        assert data["scope"] == "tests"
+        assert len(data["entries"]) == manifest["summary"]["total"]
+
 
 # ---------------------------------------------------------------------------
 # PlanBatchOrchestrator tests
@@ -1762,6 +1783,102 @@ class TestRequestBatchExecution:
 # ApprovalWorkflow tests (SESSION-006)
 # ---------------------------------------------------------------------------
 
+class TestReviewLogWriter:
+    """Tests for the machine-readable review-log writer."""
+
+    def _make_draft_with_provenance(self, tmp_path: Path, stem: str) -> Path:
+        import wave as wv
+
+        drafts_sfx = tmp_path / "drafts" / "sfx"
+        drafts_sfx.mkdir(parents=True, exist_ok=True)
+        wav_path = drafts_sfx / f"{stem}.wav"
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+
+        prov = {
+            "provenanceVersion": "1.0.0",
+            "requestId": f"req_{stem}",
+            "assetId": stem,
+            "type": "sfx",
+            "backend": "procedural",
+            "seed": 111,
+            "prompt": "test sfx",
+            "styleFamily": "heroic-sci-fantasy",
+            "generatedOutputPath": str(wav_path),
+            "targetImportPath": f"Content/Audio/{stem}.wav",
+            "reviewStatus": "draft",
+            "generatedAt": "2026-05-15T00:00:00+00:00",
+            "variationFamily": "sfx_ui_confirm",
+            "variationIndex": 1,
+        }
+        wav_path.with_name(wav_path.stem + ".provenance.json").write_text(
+            json.dumps(prov, indent=2), encoding="utf-8"
+        )
+        return wav_path
+
+    def test_writer_uses_provenance_and_qa_report(self, tmp_path):
+        """ReviewLogWriter should align output fields with provenance and qa-batch reports."""
+        from audio_engine.integration import ReviewLogWriter
+
+        draft_path = self._make_draft_with_provenance(tmp_path, "sfx_ui_confirm_var01")
+        qa_report_path = tmp_path / "qa_report.json"
+        qa_report = {
+            "qaBatchVersion": "1.0.0",
+            "results": [
+                {
+                    "file": str(draft_path),
+                    "status": "pass",
+                    "checks": {
+                        "loudness_lufs": -16.4,
+                        "true_peak_dbfs": -1.1,
+                        "loudness_ok": True,
+                        "peak_ok": True,
+                        "clipping_ok": True,
+                    },
+                }
+            ],
+        }
+        qa_report_path.write_text(json.dumps(qa_report, indent=2), encoding="utf-8")
+
+        review_log_path = tmp_path / "review_log.json"
+        writer = ReviewLogWriter()
+        log = writer.append_from_audio_files(
+            factory_root=tmp_path,
+            audio_paths=[draft_path],
+            review_log_path=review_log_path,
+            project="GameRewritten",
+            scope="tests",
+            reviewer="qa-agent",
+            qa_report_path=qa_report_path,
+            notes=["Looks good."],
+            variation_family_decisions=[
+                {
+                    "variationFamily": "sfx_ui_confirm",
+                    "assetType": "sfx",
+                    "acceptanceProfile": "sfx-ui",
+                    "decision": "approved-family",
+                    "approvedVariantIds": ["sfx_ui_confirm_var01"],
+                    "reviseVariantIds": [],
+                    "notes": ["Distinct and readable."],
+                }
+            ],
+        )
+
+        assert review_log_path.exists()
+        assert log["project"] == "GameRewritten"
+        assert len(log["entries"]) == 1
+        entry = log["entries"][0]
+        assert entry["assetId"] == "sfx_ui_confirm_var01"
+        assert entry["reviewStatus"] == "draft"
+        assert entry["variationFamily"] == "sfx_ui_confirm"
+        assert entry["variationIndex"] == 1
+        assert entry["qaSnapshot"]["loudnessLufs"] == -16.4
+        assert len(log["variationFamilyDecisions"]) == 1
+
+
 class TestApprovalWorkflow:
     """Tests for the approval workflow (draft → approved promotion)."""
 
@@ -1979,6 +2096,29 @@ class TestApprovalWorkflow:
         assert len(ok_records) == 1
         assert len(err_records) == 1
         assert "error" in err_records[0]
+
+    def test_approve_batch_updates_review_log_when_requested(self, tmp_path):
+        """approve_batch() should optionally append approved review-log entries."""
+        from audio_engine.integration import ApprovalWorkflow
+
+        draft_path = self._make_draft_with_provenance(tmp_path)
+        review_log = tmp_path / "review_log.json"
+        workflow = ApprovalWorkflow()
+        records = workflow.approve_batch(
+            tmp_path,
+            [draft_path],
+            review_log_path=review_log,
+            reviewer="qa-agent",
+            project="GameRewritten",
+            scope="tests",
+        )
+
+        assert len(records) == 1
+        assert records[0]["status"] == "ok"
+        assert review_log.exists()
+        data = json.loads(review_log.read_text())
+        assert len(data["entries"]) == 1
+        assert data["entries"][0]["reviewStatus"] == "approved"
 
     def test_approve_draft_cli_command(self, tmp_path, capsys):
         """approve-draft CLI command must approve a file and return exit code 0."""
