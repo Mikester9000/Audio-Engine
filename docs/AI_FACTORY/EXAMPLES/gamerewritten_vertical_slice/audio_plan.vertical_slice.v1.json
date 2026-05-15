@@ -12,6 +12,14 @@
     "heroic-sci-fantasy",
     "melancholic-techno-fantasy"
   ],
+  "musicDurationPolicy": {
+    "note": "See docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md for the canonical music duration table.",
+    "majorThemes": "120–300 s (up to 5 minutes); long-form game-ready pieces",
+    "gameplayLoops": "60–120 s; loopable at a natural loop point",
+    "bossLoops": "90–180 s; longer loops preferred",
+    "stingersAndFanfares": "2–12 s; never loopable",
+    "ostVariants": "For key BGM loops an _ost variant at 120–300 s may be planned or generated"
+  },
   "assetGroups": [
     {
       "groupId": "music-core-loops",
@@ -25,7 +33,15 @@
           "loop": true,
           "durationTargetSeconds": 90,
           "mood": ["adventure", "wonder", "forward-motion"],
-          "reviewPriority": "high"
+          "reviewPriority": "high",
+          "ostVariant": {
+            "assetId": "bgm_field_day_ost",
+            "gameplayRole": "ost-variant",
+            "targetPath": "Content/Audio/bgm_field_day_ost.ogg",
+            "loop": false,
+            "durationTargetSeconds": 210,
+            "note": "Full OST version of the field theme; same seed + prompt, longer duration"
+          }
         },
         {
           "assetId": "bgm_town_evening",
@@ -34,7 +50,15 @@
           "loop": true,
           "durationTargetSeconds": 90,
           "mood": ["safe", "nostalgic", "quiet-hope"],
-          "reviewPriority": "high"
+          "reviewPriority": "high",
+          "ostVariant": {
+            "assetId": "bgm_town_evening_ost",
+            "gameplayRole": "ost-variant",
+            "targetPath": "Content/Audio/bgm_town_evening_ost.ogg",
+            "loop": false,
+            "durationTargetSeconds": 180,
+            "note": "Extended OST version; contemplative full-length arrangement"
+          }
         },
         {
           "assetId": "bgm_dungeon_ruins",
@@ -52,16 +76,32 @@
           "loop": true,
           "durationTargetSeconds": 75,
           "mood": ["urgency", "drive", "heroism"],
-          "reviewPriority": "high"
+          "reviewPriority": "high",
+          "ostVariant": {
+            "assetId": "bgm_battle_standard_ost",
+            "gameplayRole": "ost-variant",
+            "targetPath": "Content/Audio/bgm_battle_standard_ost.ogg",
+            "loop": false,
+            "durationTargetSeconds": 180,
+            "note": "Full OST battle suite with intro, development, and clear ending"
+          }
         },
         {
           "assetId": "bgm_boss_phase1",
           "gameplayRole": "boss combat",
           "targetPath": "Content/Audio/bgm_boss_phase1.ogg",
           "loop": true,
-          "durationTargetSeconds": 90,
+          "durationTargetSeconds": 120,
           "mood": ["threat", "intensity", "drama"],
-          "reviewPriority": "high"
+          "reviewPriority": "high",
+          "ostVariant": {
+            "assetId": "bgm_boss_phase1_ost",
+            "gameplayRole": "ost-variant",
+            "targetPath": "Content/Audio/bgm_boss_phase1_ost.ogg",
+            "loop": false,
+            "durationTargetSeconds": 270,
+            "note": "Extended OST suite; may include intro, loop body, and climax section"
+          }
         },
         {
           "assetId": "stinger_victory_short",
@@ -70,7 +110,8 @@
           "loop": false,
           "durationTargetSeconds": 6,
           "mood": ["reward", "release"],
-          "reviewPriority": "medium"
+          "reviewPriority": "medium",
+          "note": "Short fanfare cue; no OST variant required for this asset type"
         }
       ]
     },
@@ -129,6 +170,8 @@
   ],
   "notes": [
     "Voice is intentionally out of scope for this vertical slice except optional placeholders.",
-    "This plan is a committed example/contract and not yet consumed by pipeline code."
+    "This plan is a committed example/contract and not yet consumed by pipeline code.",
+    "ostVariant entries are planned assets; long-form generation requires the --request-file path with --music-duration 180 or higher. The --batch-file path (generate-request-batch --batch-file) ignores --music-duration and does not yet support per-entry duration overrides.",
+    "SFX and ambience assets should remain short; see musicDurationPolicy for music-only guidance."
   ]
 }

@@ -74,7 +74,7 @@ from audio_engine.integration.game_state_map import (
 if TYPE_CHECKING:
     from audio_engine.integration.factory_inputs import GenerationRequest, GenerationRequestBatch
 
-__all__ = ["AssetPipeline", "GenerationManifest", "RequestBatchPipeline", "DraftExportPipeline", "RequestBatchRecord", "RequestBatchResult"]
+__all__ = ["ApprovalWorkflow", "AssetPipeline", "GenerationManifest", "RequestBatchPipeline", "DraftExportPipeline", "RequestBatchRecord", "RequestBatchResult"]
 
 
 # ---------------------------------------------------------------------------
@@ -1180,3 +1180,178 @@ class DraftExportPipeline:
             except Exception:
                 pass  # Fall through to default
         return audio_root / audio_path.name
+
+
+# ---------------------------------------------------------------------------
+# ApprovalWorkflow
+# ---------------------------------------------------------------------------
+
+class ApprovalWorkflow:
+    """Promote a draft audio asset to ``approved`` status.
+
+    This workflow:
+
+    1. Reads the ``.provenance.json`` sidecar for the given draft audio file.
+    2. Updates ``reviewStatus`` to ``"approved"`` and records ``approvedAt``.
+    3. Copies the audio file to ``<factory_root>/approved/<type>/``.
+    4. Writes an updated provenance sidecar next to the approved copy and
+       also updates the original draft provenance file in place.
+
+    Parameters
+    ----------
+    progress_callback:
+        Optional callable ``(message: str) -> None`` invoked after each step.
+    """
+
+    def __init__(
+        self,
+        progress_callback: Callable[[str], None] | None = None,
+    ) -> None:
+        self.progress_callback = progress_callback or (lambda msg: None)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def approve(self, factory_root: str | Path, draft_path: str | Path) -> dict:
+        """Approve a draft asset and copy it to ``<factory_root>/approved/<type>/``.
+
+        Parameters
+        ----------
+        factory_root:
+            Root of the factory output directory (contains ``drafts/`` and
+            will receive an ``approved/`` sub-directory).
+        draft_path:
+            Path to the draft audio file.  It must exist and must be a WAV
+            or OGG file.
+
+        Returns
+        -------
+        dict
+            Approval record with keys ``requestId``, ``assetId``, ``type``,
+            ``draftPath``, ``approvedPath``, and ``approvedAt``.
+
+        Raises
+        ------
+        FileNotFoundError
+            If *draft_path* does not exist.
+        ValueError
+            If *draft_path* does not have a recognised audio extension.
+        """
+        import datetime
+        import shutil
+
+        factory_root = Path(factory_root).resolve()
+        draft_path = Path(draft_path).resolve()
+
+        # Ensure draft_path is under factory_root/drafts/ to prevent operating
+        # on unrelated files outside the factory tree.
+        drafts_root = factory_root / "drafts"
+        try:
+            draft_path.relative_to(drafts_root)
+        except ValueError:
+            raise ValueError(
+                f"draft_path must be under <factory_root>/drafts/; "
+                f"got {draft_path!s} (factory_root={factory_root!s})"
+            )
+
+        if not draft_path.exists():
+            raise FileNotFoundError(f"draft file not found: {draft_path}")
+        if draft_path.suffix.lower() not in {".wav", ".ogg"}:
+            raise ValueError(
+                f"unsupported file type {draft_path.suffix!r}; expected .wav or .ogg"
+            )
+
+        # Read or synthesise provenance sidecar.
+        prov_path = draft_path.with_name(draft_path.stem + ".provenance.json")
+        if prov_path.exists():
+            provenance: dict = json.loads(prov_path.read_text(encoding="utf-8"))
+        else:
+            # No sidecar: infer minimal provenance from path conventions.
+            provenance = {
+                "provenanceVersion": "1.0.0",
+                "requestId": draft_path.stem,
+                "assetId": draft_path.stem,
+                "type": draft_path.parent.name,
+                "reviewStatus": "draft",
+            }
+
+        raw_type: str = provenance.get("type", draft_path.parent.name)
+        # Validate asset_type: must be a single path component with no separators
+        # or relative-path indicators to prevent writing outside approved/.
+        asset_type = Path(raw_type).name
+        if not asset_type or asset_type != raw_type or asset_type in {".", ".."}:
+            raise ValueError(
+                f"unsafe asset type {raw_type!r} in provenance; "
+                "must be a plain directory name with no path separators"
+            )
+        approved_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        # Build approved destination directory.
+        approved_dir = factory_root / "approved" / asset_type
+        approved_dir.mkdir(parents=True, exist_ok=True)
+        approved_path = approved_dir / draft_path.name
+
+        # Copy audio file.
+        shutil.copy2(str(draft_path), str(approved_path))
+        self.progress_callback(f"  [copy]  {draft_path.name} → {approved_path}")
+
+        # Update provenance fields.
+        provenance["reviewStatus"] = "approved"
+        provenance["approvedAt"] = approved_at
+        provenance["approvedPath"] = str(approved_path)
+        updated_prov_text = json.dumps(provenance, indent=2)
+
+        # Write updated provenance alongside the approved copy.
+        approved_prov_path = approved_dir / (draft_path.stem + ".provenance.json")
+        approved_prov_path.write_text(updated_prov_text, encoding="utf-8")
+        self.progress_callback(f"  [prov]  provenance written → {approved_prov_path}")
+
+        # Also update the original draft provenance so reviewStatus is consistent.
+        prov_path.write_text(updated_prov_text, encoding="utf-8")
+
+        record = {
+            "requestId": provenance.get("requestId", draft_path.stem),
+            "assetId": provenance.get("assetId", draft_path.stem),
+            "type": asset_type,
+            "draftPath": str(draft_path),
+            "approvedPath": str(approved_path),
+            "approvedAt": approved_at,
+        }
+        return record
+
+    def approve_batch(
+        self,
+        factory_root: str | Path,
+        draft_paths: list[str | Path],
+    ) -> list[dict]:
+        """Approve multiple draft assets in a single call.
+
+        Parameters
+        ----------
+        factory_root:
+            Root of the factory output directory.
+        draft_paths:
+            List of paths to draft audio files.
+
+        Returns
+        -------
+        list[dict]
+            One approval record per successfully approved file.  Errors for
+            individual files are reported via *progress_callback* and recorded
+            with ``"status": "error"`` in the returned list rather than raising.
+        """
+        records: list[dict] = []
+        for draft_path in draft_paths:
+            try:
+                record = self.approve(factory_root, draft_path)
+                record["status"] = "ok"
+                records.append(record)
+            except Exception as exc:  # noqa: BLE001
+                self.progress_callback(f"  [err]  {Path(draft_path).name}: {exc}")
+                records.append({
+                    "draftPath": str(draft_path),
+                    "status": "error",
+                    "error": str(exc),
+                })
+        return records

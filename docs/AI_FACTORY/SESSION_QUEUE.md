@@ -35,11 +35,21 @@
 - `DraftExportPipeline` + `export-drafts` CLI; 10 new tests; 370 total.
 - Exports `drafts/` audio to `exports/gamerewritten/Content/Audio/` using `targetImportPath` from provenance sidecars.
 
+### SESSION-006 — Add approval workflow (promote drafts to approved/)
+- **Status:** `completed`
+- `ApprovalWorkflow` + `approve-draft` CLI; 13 new tests; 383 total.
+- `approve-draft --factory-root <dir> --draft-file <path>` copies audio to `approved/<type>/`, updates provenance `reviewStatus` to `"approved"`, writes `approvedAt` timestamp.
+
+### SESSION-007 — Wire qa-batch into CI
+- **Status:** `completed`
+- `.github/workflows/audio-qa.yml` added; triggers on push/PR to audio source and fixture files.
+- Generates SFX batch from committed fixture then runs `qa-batch`; fails CI if any file fails loudness/peak/clipping checks.
+
 ## Current next session
 
-### SESSION-006 — Add approval workflow (promote drafts to approved/)
+### SESSION-008 — Expand full-game taxonomy coverage
 
 - **Status:** `ready`
-- **Task type:** `workflow`
-- **Objective:** Allow a draft asset to be explicitly marked as `approved` — update its `.provenance.json` `reviewStatus` field and copy it to `<factory_root>/approved/<type>/`.
-- **Enqueue next session after completion:** `SESSION-007 — Wire qa-batch into CI`
+- **Task type:** `taxonomy`
+- **Objective:** Add committed taxonomy/backlog coverage for all needed audio families beyond the vertical slice: ambience, fanfares/stingers, UI, combat/spell SFX, tension, sadness, and optional voice. Add long-form OST variant request entries for the key BGM tracks marked `+ost` in `FULL_GAME_AUDIO_CHECKLIST.md` and `audio_plan.vertical_slice.v1.json`.
+- **Enqueue next session after completion:** `SESSION-009 — Add plan-driven batch orchestration`

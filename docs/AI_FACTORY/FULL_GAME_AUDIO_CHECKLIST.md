@@ -6,27 +6,39 @@
 
 This checklist is a coverage guardrail, not a promise that every game needs every item. If a category or subcategory is intentionally out of scope for a project, say so explicitly instead of leaving the gap implicit.
 
+## Music duration key
+
+Duration annotations shown in brackets apply to this checklist:
+
+- **[long]** — up to 5 minutes (120–300 s); suitable as a standalone track on a game OST
+- **[loop]** — loopable gameplay BGM (60–120 s); should have a clean loop point
+- **[medium]** — 30–120 s; non-loopable or situationally loopable
+- **[short]** — stinger / cue / sting (2–12 s)
+- **[sting]** — very short reward or event cue (< 5 s)
+- **[ui]** — UI / system SFX (< 2 s)
+- **+ost** — a longer OST-style variant (120–300 s) should also be planned or generated for this piece
+
 ## 1) Music
 
-- [ ] title screen / boot
-- [ ] main menu
-- [ ] world map / overworld field
-- [ ] town / hub
-- [ ] shop
-- [ ] inn / safe rest area
-- [ ] dungeon / cave / ruins
-- [ ] combat regular battle
-- [ ] combat elite / miniboss
-- [ ] boss battle
-- [ ] victory / results
-- [ ] save point / checkpoint sting
-- [ ] level-up / milestone sting
-- [ ] story cutscene underscore
-- [ ] cutscene stingers / reveal cues
-- [ ] tension / stealth
-- [ ] sadness / loss / memorial
-- [ ] mystery / puzzle
-- [ ] ending / credits
+- [ ] title screen / boot [long]
+- [ ] main menu [loop]
+- [ ] world map / overworld field [loop] +ost
+- [ ] town / hub [loop] +ost
+- [ ] shop [loop]
+- [ ] inn / safe rest area [loop]
+- [ ] dungeon / cave / ruins [loop] +ost
+- [ ] combat regular battle [loop] +ost
+- [ ] combat elite / miniboss [loop]
+- [ ] boss battle [loop, 90–180 s] +ost
+- [ ] victory / results [short]
+- [ ] save point / checkpoint sting [sting]
+- [ ] level-up / milestone sting [sting]
+- [ ] story cutscene underscore [medium]
+- [ ] cutscene stingers / reveal cues [short]
+- [ ] tension / stealth [loop, 30–90 s]
+- [ ] sadness / loss / memorial [medium]
+- [ ] mystery / puzzle [loop]
+- [ ] ending / credits [long]
 
 ## 2) Fanfares and stingers
 

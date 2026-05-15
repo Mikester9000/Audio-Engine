@@ -257,6 +257,7 @@ _SFX_FUNCTIONS: dict[str, Callable] = {
     "explosion": _sfx_explosion,
     "footstep":  _sfx_footstep,
     "click":     _sfx_click,
+    "tick":      _sfx_click,
     "beep":      _sfx_beep,
     "hit":       _sfx_hit,
     "impact":    _sfx_impact,

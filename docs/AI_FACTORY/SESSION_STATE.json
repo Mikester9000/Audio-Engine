@@ -1,17 +1,19 @@
 {
   "version": "1.1.0",
-  "lastUpdated": "2026-05-14",
+  "lastUpdated": "2026-05-15",
   "currentSession": {
-    "id": "SESSION-006",
-    "title": "Add approval workflow (promote drafts to approved/)",
+    "id": "SESSION-008",
+    "title": "Expand full-game taxonomy coverage",
     "status": "ready",
-    "taskType": "workflow"
+    "taskType": "taxonomy"
   },
   "completedSessions": [
     {"id": "SESSION-001", "status": "completed", "completedDate": "2026-05-14"},
     {"id": "SESSION-002", "status": "completed", "completedDate": "2026-05-14"},
     {"id": "SESSION-003", "status": "completed", "completedDate": "2026-05-14"},
     {"id": "SESSION-004", "status": "completed", "completedDate": "2026-05-14"},
-    {"id": "SESSION-005", "status": "completed", "completedDate": "2026-05-14"}
+    {"id": "SESSION-005", "status": "completed", "completedDate": "2026-05-14"},
+    {"id": "SESSION-006", "status": "completed", "completedDate": "2026-05-15"},
+    {"id": "SESSION-007", "status": "completed", "completedDate": "2026-05-15"}
   ]
 }

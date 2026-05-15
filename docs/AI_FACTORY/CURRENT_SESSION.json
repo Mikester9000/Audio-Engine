@@ -1,24 +1,25 @@
 {
   "version": "1.0.0",
-  "lastUpdated": "2026-05-14",
+  "lastUpdated": "2026-05-15",
   "currentSession": {
-    "id": "SESSION-006",
-    "title": "Add approval workflow (promote drafts to approved/)",
+    "id": "SESSION-008",
+    "title": "Expand full-game taxonomy coverage",
     "status": "ready",
-    "taskType": "workflow",
-    "objective": "Allow a draft asset to be marked approved (updating provenance reviewStatus) and copied to approved/<type>/.",
+    "taskType": "taxonomy",
+    "objective": "Add committed taxonomy and backlog coverage for all needed audio families beyond the vertical slice: ambience, fanfares/stingers, UI, combat/spell SFX, tension, sadness, and optional voice. Add long-form OST variant request entries for BGM tracks marked +ost in the plan and checklist.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",
+      "docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md",
       "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
-      "audio_engine/integration/asset_pipeline.py",
-      "audio_engine/cli.py",
-      "tests/test_integration.py"
+      "docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md",
+      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json"
     ],
     "likelyModify": [
-      "audio_engine/integration/asset_pipeline.py",
-      "audio_engine/cli.py",
-      "tests/test_integration.py"
+      "docs/AI_FACTORY/TASKS/BACKLOG.md",
+      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json",
+      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json",
+      "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md"
     ]
   }
 }
