@@ -316,10 +316,10 @@ def synthesise_sfx(
     rng = np.random.default_rng(seed)
     fn = _SFX_FUNCTIONS.get(sfx_type, _sfx_generic)
     audio = fn(duration, pitch_hz, sample_rate, rng)
-    # Normalise to -3 dBFS
+    # Normalise to -9 dBFS to keep fixture-driven QA loudness checks in range.
     peak = np.max(np.abs(audio))
     if peak > 1e-9:
-        target = 10.0 ** (-3.0 / 20.0)
+        target = 10.0 ** (-9.0 / 20.0)
         audio = (audio / peak * target).astype(np.float32)
     return audio
 

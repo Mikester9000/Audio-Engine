@@ -1298,6 +1298,31 @@ class TestRequestBatchExecution:
             assert record.status == "ok"
             assert Path(record.output_path).exists(), f"Missing output: {record.output_path}"
 
+    def test_execute_sfx_batch_from_fixture_passes_qa_gate(self, tmp_path):
+        """Committed SFX fixture should pass qa-batch loudness/peak/clipping checks."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(batch, tmp_path)
+        assert not [record for record in result.records if record.status == "error"]
+
+        report_path = tmp_path / "qa_report.json"
+        exit_code = main(
+            [
+                "qa-batch",
+                "--input-dir",
+                str(tmp_path / "Content" / "Audio"),
+                "--output-report",
+                str(report_path),
+                "--recursive",
+                "--quiet",
+            ]
+        )
+        assert exit_code == 0
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        assert report["summary"]["failed"] == 0
+
     def test_execute_music_batch_first_request(self, tmp_path):
         """At least the WAV-format music request (stinger) should produce a non-empty output file."""
         batch = load_generation_request_batch(
