@@ -86,6 +86,12 @@ Current executable enforcement:
 - seeds must be deterministic and distinct per variant family
 - SFX variant provenance now includes `variationFamily` and `variationIndex`
 
+## Acceptance-profile alignment note (SESSION-013/014)
+
+- Existing executable QA checks remain global (`-30..-9` LUFS band, peak `<= -0.1 dBFS`) in `qa` / `qa-batch`.
+- `qa.acceptanceProfile` should still be populated for category intent (`sfx-ui`, `sfx-combat`, `sfx-magic`, `ambience-loop`) so review logs can apply category-specific loudness/readability guidance consistently.
+- Variant-family review decisions are tracked in review/report artifacts, not in request schema enforcement.
+
 ## Deterministic seed rule
 
 Every generated asset should eventually be associated with a captured seed, even if a backend later becomes less deterministic. If exact determinism is impossible, record the closest available provenance metadata.

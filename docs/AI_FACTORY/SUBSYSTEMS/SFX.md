@@ -31,8 +31,30 @@ This strategy is now **partially executable** in the factory pipeline for determ
 - Variant selection at gameplay runtime is out of scope for the current codebase.
 - The implemented factory responsibility is to generate and track variant assets reproducibly so downstream systems can pick among them.
 
+## Category-specific loudness/readability targets (SESSION-013)
+
+These are **review guidance targets** for SFX/ambience categories and variant families.
+They align to existing QA outputs (`qa`, `qa-batch`) and do **not** imply new automated per-category gates.
+
+### Existing executable QA floor (already implemented)
+
+- `qa` and `qa-batch` currently enforce global loudness acceptance at **-30.0 to -9.0 LUFS**.
+- True peak acceptance remains **≤ -0.1 dBFS**.
+- Optional loop checks remain opt-in via `--check-loop`.
+
+### Category guidance for manual review consistency
+
+| Acceptance profile | Recommended loudness focus | Readability focus |
+|---|---|---|
+| `sfx-ui` | Aim near the quieter half of current QA pass band (typically around `-22` to `-14` LUFS) | Clear attack, minimal tail masking, no harsh spike fatigue in repeated menu use |
+| `sfx-combat` | Aim near the stronger half of current QA pass band (typically around `-18` to `-10` LUFS) | Fast transient recognition during dense mixes; tails should not mask follow-up hits |
+| `sfx-magic` | Mid-band guidance (typically around `-20` to `-12` LUFS) | Identity should remain readable over music; spectral tail should support element identity without clutter |
+| `ambience-loop` | Lower-energy guidance inside pass band (typically around `-28` to `-18` LUFS) | Loop continuity and texture clarity should support scene mood without competing with foreground SFX/voice |
+
+Use these ranges as review anchors, not as hard CLI thresholds. Continue using `qa-batch` JSON fields (`loudness_lufs`, `true_peak_dbfs`, `loudness_ok`, `peak_ok`, `loop_ok`) plus listening notes for final approval decisions.
+
 ## Near-term goals
 
 1. expand SFX taxonomy from current event list to full game coverage
 2. expand executable tooling around the documented variation strategy beyond current validation/provenance support
-3. define category-specific loudness/readability targets
+3. operationalize machine-readable review logging for per-asset and variant-family QA decisions
