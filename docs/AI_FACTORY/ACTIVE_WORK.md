@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate (`audio-qa.yml`) validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow file itself. SESSION-008 expanded committed taxonomy fixtures (ambience, fanfares/stingers, UI/combat/spell SFX, tension/sadness music, optional voice) and added long-form OST request entries for key BGM tracks. The next executable session is `SESSION-009` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add plan-driven batch orchestration.
+The repository now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate (`audio-qa.yml`) validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow file itself. SESSION-008 expanded committed taxonomy fixtures (ambience, fanfares/stingers, UI/combat/spell SFX, tension/sadness music, optional voice) and added long-form OST request entries for key BGM tracks. The next executable session is `SESSION-009` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add plan-driven batch orchestration and require producing requested `.ogg` outputs as well as `.wav`.
 
 ## Now
 
@@ -25,12 +25,12 @@ The repository now has a complete draft-to-approved pipeline: `generate-request-
 - [x] Execute `SESSION-007` — wire qa-batch into CI
 - [x] Update music-duration policy across docs, checklist, layout, and example plan
 - [x] Execute `SESSION-008` — expand full-game taxonomy coverage
-- [ ] Execute `SESSION-009` — add plan-driven batch orchestration
+- [ ] Execute `SESSION-009` — add plan-driven batch orchestration with required requested `.ogg` + `.wav` outputs
 
 ## Recommended next PRs
 
 1. **Add plan-driven batch orchestration (SESSION-009)**
-   - Wire the audio plan loader into the batch execution path.
+   - Wire the audio plan loader into the batch execution path and require `.ogg` output production when requested.
 2. **Expand neural backend support**
    - Add a switchable backend for local model generation.
 

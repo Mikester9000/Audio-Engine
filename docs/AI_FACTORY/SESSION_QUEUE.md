@@ -56,6 +56,6 @@
 
 - **Status:** `ready`
 - **Task type:** `batch_generation`
-- **Objective:** Wire the committed audio-plan loader into the batch execution path so a plan can drive deterministic request generation using existing request-batch, provenance, QA, export, and approval surfaces without breaking current CLI compatibility.
+- **Objective:** Wire the committed audio-plan loader into the batch execution path so a plan can drive deterministic request generation using existing request-batch, provenance, QA, export, and approval surfaces without breaking current CLI compatibility; this session must require producing requested `.ogg` outputs as well as `.wav` when those formats are specified by factory inputs.
 - **Enqueue next session after completion:** `SESSION-010 — Expand neural backend support`
-- **Notes:** Keep existing `generate-request-batch` behavior stable; prefer additive CLI/API surface.
+- **Notes:** Keep existing `generate-request-batch` behavior stable; prefer additive CLI/API surface; do not treat `.ogg` requests as optional success paths for SESSION-009; if `.ogg` is requested and encoder support is unavailable (for example missing `soundfile`), treat the session as blocked/failed until OGG output can be produced and verified.

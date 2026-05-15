@@ -42,7 +42,7 @@
 
 | Capability | State | Source of truth | Last verified | Verification command | Notes / next step |
 |---|---|---|---|---|---|
-| Plan-driven batch orchestration | partial | `docs/AI_FACTORY/ROADMAP.md`, `audio_engine/integration/asset_pipeline.py`, `audio_engine/integration/factory_inputs.py` | 2026-05-15 | `pytest` | Request-batch execution is implemented, but direct audio-plan-driven orchestration is still queued for SESSION-009. |
+| Plan-driven batch orchestration | partial | `docs/AI_FACTORY/ROADMAP.md`, `audio_engine/integration/asset_pipeline.py`, `audio_engine/integration/factory_inputs.py` | 2026-05-15 | `pytest` | Request-batch execution is implemented, but direct audio-plan-driven orchestration is still queued for SESSION-009 and now explicitly requires producing requested `.ogg` outputs as well as `.wav`. |
 | Deterministic provenance capture per generated asset | implemented | `audio_engine/integration/asset_pipeline.py` (`_write_provenance`) | 2026-05-14 | `pytest`, smoke run | `.provenance.json` sidecar per generated file; fields: requestId, seed, backend, reviewStatus, generatedAt. |
 | Automated QA gate for generated outputs in CI | implemented | `.github/workflows/audio-qa.yml` | 2026-05-15 | GitHub Actions | Generates SFX batch and runs `qa-batch`; fails CI if any file fails QA. |
 | `GameRewritten` import automation | implemented | `audio_engine/integration/asset_pipeline.py` (`DraftExportPipeline`), `audio_engine/cli.py` (`export-drafts`) | 2026-05-14 | `pytest`, smoke run | Copies drafts to `exports/gamerewritten/Content/Audio/` using `targetImportPath` from provenance sidecars; writes export manifest. Approval workflow (`approve-draft`) also implemented. |

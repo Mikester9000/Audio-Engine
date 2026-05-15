@@ -26,7 +26,7 @@ Observed result:
 
 ## Immediate next best task
 
-Execute `SESSION-009` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add plan-driven batch orchestration by wiring audio-plan artifacts into deterministic batch execution while preserving current CLI compatibility.
+Execute `SESSION-009` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add plan-driven batch orchestration by wiring audio-plan artifacts into deterministic batch execution while preserving current CLI compatibility, and require producing requested `.ogg` outputs as well as `.wav`.
 
 ## Files future agents should read first
 
@@ -48,4 +48,4 @@ Execute `SESSION-009` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add plan-driven b
 - [x] QA gate wired into CI (`.github/workflows/audio-qa.yml`)
 - [x] Music-duration policy documented and encoded in checklist, layout, music subsystem, and example plan
 - [x] Full-game taxonomy coverage expansion (SESSION-008)
-- [ ] Plan-driven batch orchestration (SESSION-009)
+- [ ] Plan-driven batch orchestration (SESSION-009, including required `.ogg` output production)
