@@ -27,23 +27,23 @@
     },
     {
       "requestVersion": "1.0.0",
-      "requestId": "req_music_bgm_battle_standard_v1",
-      "assetId": "bgm_battle_standard",
+      "requestId": "req_music_bgm_field_day_ost_v1",
+      "assetId": "bgm_field_day_ost",
       "type": "music",
       "backend": "procedural",
-      "seed": 204812,
-      "prompt": "urgent battle loop, synthetic-orchestral pulse, strong low strings and brass accents, loopable",
+      "seed": 204802,
+      "prompt": "extended OST arrangement of field exploration theme, lyrical development, clear ending, non-looping",
       "styleFamily": "heroic-sci-fantasy",
       "output": {
-        "targetPath": "Content/Audio/bgm_battle_standard.ogg",
+        "targetPath": "Content/Audio/bgm_field_day_ost.ogg",
         "format": "ogg",
         "sampleRate": 44100,
         "channels": 2
       },
       "qa": {
-        "loopRequired": true,
+        "loopRequired": false,
         "reviewStatus": "draft",
-        "acceptanceProfile": "music-loop",
+        "acceptanceProfile": "music-ost",
         "notes": []
       }
     },
@@ -66,6 +66,204 @@
         "loopRequired": true,
         "reviewStatus": "draft",
         "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_town_evening_ost_v1",
+      "assetId": "bgm_town_evening_ost",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204824,
+      "prompt": "extended OST arrangement of evening town theme, warm piano-led arc, non-looping",
+      "styleFamily": "melancholic-techno-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_town_evening_ost.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-ost",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_dungeon_ruins_v1",
+      "assetId": "bgm_dungeon_ruins",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204845,
+      "prompt": "dungeon exploration loop with low drones and sparse motif, mysterious and tense",
+      "styleFamily": "melancholic-techno-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_dungeon_ruins.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_dungeon_ruins_ost_v1",
+      "assetId": "bgm_dungeon_ruins_ost",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204846,
+      "prompt": "extended OST suite of dungeon ruins theme with evolving textures and dramatic resolution",
+      "styleFamily": "melancholic-techno-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_dungeon_ruins_ost.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-ost",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_battle_standard_v1",
+      "assetId": "bgm_battle_standard",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204812,
+      "prompt": "urgent battle loop, synthetic-orchestral pulse, strong low strings and brass accents, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_battle_standard.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_battle_standard_ost_v1",
+      "assetId": "bgm_battle_standard_ost",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204813,
+      "prompt": "extended OST battle suite with heroic brass, tension build, and definitive finale",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_battle_standard_ost.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-ost",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_boss_phase1_v1",
+      "assetId": "bgm_boss_phase1",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204856,
+      "prompt": "boss loop with heavy percussion, dramatic harmony, relentless momentum",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_boss_phase1.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-boss-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_boss_phase1_ost_v1",
+      "assetId": "bgm_boss_phase1_ost",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204857,
+      "prompt": "extended boss OST suite with cinematic intro, evolving combat body, and climactic ending",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_boss_phase1_ost.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-ost",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_tension_stealth_v1",
+      "assetId": "bgm_tension_stealth",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204868,
+      "prompt": "minimal stealth tension loop with sparse pulses, low drones, and subtle rhythmic movement",
+      "styleFamily": "melancholic-techno-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_tension_stealth.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-tension-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_sadness_memorial_v1",
+      "assetId": "bgm_sadness_memorial",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204879,
+      "prompt": "sad memorial cue with restrained piano and strings, reflective arc, non-looping",
+      "styleFamily": "melancholic-techno-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/bgm_sadness_memorial.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-emotional-cue",
         "notes": []
       }
     },

@@ -2,23 +2,25 @@
   "version": "1.0.0",
   "lastUpdated": "2026-05-15",
   "currentSession": {
-    "id": "SESSION-008",
-    "title": "Expand full-game taxonomy coverage",
+    "id": "SESSION-009",
+    "title": "Add plan-driven batch orchestration",
     "status": "ready",
-    "taskType": "taxonomy",
-    "objective": "Add committed taxonomy and backlog coverage for all needed audio families beyond the vertical slice: ambience, fanfares/stingers, UI, combat/spell SFX, tension, sadness, and optional voice. Add long-form OST variant request entries for BGM tracks marked +ost in the plan and checklist.",
+    "taskType": "batch_generation",
+    "objective": "Wire the committed audio-plan loader into the batch execution path so a plan can drive deterministic request generation using existing request-batch, provenance, QA, export, and approval surfaces without breaking current CLI compatibility.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md",
-      "docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md",
-      "docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md",
-      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json"
-    ],
-    "likelyModify": [
-      "docs/AI_FACTORY/TASKS/BACKLOG.md",
       "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json",
       "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json",
+      "audio_engine/integration/factory_inputs.py",
+      "audio_engine/integration/asset_pipeline.py",
+      "audio_engine/cli.py"
+    ],
+    "likelyModify": [
+      "audio_engine/integration/asset_pipeline.py",
+      "audio_engine/cli.py",
+      "audio_engine/integration/factory_inputs.py",
+      "tests/test_integration.py",
       "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md"
     ]
   }

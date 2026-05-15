@@ -11,6 +11,7 @@ These artifacts are committed examples/contracts for future plan-driven factory 
 - `audio_plan.vertical_slice.v1.json` — project-level audio plan example
 - `generation_requests.music.v1.json` — music request examples
 - `generation_requests.sfx.v1.json` — SFX request examples
+- `generation_requests.voice.v1.json` — optional placeholder voice request examples
 - `review_log.example.v1.json` — simple provenance/review status example
 
 ## Intended usage in future PRs

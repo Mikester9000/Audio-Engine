@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate (`audio-qa.yml`) validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow file itself. Music-duration policy is clearly documented. The next executable session is `SESSION-008` in `docs/AI_FACTORY/SESSION_QUEUE.md`: expand full-game taxonomy coverage.
+The repository now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate (`audio-qa.yml`) validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow file itself. SESSION-008 expanded committed taxonomy fixtures (ambience, fanfares/stingers, UI/combat/spell SFX, tension/sadness music, optional voice) and added long-form OST request entries for key BGM tracks. The next executable session is `SESSION-009` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add plan-driven batch orchestration.
 
 ## Now
 
@@ -24,16 +24,14 @@ The repository now has a complete draft-to-approved pipeline: `generate-request-
 - [x] Execute `SESSION-006` — add approval workflow (promote drafts to approved/)
 - [x] Execute `SESSION-007` — wire qa-batch into CI
 - [x] Update music-duration policy across docs, checklist, layout, and example plan
-- [ ] Execute `SESSION-008` — expand full-game taxonomy coverage
+- [x] Execute `SESSION-008` — expand full-game taxonomy coverage
+- [ ] Execute `SESSION-009` — add plan-driven batch orchestration
 
 ## Recommended next PRs
 
-1. **Execute `SESSION-008` — expand full-game taxonomy coverage**
-   - Add committed backlog/request fixtures for ambience, fanfares/stingers, UI, combat/spell SFX, tension, sadness, and optional voice.
-   - Add long-form OST variant request entries for the key BGM tracks already marked `+ost` in `FULL_GAME_AUDIO_CHECKLIST.md` and `audio_plan.vertical_slice.v1.json`.
-2. **Add plan-driven batch orchestration (SESSION-009)**
+1. **Add plan-driven batch orchestration (SESSION-009)**
    - Wire the audio plan loader into the batch execution path.
-3. **Expand neural backend support**
+2. **Expand neural backend support**
    - Add a switchable backend for local model generation.
 
 ## Do not deprioritize

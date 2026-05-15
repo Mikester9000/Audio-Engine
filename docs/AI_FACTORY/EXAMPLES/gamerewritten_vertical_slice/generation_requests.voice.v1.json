@@ -1,0 +1,51 @@
+{
+  "requestBatchVersion": "1.0.0",
+  "project": "GameRewritten",
+  "scope": "vertical-slice",
+  "requests": [
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_voice_narrator_intro_placeholder_v1",
+      "assetId": "voice_narrator_intro_placeholder",
+      "type": "voice",
+      "backend": "procedural",
+      "seed": 405001,
+      "prompt": "calm narrator placeholder line for opening scene",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/voice_narrator_intro_placeholder.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "voice-placeholder",
+        "notes": ["Optional coverage; lower priority than music and SFX."]
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_voice_npc_shop_greeting_placeholder_v1",
+      "assetId": "voice_npc_shop_greeting_placeholder",
+      "type": "voice",
+      "backend": "procedural",
+      "seed": 405012,
+      "prompt": "friendly shopkeeper greeting placeholder",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/voice_npc_shop_greeting_placeholder.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "voice-placeholder",
+        "notes": ["Optional coverage; replace later with higher-fidelity voice if needed."]
+      }
+    }
+  ]
+}

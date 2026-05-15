@@ -4,36 +4,29 @@
 
 ## Last completed change
 
-SESSION-006 + SESSION-007 (combined PR): Added `ApprovalWorkflow` and `approve-draft` CLI (SESSION-006); wired `qa-batch` into CI via `.github/workflows/audio-qa.yml` (SESSION-007); updated music-duration policy across all relevant docs. 13 new tests; 383 total pass.
+SESSION-008: Expanded committed taxonomy coverage across AI-factory fixtures and backlog docs. Added ambience/fanfare/UI/combat/spell/tension/sadness/optional-voice coverage in the committed vertical-slice plan and request artifacts, plus long-form OST request entries for key BGM tracks marked `+ost`.
 
 ## Verified in this session
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest  # 383 passed
+python -m pytest  # 385 passed
 python tools/validate-assets.py assets/examples/ --verbose  # PASS
 python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json  # PASS
-
-# Smoke run: generate SFX batch then approve one draft
-audio-engine generate-request-batch \
-  --batch-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json \
-  --output-dir /tmp/session006_smoke --quiet
-audio-engine approve-draft \
-  --factory-root /tmp/session006_smoke \
-  --draft-file /tmp/session006_smoke/drafts/sfx/req_sfx_ui_confirm_v1.wav \
-  --output-report /tmp/session006_smoke/approval_report.json
-# 1 file copied to approved/sfx/; provenance reviewStatus=approved; report written
+python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json  # PASS
+python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json  # PASS
+python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.voice.v1.json  # PASS
 ```
 
 Observed result:
-- `383 passed` in pytest (up from 370 before this PR)
-- 1 SFX draft approved; `approved/sfx/req_sfx_ui_confirm_v1.wav` created
-- provenance `reviewStatus` updated to `"approved"` with `approvedAt` timestamp in both draft and approved copies
-- CI workflow `.github/workflows/audio-qa.yml` created; triggers on push/PR to audio source and fixtures
+- `385 passed` in pytest
+- all asset-manifest examples passed validation
+- all edited AI-factory JSON fixtures parsed successfully
+- committed taxonomy coverage now includes ambience, fanfares/stingers, expanded UI/combat/spell SFX, tension/sadness music, optional voice placeholders, and OST request entries for `field`, `town`, `dungeon`, `battle`, and `boss` BGM tracks
 
 ## Immediate next best task
 
-Execute `SESSION-008` from `docs/AI_FACTORY/SESSION_QUEUE.md`: expand full-game taxonomy coverage — add committed backlog for all audio families beyond the vertical slice and add OST variant request entries for key BGM tracks.
+Execute `SESSION-009` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add plan-driven batch orchestration by wiring audio-plan artifacts into deterministic batch execution while preserving current CLI compatibility.
 
 ## Files future agents should read first
 
@@ -54,4 +47,5 @@ Execute `SESSION-008` from `docs/AI_FACTORY/SESSION_QUEUE.md`: expand full-game 
 - [x] Approval workflow (`approve-draft` → `approved/<type>/`, updates provenance)
 - [x] QA gate wired into CI (`.github/workflows/audio-qa.yml`)
 - [x] Music-duration policy documented and encoded in checklist, layout, music subsystem, and example plan
-- [ ] Full-game taxonomy coverage expansion (SESSION-008)
+- [x] Full-game taxonomy coverage expansion (SESSION-008)
+- [ ] Plan-driven batch orchestration (SESSION-009)
