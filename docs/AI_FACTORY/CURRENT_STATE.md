@@ -89,7 +89,7 @@ Observed result in this session:
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
 4. Full-game taxonomy is now covered in committed example fixtures, but plan-driven execution of `audio_plan.*.json` remains unimplemented (SESSION-009 target, including required `.ogg` production for requests that specify it).
 5. OST request entries are now committed for key BGM tracks, but duration targets are still documentation/fixture guidance rather than enforced by the current `--batch-file` execution path.
-6. OGG export requires the optional `soundfile` dependency; the pipeline falls back to WAV when it is not installed.
+6. OGG export currently depends on `soundfile`; for SESSION-009 done-criteria, missing OGG encoder support is a blocker when `.ogg` is requested (not a WAV-only success path).
 
 ## Current blockers
 

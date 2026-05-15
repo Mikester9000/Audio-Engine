@@ -25,7 +25,7 @@ The repository now has a complete draft-to-approved pipeline: `generate-request-
 - [x] Execute `SESSION-007` — wire qa-batch into CI
 - [x] Update music-duration policy across docs, checklist, layout, and example plan
 - [x] Execute `SESSION-008` — expand full-game taxonomy coverage
-- [ ] Execute `SESSION-009` — add plan-driven batch orchestration
+- [ ] Execute `SESSION-009` — add plan-driven batch orchestration with required requested `.ogg` + `.wav` outputs
 
 ## Recommended next PRs
 
