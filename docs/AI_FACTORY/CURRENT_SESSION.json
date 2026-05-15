@@ -1,26 +1,27 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "lastUpdated": "2026-05-15",
   "currentSession": {
-    "id": "SESSION-009",
-    "title": "Add plan-driven batch orchestration",
+    "id": "SESSION-011",
+    "title": "Add backend evaluation notes",
     "status": "ready",
-    "taskType": "batch_generation",
-    "objective": "Wire the committed audio-plan loader into the batch execution path so a plan can drive deterministic request generation using existing request-batch, provenance, QA, export, and approval surfaces without breaking current CLI compatibility; require producing requested .ogg outputs as well as .wav when specified by factory inputs.",
+    "taskType": "docs_only",
+    "objective": "Add explicit backend evaluation notes and dependency/availability guidance for local/open backend options without overstating unimplemented model quality.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json",
-      "docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json",
-      "audio_engine/integration/factory_inputs.py",
-      "audio_engine/integration/asset_pipeline.py",
+      "docs/AI_FACTORY/CURRENT_STATE.md",
+      "docs/AI_FACTORY/ACTIVE_WORK.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md",
+      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
+      "audio_engine/ai/backend.py",
       "audio_engine/cli.py"
     ],
     "likelyModify": [
-      "audio_engine/integration/asset_pipeline.py",
-      "audio_engine/cli.py",
-      "audio_engine/integration/factory_inputs.py",
-      "tests/test_integration.py",
+      "docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md",
+      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
+      "docs/AI_FACTORY/CURRENT_STATE.md",
+      "docs/AI_FACTORY/ACTIVE_WORK.md",
       "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md"
     ]
   }

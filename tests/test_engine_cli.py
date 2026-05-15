@@ -474,3 +474,82 @@ def test_cli_generate_request_batch_writes_result_json(tmp_path, capsys):
     data = json.loads(result_json.read_text())
     assert data["project"] == "GameRewritten"
     assert "records" in data
+
+
+def test_cli_list_backends(capsys):
+    rc = main(["list-backends"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "procedural" in captured.out
+
+
+def test_cli_generate_plan_batch_subcommand_registered(capsys):
+    import argparse
+
+    parser = build_parser()
+    subparsers_actions = [
+        action
+        for action in parser._actions
+        if isinstance(action, argparse._SubParsersAction)
+    ]
+    assert subparsers_actions
+    assert "generate-plan-batch" in subparsers_actions[0].choices
+
+
+def test_cli_generate_plan_batch_sfx_smoke(tmp_path, capsys):
+    import json
+
+    request_path = _FIXTURE_DIR / "generation_requests.sfx.v1.json"
+    batch = json.loads(request_path.read_text(encoding="utf-8"))
+    requests = batch["requests"][:2]
+    plan = {
+        "planVersion": "1.0.0",
+        "project": "GameRewritten",
+        "scope": "vertical-slice",
+        "priorities": {"music": "high", "sfx": "high", "voice": "low"},
+        "styleFamilies": ["heroic-sci-fantasy"],
+        "assetGroups": [
+            {
+                "groupId": "sfx-required",
+                "type": "sfx",
+                "required": True,
+                "targets": [
+                    {
+                        "assetId": req["assetId"],
+                        "gameplayRole": f"role-{index}",
+                        "targetPath": req["output"]["targetPath"],
+                        "loop": req["qa"]["loopRequired"],
+                        "durationTargetSeconds": 0.2,
+                    }
+                    for index, req in enumerate(requests)
+                ],
+            }
+        ],
+    }
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps(plan), encoding="utf-8")
+
+    rc = main([
+        "generate-plan-batch",
+        "--plan-file", str(plan_path),
+        "--request-file", str(request_path),
+        "--output-dir", str(tmp_path),
+        "--quiet",
+    ])
+    assert rc == 0
+    output_files = list((tmp_path / "drafts" / "sfx").glob("*.wav"))
+    assert len(output_files) == 2
+
+
+def test_cli_generate_voice_accepts_seed_and_backend(tmp_path):
+    out = str(tmp_path / "voice.wav")
+    rc = main([
+        "generate-voice",
+        "--text", "Welcome, hero.",
+        "--voice", "narrator",
+        "--output", out,
+        "--seed", "7",
+        "--backend", "procedural",
+    ])
+    assert rc == 0
+    assert Path(out).exists()

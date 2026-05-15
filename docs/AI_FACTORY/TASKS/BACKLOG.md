@@ -9,7 +9,7 @@
 - [x] Define approval workflow for generated assets
 - [x] Define canonical downstream folder and filename rules
 - [x] Expand taxonomy coverage fixtures for ambience, fanfares/stingers, UI, combat/spell SFX, tension, sadness, and optional voice
-- [ ] Wire audio-plan artifacts into executable plan-driven batch orchestration, requiring requested `.ogg` outputs as well as `.wav`
+- [x] Wire audio-plan artifacts into executable plan-driven batch orchestration, requiring requested `.ogg` outputs as well as `.wav`
 
 ## P1 — Important next layer
 

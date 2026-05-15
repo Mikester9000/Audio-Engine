@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, a request-batch generation command, per-request provenance sidecars, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, and taxonomy fixtures now cover ambience, fanfares/stingers, expanded UI/combat/spell SFX, tension/sadness music, optional voice placeholders, and key BGM OST request entries.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, and taxonomy fixtures now cover ambience, fanfares/stingers, expanded UI/combat/spell SFX, tension/sadness music, optional voice placeholders, key BGM OST request entries, and required fanfare request fixtures.
 
 ## What is implemented today
 
@@ -23,6 +23,7 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Batch game asset generation | Implemented | `audio_engine/integration/asset_pipeline.py` |
 | Typed audio plan + generation request loading | Implemented | `audio_engine/integration/factory_inputs.py`, `tests/test_integration.py` |
 | Request-batch generation pipeline | Implemented | `audio_engine/integration/asset_pipeline.py` (`RequestBatchPipeline`), `audio_engine/cli.py` (`generate-request-batch`) |
+| Plan-driven batch orchestration | Implemented | `audio_engine/integration/asset_pipeline.py` (`PlanBatchOrchestrator`), `audio_engine/cli.py` (`generate-plan-batch`) |
 | Per-request provenance sidecar files | Implemented | `audio_engine/integration/asset_pipeline.py` (`_write_provenance`) |
 | Batch QA gate command | Implemented | `audio_engine/cli.py` (`qa-batch`) |
 | GameRewritten export profile | Implemented | `audio_engine/integration/asset_pipeline.py` (`DraftExportPipeline`), `audio_engine/cli.py` (`export-drafts`) |
@@ -35,27 +36,26 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Session queue / autopilot control docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_QUEUE.md`, `docs/AI_FACTORY/SESSION_STATE.json`, `docs/AI_FACTORY/CURRENT_SESSION.json` |
 | Final execution-safety hardening docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_GATE_RULES.md`, `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`, `docs/AI_FACTORY/VERIFICATION_PROFILES.md`, `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md`, `docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md`, `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md` |
 | Full-game taxonomy fixture coverage | Implemented (docs fixtures) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json`, `generation_requests.music.v1.json`, `generation_requests.sfx.v1.json`, `generation_requests.voice.v1.json`, `docs/AI_FACTORY/TASKS/BACKLOG.md` |
+| Backend discoverability and selection CLI | Implemented | `audio_engine/cli.py` (`list-backends`, `--backend` on `generate-music`/`generate-sfx`/`generate-voice`) |
 | Automated test suite | Implemented | `tests/` |
 
 ### Commands verified in this session
 
 ```bash
 pip install -e ".[dev]"
+pip install soundfile
 python -m pytest
-# 383 passed (SESSION-006 + SESSION-007)
+# 399 passed (SESSION-009 + SESSION-010)
 python tools/validate-assets.py assets/examples/ --verbose
-python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json
-python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json
-python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json
-python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.voice.v1.json
+python -m audio_engine.cli generate-plan-batch --plan-file /tmp/session009010_smoke/plan.smoke.json --request-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json --output-dir /tmp/session009010_smoke --force --quiet
 ```
 
 Observed result in this session:
 
-- `386 passed` in pytest
+- `399 passed` in pytest
 - asset example manifests passed validation
-- all edited taxonomy fixture JSON files parsed successfully
-- SESSION-008 taxonomy objective completed in docs fixtures and backlog coverage
+- deterministic plan-driven smoke run produced requested `.ogg` output plus provenance sidecar
+- SESSION-009 and SESSION-010 objectives completed
 
 ## Current repository structure
 
@@ -87,9 +87,9 @@ Observed result in this session:
 1. The default backend is still primarily procedural rather than modern neural generation.
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
-4. Full-game taxonomy is now covered in committed example fixtures, but plan-driven execution of `audio_plan.*.json` remains unimplemented (SESSION-009 target, including required `.ogg` production for requests that specify it).
-5. OST request entries are now committed for key BGM tracks, but duration targets are still documentation/fixture guidance rather than enforced by the current `--batch-file` execution path.
-6. OGG export currently depends on `soundfile`; for SESSION-009 done-criteria, missing OGG encoder support is a blocker when `.ogg` is requested (not a WAV-only success path).
+4. Plan-driven orchestration currently requires explicit request-batch files that provide prompts/seeds/backends for all required plan targets; missing required requests are treated as execution errors.
+5. OST request entries are committed for key BGM tracks and fanfare entries now exist, but duration targets are still documentation/fixture guidance rather than enforced per target by `RequestBatchPipeline`.
+6. OGG export depends on `soundfile`; `.ogg` requests fail (no fallback-to-WAV) when encoder support is unavailable.
 
 ## Current blockers
 
@@ -102,4 +102,4 @@ None blocking the next session.
 
 ## Immediate interpretation
 
-This repo now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow itself (path-filtered). SESSION-008 completed taxonomy fixture expansion and added key BGM OST request entries; the next session (SESSION-009) should wire audio-plan artifacts into plan-driven batch orchestration and require producing requested `.ogg` outputs as well as `.wav`.
+This repo now has a complete draft-to-approved pipeline with both request-driven and plan-driven entrypoints: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are now strict in request-batch execution paths (no silent WAV fallback), and backend selection/discovery surfaces have been expanded for future neural/local model adapters.

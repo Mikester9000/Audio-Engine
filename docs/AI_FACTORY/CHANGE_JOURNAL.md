@@ -127,3 +127,24 @@
 - Added new optional fixture `generation_requests.voice.v1.json` with placeholder voice requests to track low-priority voice scope explicitly.
 - Updated loader fixture tests in `tests/test_integration.py` to match expanded fixture counts and include the voice fixture.
 - Updated continuity/session-control docs (`CURRENT_STATE.md`, `ACTIVE_WORK.md`, `HANDOFF.md`, `SESSION_QUEUE.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, `SESSION_HISTORY.md`, `IMPLEMENTATION_MATRIX.md`, `TASKS/BACKLOG.md`) and advanced the queue to `SESSION-009`.
+
+## 2026-05-15 — Complete SESSION-009 (plan-driven orchestration) + SESSION-010 (backend support expansion)
+
+- Added `PlanBatchOrchestrator` to `audio_engine/integration/asset_pipeline.py` and exported it through `audio_engine.integration`.
+- Added `generate-plan-batch` CLI command to execute one audio plan against one or more request-batch files while preserving existing `generate-request-batch` compatibility.
+- Plan-driven orchestration now validates required-target coverage and enforces plan/request consistency for type, `targetPath`, and output format.
+- Removed OGG fallback-to-WAV behavior from `RequestBatchPipeline`; requested `.ogg` outputs must be produced, otherwise the request is recorded as an error.
+- Updated `RequestBatchPipeline` to honor per-request `backend` for music, SFX, and voice generation.
+- Added backend discovery/selection surfaces in CLI:
+  - new `list-backends` command
+  - `--backend` support on `generate-music`, `generate-sfx`, and `generate-voice`
+- Expanded fixture coverage by adding required fanfare requests to `generation_requests.music.v1.json` (now 15 music requests).
+- Added integration and CLI tests for:
+  - plan-driven orchestration
+  - strict OGG failure behavior when encoder support is unavailable
+  - backend handling in request-batch execution
+  - new CLI subcommands/options
+- Verification:
+  - `python -m pytest` → 399 passed
+  - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
+  - deterministic `/tmp` smoke run with `generate-plan-batch` produced requested `.ogg` output after installing `soundfile`.

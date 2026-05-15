@@ -26,6 +26,7 @@ from audio_engine.integration import (
     FactoryInputError,
     GenerationManifest,
     GenerationRequestBatch,
+    PlanBatchOrchestrator,
     RequestBatchRecord,
     RequestBatchResult,
     MUSIC_MANIFEST,
@@ -225,7 +226,7 @@ class TestFactoryInputLoaders:
     @pytest.mark.parametrize(
         ("filename", "expected_type", "expected_request_count"),
         [
-            ("generation_requests.music.v1.json", "music", 13),
+            ("generation_requests.music.v1.json", "music", 15),
             ("generation_requests.sfx.v1.json", "sfx", 10),
             ("generation_requests.voice.v1.json", "voice", 2),
         ],
@@ -242,6 +243,21 @@ class TestFactoryInputLoaders:
         assert all(request.output.target_path for request in batch.requests)
         assert all(request.output.sample_rate > 0 for request in batch.requests)
         assert all(request.output.channels > 0 for request in batch.requests)
+
+    def test_music_fixture_includes_required_fanfare_requests(self):
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        fanfare_requests = {
+            request.asset_id: request
+            for request in batch.requests
+            if request.asset_id in {"fanfare_item_obtain", "fanfare_quest_complete"}
+        }
+        assert set(fanfare_requests) == {"fanfare_item_obtain", "fanfare_quest_complete"}
+        for request in fanfare_requests.values():
+            assert request.type == "music"
+            assert request.output.format == "wav"
+            assert request.qa.loop_required is False
 
     def test_generation_request_loader_rejects_missing_request_id(self):
         invalid_batch = {
@@ -774,9 +790,10 @@ class TestRequestBatchPipeline:
         assert "errors" in data
 
     def test_execute_music_batch_creates_files(self, tmp_path, monkeypatch):
-        """Execute the committed music request batch (monkeypatched to 2 s duration)."""
+        """Execute one WAV-format music request (monkeypatched to 2 s duration)."""
         from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
         from audio_engine.ai.music_gen import MusicGen
+        from audio_engine.integration.factory_inputs import GenerationRequestBatch
 
         # Monkeypatch generate() to produce a short dummy signal instead of 30 s.
         import numpy as np
@@ -788,8 +805,16 @@ class TestRequestBatchPipeline:
 
         monkeypatch.setattr(MusicGen, "generate", _fast_generate)
 
-        batch = load_generation_request_batch(
+        full_batch = load_generation_request_batch(
             EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        wav_requests = [r for r in full_batch.requests if r.output.format == "wav"]
+        assert wav_requests, "No WAV-format music requests found in fixture"
+        batch = GenerationRequestBatch(
+            request_batch_version=full_batch.request_batch_version,
+            project=full_batch.project,
+            scope=full_batch.scope,
+            requests=[wav_requests[0]],
         )
         pipeline = RequestBatchPipeline(skip_existing=False)
         manifest = pipeline.execute(batch, tmp_path)
@@ -799,6 +824,77 @@ class TestRequestBatchPipeline:
         for record in manifest.music:
             assert Path(record["file"]).exists(), f"Missing output: {record['file']}"
             assert record["seed"] > 0
+
+    def test_execute_request_batch_ogg_missing_encoder_is_error(self, tmp_path, monkeypatch):
+        """OGG requests must fail (not silently fall back to WAV) when OGG export is unavailable."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+        from audio_engine.integration.factory_inputs import GenerationRequestBatch
+        from audio_engine.export.audio_exporter import AudioExporter
+
+        full_batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        ogg_requests = [r for r in full_batch.requests if r.output.format == "ogg"]
+        assert ogg_requests, "No OGG-format music requests found in fixture"
+        batch = GenerationRequestBatch(
+            request_batch_version=full_batch.request_batch_version,
+            project=full_batch.project,
+            scope=full_batch.scope,
+            requests=[ogg_requests[0]],
+        )
+
+        def _simulate_missing_encoder(_exporter, audio, path):  # pragma: no cover - injected behavior
+            raise ImportError("soundfile missing for test")
+
+        monkeypatch.setattr(AudioExporter, "_write_ogg", _simulate_missing_encoder)
+
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        assert len(manifest.errors) == 1
+        assert "soundfile missing for test" in manifest.errors[0]
+        expected_wav_fallback = tmp_path / "drafts" / "music" / f"{ogg_requests[0].request_id}.wav"
+        assert not expected_wav_fallback.exists(), "Unexpected WAV fallback file was written"
+
+    def test_execute_music_batch_full_fixture_without_encoder_dependency(self, tmp_path, monkeypatch):
+        """Execute the full committed music fixture with a patched OGG writer for broad integration coverage."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+        from audio_engine.export.audio_exporter import AudioExporter
+
+        def _fake_write_ogg(_exporter, audio, path):  # pragma: no cover - injected behavior
+            return _exporter._write_wav(audio, path)
+
+        monkeypatch.setattr(AudioExporter, "_write_ogg", _fake_write_ogg)
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        assert len(manifest.errors) == 0, manifest.errors
+        assert len(manifest.music) == len(batch.requests)
+
+    def test_request_batch_pipeline_uses_request_backend(self, tmp_path):
+        """RequestBatchPipeline must respect request.backend for generation."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+        from audio_engine.integration.factory_inputs import GenerationRequestBatch
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        bad_request = replace(batch.requests[0], backend="invalid_backend")
+        single_request_batch = GenerationRequestBatch(
+            request_batch_version=batch.request_batch_version,
+            project=batch.project,
+            scope=batch.scope,
+            requests=[bad_request],
+        )
+
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(single_request_batch, tmp_path)
+        assert len(manifest.errors) == 1
+        assert "Unknown backend 'invalid_backend'" in manifest.errors[0]
 
     def test_progress_callback_invoked(self, tmp_path):
         """Progress messages should be emitted during batch execution."""
@@ -1033,6 +1129,145 @@ class TestDraftExportPipeline:
 
 
 # ---------------------------------------------------------------------------
+# PlanBatchOrchestrator tests
+# ---------------------------------------------------------------------------
+
+class TestPlanBatchOrchestrator:
+    """Tests for plan-driven batch orchestration."""
+
+    @staticmethod
+    def _make_sfx_plan_from_batch(batch: GenerationRequestBatch) -> AudioPlan:
+        selected = batch.requests[:2]
+        plan_payload = {
+            "planVersion": "1.0.0",
+            "project": batch.project,
+            "scope": batch.scope,
+            "priorities": {"music": "high", "sfx": "high", "voice": "low"},
+            "styleFamilies": ["heroic-sci-fantasy"],
+            "assetGroups": [
+                {
+                    "groupId": "sfx-required",
+                    "type": "sfx",
+                    "required": True,
+                    "targets": [
+                        {
+                            "assetId": req.asset_id,
+                            "gameplayRole": f"role-{index}",
+                            "targetPath": req.output.target_path,
+                            "loop": req.qa.loop_required,
+                            "durationTargetSeconds": 0.2,
+                        }
+                        for index, req in enumerate(selected)
+                    ],
+                }
+            ],
+        }
+        return parse_audio_plan(plan_payload, source="test_plan")
+
+    def test_execute_plan_drives_subset_generation(self, tmp_path):
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        plan = self._make_sfx_plan_from_batch(batch)
+        orchestrator = PlanBatchOrchestrator(skip_existing=False)
+        manifest = orchestrator.execute(plan, [batch], tmp_path)
+
+        assert len(manifest.errors) == 0, manifest.errors
+        assert len(manifest.sfx) == 2
+        produced_request_ids = [record["request_id"] for record in manifest.sfx]
+        expected_request_ids = [batch.requests[0].request_id, batch.requests[1].request_id]
+        assert produced_request_ids == expected_request_ids
+
+    def test_execute_plan_missing_required_request_raises(self, tmp_path):
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        plan = self._make_sfx_plan_from_batch(batch)
+        truncated_batch = replace(batch, requests=[batch.requests[0]])
+        orchestrator = PlanBatchOrchestrator(skip_existing=False)
+
+        with pytest.raises(ValueError, match="missing generation requests for required plan assetIds"):
+            orchestrator.execute(plan, [truncated_batch], tmp_path)
+
+    def test_execute_plan_rejects_type_mismatch(self, tmp_path):
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        plan = self._make_sfx_plan_from_batch(batch)
+        mismatched_request = replace(batch.requests[0], type="music")
+        bad_batch = replace(batch, requests=[mismatched_request, batch.requests[1]])
+        orchestrator = PlanBatchOrchestrator(skip_existing=False)
+
+        with pytest.raises(ValueError, match="plan/request type mismatch"):
+            orchestrator.execute(plan, [bad_batch], tmp_path)
+
+    def test_execute_plan_rejects_target_path_mismatch(self, tmp_path):
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        plan = self._make_sfx_plan_from_batch(batch)
+        mismatched_request = replace(
+            batch.requests[0],
+            output=replace(batch.requests[0].output, target_path="Content/Audio/other.wav"),
+        )
+        bad_batch = replace(batch, requests=[mismatched_request, batch.requests[1]])
+        orchestrator = PlanBatchOrchestrator(skip_existing=False)
+
+        with pytest.raises(ValueError, match="plan/request targetPath mismatch"):
+            orchestrator.execute(plan, [bad_batch], tmp_path)
+
+    def test_execute_plan_rejects_unsupported_plan_format(self, tmp_path):
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        plan = self._make_sfx_plan_from_batch(batch)
+        target = plan.asset_groups[0].targets[0]
+        bad_plan = parse_audio_plan(
+            {
+                "planVersion": plan.plan_version,
+                "project": plan.project,
+                "scope": plan.scope,
+                "priorities": {
+                    "music": plan.priorities.music,
+                    "sfx": plan.priorities.sfx,
+                    "voice": plan.priorities.voice,
+                },
+                "styleFamilies": plan.style_families,
+                "assetGroups": [
+                    {
+                        "groupId": "sfx-required",
+                        "type": "sfx",
+                        "required": True,
+                        "targets": [
+                            {
+                                "assetId": target.asset_id,
+                                "gameplayRole": target.gameplay_role,
+                                "targetPath": target.target_path.replace(".wav", ".mp3"),
+                                "loop": target.loop,
+                                "durationTargetSeconds": target.duration_target_seconds,
+                            }
+                        ],
+                    }
+                ],
+            },
+            source="bad_plan",
+        )
+        bad_request = replace(
+            batch.requests[0],
+            output=replace(
+                batch.requests[0].output,
+                target_path=target.target_path.replace(".wav", ".mp3"),
+                format="mp3",
+            ),
+        )
+        bad_batch = replace(batch, requests=[bad_request])
+        orchestrator = PlanBatchOrchestrator(skip_existing=False)
+
+        with pytest.raises(ValueError, match="unsupported plan target format"):
+            orchestrator.execute(bad_plan, [bad_batch], tmp_path)
+
+
+# ---------------------------------------------------------------------------
 # RequestBatch execution
 # ---------------------------------------------------------------------------
 
@@ -1062,6 +1297,31 @@ class TestRequestBatchExecution:
         for record in result.records:
             assert record.status == "ok"
             assert Path(record.output_path).exists(), f"Missing output: {record.output_path}"
+
+    def test_execute_sfx_batch_from_fixture_passes_qa_gate(self, tmp_path):
+        """Committed SFX fixture should pass qa-batch loudness/peak/clipping checks."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(batch, tmp_path)
+        assert not [record for record in result.records if record.status == "error"]
+
+        report_path = tmp_path / "qa_report.json"
+        exit_code = main(
+            [
+                "qa-batch",
+                "--input-dir",
+                str(tmp_path / "Content" / "Audio"),
+                "--output-report",
+                str(report_path),
+                "--recursive",
+                "--quiet",
+            ]
+        )
+        assert exit_code == 0
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        assert report["summary"]["failed"] == 0
 
     def test_execute_music_batch_first_request(self, tmp_path):
         """At least the WAV-format music request (stinger) should produce a non-empty output file."""
