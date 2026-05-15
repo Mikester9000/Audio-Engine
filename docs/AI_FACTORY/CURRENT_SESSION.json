@@ -6,7 +6,7 @@
     "title": "Add plan-driven batch orchestration",
     "status": "ready",
     "taskType": "batch_generation",
-    "objective": "Wire the committed audio-plan loader into the batch execution path so a plan can drive deterministic request generation using existing request-batch, provenance, QA, export, and approval surfaces without breaking current CLI compatibility.",
+    "objective": "Wire the committed audio-plan loader into the batch execution path so a plan can drive deterministic request generation using existing request-batch, provenance, QA, export, and approval surfaces without breaking current CLI compatibility; require producing requested .ogg outputs as well as .wav when specified by factory inputs.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",

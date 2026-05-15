@@ -87,7 +87,7 @@ Observed result in this session:
 1. The default backend is still primarily procedural rather than modern neural generation.
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
-4. Full-game taxonomy is now covered in committed example fixtures, but plan-driven execution of `audio_plan.*.json` remains unimplemented (SESSION-009 target).
+4. Full-game taxonomy is now covered in committed example fixtures, but plan-driven execution of `audio_plan.*.json` remains unimplemented (SESSION-009 target, including required `.ogg` production for requests that specify it).
 5. OST request entries are now committed for key BGM tracks, but duration targets are still documentation/fixture guidance rather than enforced by the current `--batch-file` execution path.
 6. OGG export requires the optional `soundfile` dependency; the pipeline falls back to WAV when it is not installed.
 
@@ -102,4 +102,4 @@ None blocking the next session.
 
 ## Immediate interpretation
 
-This repo now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow itself (path-filtered). SESSION-008 completed taxonomy fixture expansion and added key BGM OST request entries; the next session (SESSION-009) should wire audio-plan artifacts into plan-driven batch orchestration.
+This repo now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow itself (path-filtered). SESSION-008 completed taxonomy fixture expansion and added key BGM OST request entries; the next session (SESSION-009) should wire audio-plan artifacts into plan-driven batch orchestration and require producing requested `.ogg` outputs as well as `.wav`.
