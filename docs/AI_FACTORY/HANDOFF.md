@@ -4,20 +4,18 @@
 
 ## Last completed change
 
-SESSION-011 + SESSION-012: Added backend evaluation/dependency guidance aligned with backend CLI discovery/selection surfaces, and documented deterministic repeated-SFX variation strategy guidance (variant-per-request, stable naming, explicit seed capture) as docs-contract behavior without claiming unimplemented runtime variation automation.
+SESSION-011 + SESSION-012: Implemented executable backend evaluation metadata (`BackendRegistry.evaluate_backends` + enriched `list-backends` output), and implemented repeated-SFX variation execution rules (variant-family validation with `_varNN` + distinct seeds + contiguous indices) plus SFX variant provenance fields (`variationFamily`, `variationIndex`).
 
 ## Verified in this session
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest  # 400 passed
+python -m pytest  # 404 passed
 python tools/validate-assets.py assets/examples/ --verbose  # PASS
-python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json  # PASS
-python -m json.tool docs/AI_FACTORY/SESSION_STATE.json  # PASS
 ```
 
 Observed result:
-- `400 passed` in pytest
+- `404 passed` in pytest
 - all asset-manifest examples passed validation
 - edited continuity/session JSON files parse successfully
 - SESSION-011 and SESSION-012 completed and queue advanced to SESSION-013
@@ -48,5 +46,5 @@ Execute `SESSION-013` from `docs/AI_FACTORY/SESSION_QUEUE.md`: define category-s
 - [x] Full-game taxonomy coverage expansion (SESSION-008)
 - [x] Plan-driven batch orchestration (SESSION-009, including required `.ogg` output production)
 - [x] Backend support surface expansion (SESSION-010)
-- [x] Backend evaluation and dependency guidance docs (SESSION-011)
-- [x] Repeated-SFX variation strategy docs-contract guidance (SESSION-012)
+- [x] Backend evaluation metadata in code and CLI output (SESSION-011)
+- [x] Repeated-SFX variation validation + provenance metadata in code (SESSION-012)

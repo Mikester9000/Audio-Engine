@@ -1122,11 +1122,14 @@ class TestRequestBatchPipeline:
         manifest = pipeline.execute(variant_batch, tmp_path)
         assert not manifest.errors
 
+        observed_indices: list[int] = []
         for record in manifest.sfx:
-            provenance_path = Path(record["file"]).with_name(Path(record["file"]).stem + ".provenance.json")
+            audio_path = Path(record["file"])
+            provenance_path = audio_path.with_name(audio_path.stem + ".provenance.json")
             data = json.loads(provenance_path.read_text())
             assert data["variationFamily"] == "sfx_ui_confirm"
-            assert data["variationIndex"] in {1, 2}
+            observed_indices.append(data["variationIndex"])
+        assert set(observed_indices) == {1, 2}
 
     def test_provenance_not_written_for_skipped(self, tmp_path):
         """No provenance file should be written for skipped (already-existing) files."""

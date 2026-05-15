@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline with both request-driven and plan-driven execution: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. SESSION-011 and SESSION-012 are now completed as docs-only continuity work: backend evaluation/dependency guidance and deterministic repeated-SFX variation strategy guidance are documented without overstating unimplemented runtime behavior. The next executable session is `SESSION-013` in `docs/AI_FACTORY/SESSION_QUEUE.md`: define category-specific SFX loudness/readability targets.
+The repository now has a complete draft-to-approved pipeline with both request-driven and plan-driven execution: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. SESSION-011 and SESSION-012 now include executable behavior: backend evaluation metadata is exposed through registry/CLI surfaces, and repeated-SFX variation strategy is enforced in request parsing with variant provenance capture. The next executable session is `SESSION-013` in `docs/AI_FACTORY/SESSION_QUEUE.md`: define category-specific SFX loudness/readability targets.
 
 ## Now
 
@@ -27,8 +27,8 @@ The repository now has a complete draft-to-approved pipeline with both request-d
 - [x] Execute `SESSION-008` — expand full-game taxonomy coverage
 - [x] Execute `SESSION-009` — add plan-driven batch orchestration with required requested `.ogg` + `.wav` outputs
 - [x] Execute `SESSION-010` — expand neural/backend support surfaces
-- [x] Execute `SESSION-011` — add backend evaluation notes and dependency guidance
-- [x] Execute `SESSION-012` — add variation strategy for repeated SFX categories
+- [x] Execute `SESSION-011` — implement backend evaluation metadata in backend registry/CLI
+- [x] Execute `SESSION-012` — implement repeated-SFX variation validation and provenance metadata
 - [ ] Execute `SESSION-013` — define category-specific SFX loudness/readability targets
 
 ## Recommended next PRs

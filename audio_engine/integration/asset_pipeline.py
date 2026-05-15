@@ -55,7 +55,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path, PureWindowsPath
@@ -78,7 +77,6 @@ if TYPE_CHECKING:
 __all__ = ["ApprovalWorkflow", "AssetPipeline", "GenerationManifest", "RequestBatchPipeline", "PlanBatchOrchestrator", "DraftExportPipeline", "RequestBatchRecord", "RequestBatchResult"]
 
 _SUPPORTED_REQUEST_FORMATS = frozenset({"wav", "ogg"})
-_VARIANT_SUFFIX_RE = re.compile(r"^(?P<stem>.+)_var(?P<index>\d{2})$")
 
 
 # ---------------------------------------------------------------------------
@@ -1008,21 +1006,15 @@ class RequestBatchPipeline:
             "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }
         if request.type == "sfx":
-            parsed_variant = _parse_variant_suffix(request.asset_id)
+            from audio_engine.integration.factory_inputs import parse_variant_suffix
+
+            parsed_variant = parse_variant_suffix(request.asset_id)
             if parsed_variant is not None:
                 variation_family, variation_index = parsed_variant
                 provenance["variationFamily"] = variation_family
                 provenance["variationIndex"] = variation_index
         provenance_path = output_path.with_name(output_path.stem + ".provenance.json")
         provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
-
-
-def _parse_variant_suffix(value: str) -> tuple[str, int] | None:
-    """Parse `_varNN` suffix and return `(family_stem, index)` if present."""
-    match = _VARIANT_SUFFIX_RE.match(value)
-    if match is None:
-        return None
-    return match.group("stem"), int(match.group("index"))
 
 
 # ---------------------------------------------------------------------------

@@ -64,15 +64,16 @@
 
 ### SESSION-011 — Add backend evaluation notes
 - **Status:** `completed`
-- **Task type:** `docs_only`
-- Added explicit backend evaluation notes and dependency/availability guidance aligned with backend registry/selection CLI surfaces.
-- Documented current backend reality (`procedural` implemented) and future local/open adapter families without claiming unimplemented quality.
+- **Task type:** `cli`
+- Added executable backend evaluation metadata in `BackendRegistry.evaluate_backends()` and surfaced dependency/modality evaluation output in `audio-engine list-backends`.
+- Preserved truthful current backend reality (`procedural` implemented) while keeping future adapter-family quality claims out of runtime behavior.
 
 ### SESSION-012 — Add variation strategy for repeated SFX categories
 - **Status:** `completed`
-- **Task type:** `docs_only`
-- Added deterministic request-level SFX variation strategy guidance (stable naming, explicit seed capture, variant-per-request flow).
-- Clarified this is currently docs-contract guidance and not implemented runtime variation selection logic.
+- **Task type:** `loader_parsing + provenance`
+- Added executable repeated-SFX variant-family validation in generation-request parsing (`_varNN` naming, deterministic distinct seeds, contiguous variant indices).
+- Added per-asset variant provenance fields (`variationFamily`, `variationIndex`) for SFX variant requests in `RequestBatchPipeline`.
+- Runtime in-game variant selection remains downstream/out of scope; factory-side deterministic variant generation/tracking is now implemented.
 
 ## Current next session
 

@@ -19,6 +19,7 @@
 
 - **Current implemented backend reality:** the only shipped backend is `procedural` (`audio_engine/ai/backend.py`).
 - **Current selection/discovery surfaces:** users can list registered backends with `audio-engine list-backends` and select one with `--backend` on music/SFX/voice generation commands.
+- **Current executable evaluation surface:** `BackendRegistry.evaluate_backends()` now reports backend availability, availability reason, dependency summary, and supported modalities; `audio-engine list-backends` prints this metadata.
 - **Availability behavior:** backend availability is dependency-driven (`is_available()`); missing runtime dependencies should be treated as unavailable/failing execution rather than as quality regressions.
 - **Future local/open backend guidance (docs, not implementation):**
   - acceptable adapter families include local ONNX-runtime wrappers, ggml/llama.cpp-style local wrappers, or local-files-only Hugging Face adapters

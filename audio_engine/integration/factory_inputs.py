@@ -295,11 +295,11 @@ def _validate_sfx_variation_strategy(requests: list[GenerationRequest], *, sourc
 
         seen_seed_values: set[int] = set()
         seen_indices: set[int] = set()
-        for request_index, request in members:
-            context = f"{source}.requests[{request_index}]"
-            asset_variant = _parse_variant_suffix(request.asset_id)
-            request_variant = _parse_variant_suffix(request.request_id)
-            output_variant = _parse_variant_suffix(Path(request.output.target_path).stem)
+        for member_request_index, request in members:
+            context = f"{source}.requests[{member_request_index}]"
+            asset_variant = parse_variant_suffix(request.asset_id)
+            request_variant = parse_variant_suffix(request.request_id)
+            output_variant = parse_variant_suffix(Path(request.output.target_path).stem)
 
             if asset_variant is None:
                 raise FactoryInputError(
@@ -315,23 +315,14 @@ def _validate_sfx_variation_strategy(requests: list[GenerationRequest], *, sourc
                 )
 
             asset_stem, asset_index = asset_variant
-            request_stem, request_index_suffix = request_variant
-            output_stem, output_index = output_variant
+            _, request_index = request_variant
+            _, output_index = output_variant
 
             if asset_stem != family:
                 raise FactoryInputError(
                     f"{context}.assetId variant family mismatch: expected stem '{family}', got '{asset_stem}'"
                 )
-            if request_stem != request.request_id.rsplit("_var", 1)[0]:
-                raise FactoryInputError(
-                    f"{context}.requestId has invalid `_varNN` suffix placement"
-                )
-            if output_stem != request.output.target_path.rsplit(".", 1)[0].rsplit("_var", 1)[0]:
-                raise FactoryInputError(
-                    f"{context}.output.targetPath has invalid `_varNN` suffix placement"
-                )
-
-            if not (asset_index == request_index_suffix == output_index):
+            if not (asset_index == request_index == output_index):
                 raise FactoryInputError(
                     f"{context} variant index mismatch across assetId/requestId/output.targetPath"
                 )
@@ -349,7 +340,21 @@ def _validate_sfx_variation_strategy(requests: list[GenerationRequest], *, sourc
             )
 
 
-def _parse_variant_suffix(value: str) -> tuple[str, int] | None:
+def parse_variant_suffix(value: str) -> tuple[str, int] | None:
+    """Parse an asset/request stem with `_varNN` suffix into `(family_stem, index)`.
+
+    Parameters
+    ----------
+    value:
+        Identifier or filename stem potentially ending in a two-digit variant
+        suffix, such as ``sfx_ui_confirm_var01``.
+
+    Returns
+    -------
+    tuple[str, int] | None
+        ``(family_stem, variant_index)`` when a valid `_varNN` suffix is
+        present; otherwise ``None``.
+    """
     match = _VARIANT_SUFFIX_RE.match(value)
     if match is None:
         return None
@@ -357,7 +362,12 @@ def _parse_variant_suffix(value: str) -> tuple[str, int] | None:
 
 
 def _variant_family_name(asset_id: str) -> str:
-    parsed = _parse_variant_suffix(asset_id)
+    """Return the repeated-SFX family stem for an asset identifier.
+
+    If *asset_id* contains a `_varNN` suffix, the suffix is removed and the
+    family stem is returned. Otherwise, the original identifier is returned.
+    """
+    parsed = parse_variant_suffix(asset_id)
     if parsed is None:
         return asset_id
     return parsed[0]

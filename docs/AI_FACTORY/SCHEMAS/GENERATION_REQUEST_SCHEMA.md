@@ -57,6 +57,7 @@ Committed examples:
 - `backend` is required and should explicitly name the intended backend.
 - Today, `procedural` is the only implemented and guaranteed backend.
 - Before running large batches, verify registry/availability with `audio-engine list-backends`.
+- `audio-engine list-backends` now exposes executable backend-evaluation metadata (`available`, supported modalities, dependency summary, availability reason) sourced from `BackendRegistry.evaluate_backends()`.
 - Requests that require an unavailable backend should fail fast; do not silently switch to a different backend unless explicitly requested in project policy.
 
 ## Recommended review fields
@@ -68,7 +69,7 @@ Committed examples:
 - `replaceExisting`
 - `supersedesRequestId`
 
-## Repeated SFX variation strategy (SESSION-012, docs-contract)
+## Repeated SFX variation strategy (SESSION-012)
 
 Until automated variation orchestration exists, repeated SFX categories should use deterministic request-level variation records:
 
@@ -77,6 +78,13 @@ Until automated variation orchestration exists, repeated SFX categories should u
 - assign deterministic but distinct seeds per variant in a stable sequence
 - keep prompt/style family semantically aligned across the variant family while introducing controlled wording differences
 - keep output paths explicit per variant so downstream import and QA can track each generated file independently
+
+Current executable enforcement:
+
+- repeated SFX families in a single request batch now require `_varNN` suffixes on `assetId`, `requestId`, and output filename stem
+- variant indices must align across those fields and be contiguous (`_var01.._varNN`) per family
+- seeds must be deterministic and distinct per variant family
+- SFX variant provenance now includes `variationFamily` and `variationIndex`
 
 ## Deterministic seed rule
 

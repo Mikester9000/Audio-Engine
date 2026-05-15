@@ -166,3 +166,29 @@
   - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
   - `python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json` → PASS
   - `python -m json.tool docs/AI_FACTORY/SESSION_STATE.json` → PASS
+
+## 2026-05-15 — Implement executable SESSION-011/012 behavior (backend evaluation + SFX variation enforcement)
+
+- Implemented executable backend evaluation metadata in `audio_engine/ai/backend.py` via `BackendRegistry.evaluate_backends()`:
+  - backend availability status
+  - availability reason
+  - dependency summary
+  - supported modalities
+- Updated `audio-engine list-backends` (`audio_engine/cli.py`) to surface the executable evaluation metadata in CLI output.
+- Implemented repeated-SFX variation enforcement in `audio_engine/integration/factory_inputs.py`:
+  - repeated family detection for SFX requests
+  - required `_varNN` variant suffixes on `assetId`, `requestId`, and output filename stem
+  - aligned/contiguous variant indices per family
+  - distinct deterministic seeds per family
+- Extended SFX provenance in `audio_engine/integration/asset_pipeline.py`:
+  - `variationFamily`
+  - `variationIndex`
+- Added test coverage in:
+  - `tests/test_ai_pipeline.py` (backend evaluation metadata)
+  - `tests/test_engine_cli.py` (`list-backends` enriched output)
+  - `tests/test_integration.py` (variant-family parse validation and variant provenance fields)
+- Updated continuity and subsystem/schema docs to reflect that SESSION-011/012 now have executable code paths, not docs-only status.
+- Verification:
+  - `python -m pytest tests/test_ai_pipeline.py tests/test_engine_cli.py tests/test_integration.py` → 200 passed
+  - `python -m pytest` → 404 passed
+  - `python tools/validate-assets.py assets/examples/ --verbose` → PASS

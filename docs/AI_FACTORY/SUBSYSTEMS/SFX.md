@@ -15,7 +15,7 @@
 
 ## Variation strategy for repeated categories (SESSION-012)
 
-This strategy is a **docs-contract layer** for deterministic request authoring, not an automatic runtime randomizer.
+This strategy is now **partially executable** in the factory pipeline for deterministic request authoring (validation + provenance metadata), while still not implementing automatic runtime randomization.
 
 1. Define repeated-event families explicitly (e.g., `ui_confirm`, `footstep_stone`, `sword_hit_light`).
 2. Pre-generate multiple variants per family as separate generation requests.
@@ -26,11 +26,13 @@ This strategy is a **docs-contract layer** for deterministic request authoring, 
 
 ### Current execution boundary
 
+- Request parsing now enforces repeated-family `_varNN` variant naming, distinct deterministic seeds per family, and contiguous variant index sequences.
+- Request-batch provenance sidecars now include `variationFamily` and `variationIndex` for SFX variant requests.
 - Variant selection at gameplay runtime is out of scope for the current codebase.
 - The implemented factory responsibility is to generate and track variant assets reproducibly so downstream systems can pick among them.
 
 ## Near-term goals
 
 1. expand SFX taxonomy from current event list to full game coverage
-2. implement executable tooling around the documented variation strategy
+2. expand executable tooling around the documented variation strategy beyond current validation/provenance support
 3. define category-specific loudness/readability targets
