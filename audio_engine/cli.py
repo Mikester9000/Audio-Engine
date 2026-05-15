@@ -89,7 +89,7 @@ def _cmd_generate_music(args: argparse.Namespace) -> None:
     """Generate music from a text prompt using the AI pipeline."""
     from audio_engine.ai import MusicGen
 
-    gen = MusicGen(sample_rate=args.sample_rate, seed=args.seed)
+    gen = MusicGen(sample_rate=args.sample_rate, backend=args.backend, seed=args.seed)
     print(f"Generating music: '{args.prompt}' → {args.output} …")
     path = gen.generate_to_file(
         prompt=args.prompt,
@@ -105,7 +105,7 @@ def _cmd_generate_sfx(args: argparse.Namespace) -> None:
     """Generate a sound effect from a text prompt."""
     from audio_engine.ai import SFXGen
 
-    gen = SFXGen(sample_rate=args.sample_rate, seed=args.seed)
+    gen = SFXGen(sample_rate=args.sample_rate, backend=args.backend, seed=args.seed)
     print(f"Generating SFX: '{args.prompt}' → {args.output} …")
     pitch = float(args.pitch) if args.pitch is not None else None
     path = gen.generate_to_file(
@@ -121,7 +121,7 @@ def _cmd_generate_voice(args: argparse.Namespace) -> None:
     """Generate voice/TTS audio from text."""
     from audio_engine.ai import VoiceGen
 
-    gen = VoiceGen(sample_rate=args.sample_rate)
+    gen = VoiceGen(sample_rate=args.sample_rate, backend=args.backend, seed=args.seed)
     print(f"Synthesising voice: '{args.text}' (voice={args.voice}) → {args.output} …")
     path = gen.generate_to_file(
         text=args.text,
@@ -392,6 +392,15 @@ def _cmd_list_instruments(_args: argparse.Namespace) -> None:
     for i in instruments:
         print(f"  {i}")
 
+def _cmd_list_backends(_args: argparse.Namespace) -> None:
+    from audio_engine.ai.backend import BackendRegistry
+
+    print("Available generation backends:")
+    for name in BackendRegistry.available_backends():
+        backend = BackendRegistry.get(name)
+        status = "available" if backend.is_available() else "unavailable"
+        print(f"  {name} ({status})")
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -440,6 +449,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     gm.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
     gm.add_argument("--seed", type=int, default=None, help="Random seed.")
+    gm.add_argument(
+        "--backend",
+        default="procedural",
+        help="Generation backend name (default: procedural).",
+    )
 
     # --- generate-sfx ---
     gs = sub.add_parser(
@@ -455,6 +469,11 @@ def build_parser() -> argparse.ArgumentParser:
     gs.add_argument("--output", "-o", default="sfx.wav", help="Output WAV file.")
     gs.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
     gs.add_argument("--seed", type=int, default=None, help="Random seed.")
+    gs.add_argument(
+        "--backend",
+        default="procedural",
+        help="Generation backend name (default: procedural).",
+    )
 
     # --- generate-voice ---
     gv = sub.add_parser(
@@ -471,6 +490,12 @@ def build_parser() -> argparse.ArgumentParser:
     gv.add_argument("--speed", type=float, default=1.0, help="Speech rate multiplier (default: 1.0).")
     gv.add_argument("--output", "-o", default="voice.wav", help="Output WAV file.")
     gv.add_argument("--sample-rate", type=int, default=22050, help="Sample rate in Hz (default: 22050).")
+    gv.add_argument("--seed", type=int, default=None, help="Random seed.")
+    gv.add_argument(
+        "--backend",
+        default="procedural",
+        help="Generation backend name (default: procedural).",
+    )
 
     # --- qa ---
     qa = sub.add_parser(
@@ -585,6 +610,9 @@ def build_parser() -> argparse.ArgumentParser:
     # --- list-instruments ---
     sub.add_parser("list-instruments", help="List available synthesised instruments.")
 
+    # --- list-backends ---
+    sub.add_parser("list-backends", help="List available generation backends.")
+
     # --- generate-request-batch ---
     grb = sub.add_parser(
         "generate-request-batch",
@@ -621,6 +649,32 @@ def build_parser() -> argparse.ArgumentParser:
     grb.add_argument(
         "--write-result", action="store_true",
         help="Write request_batch_result.json to the output directory.",
+    )
+
+    # --- generate-plan-batch ---
+    gpb = sub.add_parser(
+        "generate-plan-batch",
+        help="Execute request batches filtered and ordered by an audio plan.",
+    )
+    gpb.add_argument(
+        "--plan-file", "-p", required=True,
+        help="Path to an audio-plan JSON file.",
+    )
+    gpb.add_argument(
+        "--request-file", "-r", nargs="+", required=True,
+        help="One or more generation-request batch JSON files.",
+    )
+    gpb.add_argument(
+        "--output-dir", "-o", default=".",
+        help="Root output directory for drafts (default: current directory).",
+    )
+    gpb.add_argument(
+        "--force", action="store_true",
+        help="Regenerate assets even if output files already exist.",
+    )
+    gpb.add_argument(
+        "--quiet", action="store_true",
+        help="Suppress per-asset progress messages.",
     )
     gga = sub.add_parser(
         "generate-game-assets",
@@ -714,6 +768,44 @@ def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
         if manifest.errors:
             raise SystemExit(1)
 
+def _cmd_generate_plan_batch(args: argparse.Namespace) -> None:
+    """Execute plan-driven generation using one audio plan and request batches."""
+    from audio_engine.integration import (
+        PlanBatchOrchestrator,
+        load_audio_plan,
+        load_generation_request_batch,
+    )
+
+    plan_path = Path(args.plan_file)
+    if not plan_path.exists():
+        raise FileNotFoundError(f"plan file not found: {plan_path}")
+
+    request_paths = [Path(p) for p in args.request_file]
+    for path in request_paths:
+        if not path.exists():
+            raise FileNotFoundError(f"request file not found: {path}")
+
+    plan = load_audio_plan(plan_path)
+    request_batches = [load_generation_request_batch(path) for path in request_paths]
+
+    def _progress(msg: str) -> None:
+        if not args.quiet:
+            print(msg)
+
+    orchestrator = PlanBatchOrchestrator(
+        progress_callback=_progress,
+        skip_existing=not args.force,
+    )
+    print(
+        f"Executing plan batch: {plan_path.name} "
+        f"({len(request_paths)} request file(s)) → {args.output_dir}"
+    )
+    manifest = orchestrator.execute(plan, request_batches, args.output_dir)
+    print()
+    print(manifest.summary())
+    if manifest.errors:
+        raise SystemExit(1)
+
 
 def _cmd_generate_game_assets(args: argparse.Namespace) -> None:
     """Generate the complete audio asset library for the Game Engine for Teaching."""
@@ -796,7 +888,9 @@ def main(argv: list[str] | None = None) -> int:
         "sfx": _cmd_sfx,
         "list-styles": _cmd_list_styles,
         "list-instruments": _cmd_list_instruments,
+        "list-backends": _cmd_list_backends,
         "generate-request-batch": _cmd_generate_request_batch,
+        "generate-plan-batch": _cmd_generate_plan_batch,
         "generate-game-assets": _cmd_generate_game_assets,
         "verify-game-assets": _cmd_verify_game_assets,
     }

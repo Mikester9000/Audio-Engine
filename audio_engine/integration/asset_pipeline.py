@@ -72,9 +72,9 @@ from audio_engine.integration.game_state_map import (
 )
 
 if TYPE_CHECKING:
-    from audio_engine.integration.factory_inputs import GenerationRequest, GenerationRequestBatch
+    from audio_engine.integration.factory_inputs import AudioPlan, GenerationRequest, GenerationRequestBatch
 
-__all__ = ["ApprovalWorkflow", "AssetPipeline", "GenerationManifest", "RequestBatchPipeline", "DraftExportPipeline", "RequestBatchRecord", "RequestBatchResult"]
+__all__ = ["ApprovalWorkflow", "AssetPipeline", "GenerationManifest", "RequestBatchPipeline", "PlanBatchOrchestrator", "DraftExportPipeline", "RequestBatchRecord", "RequestBatchResult"]
 
 
 # ---------------------------------------------------------------------------
@@ -902,8 +902,7 @@ class RequestBatchPipeline:
         Returns
         -------
         Path
-            Actual path of the written file (may differ in extension if OGG
-            fallback to WAV is needed).
+            Actual path of the written file.
         """
         from audio_engine.export.audio_exporter import AudioExporter
 
@@ -912,15 +911,7 @@ class RequestBatchPipeline:
 
         exporter = AudioExporter(sample_rate=request.output.sample_rate, bit_depth=16)
         fmt = request.output.format.lower()
-
-        try:
-            written = exporter.export(audio, output_path, fmt=fmt)
-        except ImportError:
-            # OGG requires optional soundfile dependency; fall back to WAV.
-            self.progress_callback(
-                f"  [warn] OGG not available for {request.request_id}; writing WAV instead"
-            )
-            written = exporter.export(audio, output_path.with_suffix(".wav"), fmt="wav")
+        written = exporter.export(audio, output_path, fmt=fmt)
 
         if request.qa.loop_required and written.suffix.lower() == ".wav":
             n_samples = audio.shape[0] if audio.ndim == 2 else len(audio)
@@ -935,7 +926,7 @@ class RequestBatchPipeline:
         if request.type == "music":
             from audio_engine.ai.music_gen import MusicGen
 
-            gen = MusicGen(sample_rate=sr, seed=request.seed)
+            gen = MusicGen(sample_rate=sr, backend=request.backend, seed=request.seed)
             return gen.generate(
                 prompt=request.prompt,
                 loopable=request.qa.loop_required,
@@ -943,12 +934,12 @@ class RequestBatchPipeline:
         elif request.type == "sfx":
             from audio_engine.ai.sfx_gen import SFXGen
 
-            gen = SFXGen(sample_rate=sr, seed=request.seed)
+            gen = SFXGen(sample_rate=sr, backend=request.backend, seed=request.seed)
             return gen.generate(prompt=request.prompt)
         elif request.type == "voice":
             from audio_engine.ai.voice_gen import VoiceGen
 
-            gen = VoiceGen(sample_rate=sr, seed=request.seed)
+            gen = VoiceGen(sample_rate=sr, backend=request.backend, seed=request.seed)
             return gen.generate(request.prompt)
         else:
             raise ValueError(f"Unknown request type: {request.type!r}")
@@ -1013,6 +1004,115 @@ class RequestBatchPipeline:
         }
         provenance_path = output_path.with_name(output_path.stem + ".provenance.json")
         provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# PlanBatchOrchestrator
+# ---------------------------------------------------------------------------
+
+class PlanBatchOrchestrator:
+    """Execute request batches using an audio plan as the selection contract.
+
+    The plan determines which assets should be generated and in what order.
+    Requests provide executable generation details (prompt, seed, backend, and
+    output settings). Missing required plan targets are treated as errors.
+    """
+
+    def __init__(
+        self,
+        progress_callback: Callable[[str], None] | None = None,
+        skip_existing: bool = True,
+    ) -> None:
+        self.progress_callback = progress_callback or (lambda msg: None)
+        self.skip_existing = skip_existing
+
+    def execute(
+        self,
+        plan: "AudioPlan",
+        request_batches: list["GenerationRequestBatch"],
+        output_dir: str | Path,
+    ) -> GenerationManifest:
+        """Select plan-targeted requests and execute via :class:`RequestBatchPipeline`."""
+        selected_requests = self._select_requests(plan, request_batches)
+        merged_batch = self._merge_selected_requests(plan, selected_requests)
+        pipeline = RequestBatchPipeline(
+            progress_callback=self.progress_callback,
+            skip_existing=self.skip_existing,
+        )
+        return pipeline.execute(merged_batch, output_dir)
+
+    def _select_requests(
+        self,
+        plan: "AudioPlan",
+        request_batches: list["GenerationRequestBatch"],
+    ) -> list["GenerationRequest"]:
+        request_by_asset_id: dict[str, GenerationRequest] = {}
+        seen_request_ids: set[str] = set()
+        for batch in request_batches:
+            for request in batch.requests:
+                if request.request_id in seen_request_ids:
+                    raise ValueError(f"duplicate requestId across request batches: {request.request_id}")
+                seen_request_ids.add(request.request_id)
+                if request.asset_id in request_by_asset_id:
+                    raise ValueError(
+                        f"duplicate assetId across request batches: {request.asset_id}"
+                    )
+                request_by_asset_id[request.asset_id] = request
+
+        selected: list[GenerationRequest] = []
+        missing_required: list[str] = []
+
+        for group in plan.asset_groups:
+            for target in group.targets:
+                request = request_by_asset_id.get(target.asset_id)
+                if request is None:
+                    if group.required:
+                        missing_required.append(target.asset_id)
+                    continue
+
+                if request.type != group.type:
+                    raise ValueError(
+                        f"plan/request type mismatch for assetId {target.asset_id}: "
+                        f"plan={group.type}, request={request.type}"
+                    )
+                if request.output.target_path != target.target_path:
+                    raise ValueError(
+                        f"plan/request targetPath mismatch for assetId {target.asset_id}: "
+                        f"plan={target.target_path}, request={request.output.target_path}"
+                    )
+
+                expected_format = Path(target.target_path).suffix.lower().lstrip(".")
+                if expected_format in {"wav", "ogg"} and request.output.format.lower() != expected_format:
+                    raise ValueError(
+                        f"plan/request format mismatch for assetId {target.asset_id}: "
+                        f"plan={expected_format}, request={request.output.format}"
+                    )
+
+                selected.append(request)
+
+        if missing_required:
+            raise ValueError(
+                "missing generation requests for required plan assetIds: "
+                + ", ".join(sorted(missing_required))
+            )
+        if not selected:
+            raise ValueError("no matching requests found for audio plan targets")
+
+        return selected
+
+    @staticmethod
+    def _merge_selected_requests(
+        plan: "AudioPlan",
+        selected_requests: list["GenerationRequest"],
+    ) -> "GenerationRequestBatch":
+        from audio_engine.integration.factory_inputs import GenerationRequestBatch
+
+        return GenerationRequestBatch(
+            request_batch_version="1.0.0",
+            project=plan.project,
+            scope=plan.scope,
+            requests=selected_requests,
+        )
 
 
 # ---------------------------------------------------------------------------

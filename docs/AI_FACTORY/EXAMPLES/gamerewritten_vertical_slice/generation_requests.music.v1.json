@@ -288,6 +288,50 @@
         "acceptanceProfile": "music-stinger",
         "notes": []
       }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_fanfare_item_obtain_v1",
+      "assetId": "fanfare_item_obtain",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204835,
+      "prompt": "short item obtain fanfare with sparkle and clean ending",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/fanfare_item_obtain.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-stinger",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_fanfare_quest_complete_v1",
+      "assetId": "fanfare_quest_complete",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 204836,
+      "prompt": "short quest complete fanfare with resolved cadence and no tail ring",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/fanfare_quest_complete.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-stinger",
+        "notes": []
+      }
     }
   ]
 }
