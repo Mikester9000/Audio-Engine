@@ -4,29 +4,27 @@
 
 ## Last completed change
 
-SESSION-008: Expanded committed taxonomy coverage across AI-factory fixtures and backlog docs. Added ambience/fanfare/UI/combat/spell/tension/sadness/optional-voice coverage in the committed vertical-slice plan and request artifacts, plus long-form OST request entries for key BGM tracks marked `+ost`.
+SESSION-009 + SESSION-010: Added plan-driven orchestration (`PlanBatchOrchestrator` + `generate-plan-batch`) and expanded backend support surfaces. Request-batch execution now enforces requested output formats strictly (no OGG→WAV fallback) and now honors per-request backend in `RequestBatchPipeline`; CLI now exposes backend selection flags and `list-backends`.
 
 ## Verified in this session
 
 ```bash
 pip install -e ".[dev]"
-python -m pytest  # 386 passed
+pip install soundfile
+python -m pytest  # 395 passed
 python tools/validate-assets.py assets/examples/ --verbose  # PASS
-python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json  # PASS
-python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json  # PASS
-python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json  # PASS
-python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.voice.v1.json  # PASS
+python -m audio_engine.cli generate-plan-batch --plan-file /tmp/session009010_smoke/plan.smoke.json --request-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json --output-dir /tmp/session009010_smoke --force --quiet  # PASS
 ```
 
 Observed result:
-- `386 passed` in pytest
+- `395 passed` in pytest
 - all asset-manifest examples passed validation
-- all edited AI-factory JSON fixtures parsed successfully
-- committed taxonomy coverage now includes ambience, fanfares/stingers, expanded UI/combat/spell SFX, tension/sadness music, optional voice placeholders, and OST request entries for `field`, `town`, `dungeon`, `battle`, and `boss` BGM tracks
+- deterministic plan-driven smoke run produced requested `.ogg` output and provenance sidecar
+- required fanfare requests were added to committed music request fixture to satisfy required plan targets
 
 ## Immediate next best task
 
-Execute `SESSION-009` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add plan-driven batch orchestration by wiring audio-plan artifacts into deterministic batch execution while preserving current CLI compatibility, and require producing requested `.ogg` outputs as well as `.wav`.
+Execute `SESSION-011` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add backend evaluation notes and dependency/availability guidance aligned with the newly-added backend CLI surfaces.
 
 ## Files future agents should read first
 
@@ -48,4 +46,5 @@ Execute `SESSION-009` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add plan-driven b
 - [x] QA gate wired into CI (`.github/workflows/audio-qa.yml`)
 - [x] Music-duration policy documented and encoded in checklist, layout, music subsystem, and example plan
 - [x] Full-game taxonomy coverage expansion (SESSION-008)
-- [ ] Plan-driven batch orchestration (SESSION-009, including required `.ogg` output production)
+- [x] Plan-driven batch orchestration (SESSION-009, including required `.ogg` output production)
+- [x] Backend support surface expansion (SESSION-010)

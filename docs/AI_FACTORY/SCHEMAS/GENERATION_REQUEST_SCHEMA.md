@@ -1,6 +1,6 @@
 # Generation Request Schema
 
-> This contract is partially implemented in code via `audio_engine/integration/factory_inputs.py` for fixture-backed request-batch loading and validation. Batch execution/provenance writing remain future work.
+> This contract is implemented in code via `audio_engine/integration/factory_inputs.py` (typed loading/validation) and `audio_engine/integration/asset_pipeline.py` (`RequestBatchPipeline` and `PlanBatchOrchestrator`) for deterministic execution and provenance writing.
 
 ## Purpose
 

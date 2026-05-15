@@ -2,27 +2,30 @@
 
 ## What exists now
 
-- `AssetPipeline` can generate `music/`, `sfx/`, and `voice/` directories plus `manifest.json`
-- current generation map is defined in `audio_engine/integration/game_state_map.py`
-- CLI supports `generate-game-assets` and `verify-game-assets`
-- committed plan/request/review example artifacts now exist under `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/`
-- typed loader code for the committed audio plan and music/SFX request fixtures now exists in `audio_engine/integration/factory_inputs.py`
-- `RequestBatchPipeline` now exists in `audio_engine/integration/asset_pipeline.py`, executing any `GenerationRequestBatch` deterministically with per-request seeds; outputs land in `<output_dir>/drafts/<type>/`
-- CLI supports `generate-request-batch --batch-file <json> --output-dir <dir>` for factory-driven generation
-- each successful generation writes a `.provenance.json` sidecar file alongside the audio file containing `provenanceVersion`, `requestId`, `assetId`, `type`, `backend`, `seed`, `prompt`, `styleFamily`, `generatedOutputPath`, `targetImportPath`, `reviewStatus`, and `generatedAt`
-- `qa-batch --input-dir <dir> [--output-report <path>] [--check-loop] [--recursive] [--quiet]` runs `LoudnessMeter`, `ClippingDetector`, and optionally `LoopAnalyzer` on all WAVs in a directory and writes a JSON report with per-file pass/fail status
-- `export-drafts --output-dir <factory_root>` copies draft audio files to `exports/gamerewritten/Content/Audio/` using the `targetImportPath` filename from provenance sidecars; writes `export_manifest.json`
+- Legacy fixed-map generation remains available via `AssetPipeline.generate_*` and CLI:
+  - `generate-game-assets`
+  - `verify-game-assets`
+- Request-driven generation is implemented via `RequestBatchPipeline` and CLI:
+  - `generate-request-batch --batch-file ...`
+- Plan-driven orchestration is implemented via `PlanBatchOrchestrator` and CLI:
+  - `generate-plan-batch --plan-file ... --request-file ...`
+  - plan targets select and order executable requests; missing required plan targets fail execution
+- Per-request provenance sidecars are written for successful draft outputs:
+  - `<stem>.provenance.json` with request ID, asset ID, backend, seed, prompt, output path, import path, review status, and timestamp
+- QA/export/approval workflow is implemented end-to-end:
+  - `qa-batch`
+  - `export-drafts`
+  - `approve-draft`
+- Request format behavior is strict:
+  - requested `.ogg` outputs must be produced as `.ogg`
+  - no silent OGG→WAV fallback in request-batch execution paths
 
-## Current constraint
+## Current constraints
 
-The existing pipeline has two modes: the legacy fixed-map `AssetPipeline` for the Game Engine for Teaching, and the new plan/request-driven `RequestBatchPipeline`. Provenance sidecars are per-request; there is not yet an approval workflow that promotes assets from `drafts/` to `approved/`.
-
-## Missing capabilities
-
-- approval/replacement workflow (promote from drafts → approved)
-- generalized export targets for `GameRewritten`
-- automated QA gate for generated output sets
+- Plan-driven execution requires request batches that contain executable entries for all required plan targets.
+- Per-target duration from plan metadata (`durationTargetSeconds`) is still guidance; current request-batch execution does not yet enforce this value as a hard duration override.
+- OGG export depends on `soundfile`; if unavailable, requests that specify `.ogg` fail.
 
 ## Near-term goal
 
-Add an approval workflow (`SESSION-006`) so draft assets can be explicitly marked as `approved` (updating provenance `reviewStatus`) and copied to `approved/<type>/`, cleanly separating draft from approved downstream content.
+Execute `SESSION-011` to document backend evaluation and dependency/availability guidance so the current backend registry/selection surfaces can be used consistently by future sessions.

@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate (`audio-qa.yml`) validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow file itself. SESSION-008 expanded committed taxonomy fixtures (ambience, fanfares/stingers, UI/combat/spell SFX, tension/sadness music, optional voice) and added long-form OST request entries for key BGM tracks. The next executable session is `SESSION-009` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add plan-driven batch orchestration and require producing requested `.ogg` outputs as well as `.wav`.
+The repository now has a complete draft-to-approved pipeline with both request-driven and plan-driven execution: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. SESSION-009 added plan-driven orchestration with strict requested-format behavior (requested `.ogg` must be produced; no WAV fallback), and SESSION-010 expanded backend surfaces (`RequestBatchPipeline` now honors request backend and CLI now supports backend selection/discovery). The next executable session is `SESSION-011` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add backend evaluation notes and dependency/availability guidance.
 
 ## Now
 
@@ -25,14 +25,16 @@ The repository now has a complete draft-to-approved pipeline: `generate-request-
 - [x] Execute `SESSION-007` — wire qa-batch into CI
 - [x] Update music-duration policy across docs, checklist, layout, and example plan
 - [x] Execute `SESSION-008` — expand full-game taxonomy coverage
-- [ ] Execute `SESSION-009` — add plan-driven batch orchestration with required requested `.ogg` + `.wav` outputs
+- [x] Execute `SESSION-009` — add plan-driven batch orchestration with required requested `.ogg` + `.wav` outputs
+- [x] Execute `SESSION-010` — expand neural/backend support surfaces
+- [ ] Execute `SESSION-011` — add backend evaluation notes and dependency guidance
 
 ## Recommended next PRs
 
-1. **Add plan-driven batch orchestration (SESSION-009)**
-   - Wire the audio plan loader into the batch execution path and require `.ogg` output production when requested.
-2. **Expand neural backend support**
-   - Add a switchable backend for local model generation.
+1. **Add backend evaluation notes (SESSION-011)**
+   - Document backend strategy, availability checks, and realistic quality expectations for local/open model adapters.
+2. **Add variation strategy for repeated SFX categories (SESSION-012)**
+   - Define deterministic variation controls for repeated gameplay-triggered SFX families.
 
 ## Do not deprioritize
 

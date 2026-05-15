@@ -1,6 +1,6 @@
 # Project Audio Plan Schema
 
-> This contract is partially implemented in code via `audio_engine/integration/factory_inputs.py` for fixture-backed plan loading and validation. Full plan-driven orchestration remains future work.
+> This contract is implemented in code via `audio_engine/integration/factory_inputs.py` for typed loading/validation and `audio_engine/integration/asset_pipeline.py` (`PlanBatchOrchestrator`) for plan-driven request orchestration.
 
 ## Purpose
 
@@ -71,4 +71,4 @@ Committed example:
 
 ## Rule
 
-Future implementation should read from a plan like this rather than relying only on ad hoc prompts.
+Plan-driven execution should continue using this schema as the canonical selection contract, with executable prompt/seed/backend details supplied by generation-request batches.

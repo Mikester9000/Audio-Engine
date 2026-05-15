@@ -50,12 +50,24 @@
 - Expanded committed example fixtures across music/SFX/ambience/optional voice taxonomy coverage.
 - Added long-form OST request entries for key BGM loops (`field`, `town`, `dungeon`, `battle`, `boss`) plus tension/sadness music entries.
 
+### SESSION-009 — Add plan-driven batch orchestration
+- **Status:** `completed`
+- Added `PlanBatchOrchestrator` + `generate-plan-batch` CLI path to drive deterministic request execution from `audio_plan.*.json` targets.
+- Required plan targets now map to request batches with strict type/path/format matching, and execution routes through existing `RequestBatchPipeline` provenance/drafts surfaces.
+- Removed OGG fallback-to-WAV behavior in `RequestBatchPipeline`: requested `.ogg` outputs must be produced or the request fails.
+
+### SESSION-010 — Expand neural backend support
+- **Status:** `completed`
+- Request-batch generation now respects per-request `backend` for music/SFX/voice in `RequestBatchPipeline`.
+- Added backend discoverability via `list-backends` CLI and backend selection flags (`--backend`) on `generate-music`, `generate-sfx`, and `generate-voice`.
+- Added coverage tests for invalid-backend handling through request-batch execution paths.
+
 ## Current next session
 
-### SESSION-009 — Add plan-driven batch orchestration
+### SESSION-011 — Add backend evaluation notes
 
 - **Status:** `ready`
-- **Task type:** `batch_generation`
-- **Objective:** Wire the committed audio-plan loader into the batch execution path so a plan can drive deterministic request generation using existing request-batch, provenance, QA, export, and approval surfaces without breaking current CLI compatibility; this session must require producing requested `.ogg` outputs as well as `.wav` when those formats are specified by factory inputs.
-- **Enqueue next session after completion:** `SESSION-010 — Expand neural backend support`
-- **Notes:** Keep existing `generate-request-batch` behavior stable; prefer additive CLI/API surface; do not treat `.ogg` requests as optional success paths for SESSION-009; if `.ogg` is requested and encoder support is unavailable (for example missing `soundfile`), treat the session as blocked/failed until OGG output can be produced and verified.
+- **Task type:** `docs_only`
+- **Objective:** Add explicit backend evaluation notes and dependency/availability guidance for local/open backend options (without claiming unimplemented model quality), aligned with the new backend selection/discovery CLI surfaces.
+- **Enqueue next session after completion:** `SESSION-012 — Add variation strategy for repeated SFX categories`
+- **Notes:** Keep implementation claims truthful; document what exists now (`procedural` + backend registry/selection hooks) versus future model adapters.
