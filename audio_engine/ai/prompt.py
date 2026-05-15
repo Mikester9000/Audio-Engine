@@ -137,7 +137,7 @@ _STYLE_KEYWORDS: dict[str, list[str]] = {
 }
 
 _SFX_KEYWORDS: list[str] = [
-    "explosion", "footstep", "click", "beep", "hit", "impact",
+    "explosion", "footstep", "click", "tick", "beep", "hit", "impact",
     "whoosh", "laser", "coin", "pickup", "jump", "land",
     "door", "open", "close", "ping", "alert", "notification",
     "magic", "spell", "fire", "water", "wind", "rain",

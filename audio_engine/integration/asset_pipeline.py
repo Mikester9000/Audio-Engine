@@ -1241,8 +1241,19 @@ class ApprovalWorkflow:
         import datetime
         import shutil
 
-        factory_root = Path(factory_root)
+        factory_root = Path(factory_root).resolve()
         draft_path = Path(draft_path).resolve()
+
+        # Ensure draft_path is under factory_root/drafts/ to prevent operating
+        # on unrelated files outside the factory tree.
+        drafts_root = factory_root / "drafts"
+        try:
+            draft_path.relative_to(drafts_root)
+        except ValueError:
+            raise ValueError(
+                f"draft_path must be under <factory_root>/drafts/; "
+                f"got {draft_path!s} (factory_root={factory_root!s})"
+            )
 
         if not draft_path.exists():
             raise FileNotFoundError(f"draft file not found: {draft_path}")
@@ -1265,7 +1276,15 @@ class ApprovalWorkflow:
                 "reviewStatus": "draft",
             }
 
-        asset_type: str = provenance.get("type", draft_path.parent.name)
+        raw_type: str = provenance.get("type", draft_path.parent.name)
+        # Validate asset_type: must be a single path component with no separators
+        # or relative-path indicators to prevent writing outside approved/.
+        asset_type = Path(raw_type).name
+        if not asset_type or asset_type != raw_type or asset_type in {".", ".."}:
+            raise ValueError(
+                f"unsafe asset type {raw_type!r} in provenance; "
+                "must be a plain directory name with no path separators"
+            )
         approved_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         # Build approved destination directory.

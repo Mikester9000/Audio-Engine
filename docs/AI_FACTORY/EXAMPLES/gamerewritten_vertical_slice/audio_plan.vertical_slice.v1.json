@@ -36,6 +36,7 @@
           "reviewPriority": "high",
           "ostVariant": {
             "assetId": "bgm_field_day_ost",
+            "gameplayRole": "ost-variant",
             "targetPath": "Content/Audio/bgm_field_day_ost.ogg",
             "loop": false,
             "durationTargetSeconds": 210,
@@ -52,6 +53,7 @@
           "reviewPriority": "high",
           "ostVariant": {
             "assetId": "bgm_town_evening_ost",
+            "gameplayRole": "ost-variant",
             "targetPath": "Content/Audio/bgm_town_evening_ost.ogg",
             "loop": false,
             "durationTargetSeconds": 180,
@@ -77,6 +79,7 @@
           "reviewPriority": "high",
           "ostVariant": {
             "assetId": "bgm_battle_standard_ost",
+            "gameplayRole": "ost-variant",
             "targetPath": "Content/Audio/bgm_battle_standard_ost.ogg",
             "loop": false,
             "durationTargetSeconds": 180,
@@ -93,6 +96,7 @@
           "reviewPriority": "high",
           "ostVariant": {
             "assetId": "bgm_boss_phase1_ost",
+            "gameplayRole": "ost-variant",
             "targetPath": "Content/Audio/bgm_boss_phase1_ost.ogg",
             "loop": false,
             "durationTargetSeconds": 270,
@@ -167,7 +171,7 @@
   "notes": [
     "Voice is intentionally out of scope for this vertical slice except optional placeholders.",
     "This plan is a committed example/contract and not yet consumed by pipeline code.",
-    "ostVariant entries are planned assets; generation requires --music-duration 180 or higher in the CLI.",
+    "ostVariant entries are planned assets; long-form generation requires the --request-file path with --music-duration 180 or higher. The --batch-file path (generate-request-batch --batch-file) ignores --music-duration and does not yet support per-entry duration overrides.",
     "SFX and ambience assets should remain short; see musicDurationPolicy for music-only guidance."
   ]
 }

@@ -1354,13 +1354,12 @@ class TestApprovalWorkflow:
     def _make_draft_with_provenance(self, tmp_path: Path, request_id: str = "req_sfx_test_v1") -> Path:
         """Create a minimal draft WAV + provenance sidecar and return the WAV path."""
         import wave as wv
-        import struct
 
         drafts_sfx = tmp_path / "drafts" / "sfx"
         drafts_sfx.mkdir(parents=True, exist_ok=True)
         wav_path = drafts_sfx / f"{request_id}.wav"
 
-        # Write a minimal valid WAV (44 bytes: header only, 0 samples).
+        # Write a minimal valid WAV (100 samples of silence).
         with wv.open(str(wav_path), "w") as wf:
             wf.setnchannels(1)
             wf.setsampwidth(2)
@@ -1444,19 +1443,72 @@ class TestApprovalWorkflow:
             assert key in record, f"Missing key '{key}' in approval record"
         assert record["type"] == "sfx"
 
+    def test_approve_raises_on_draft_path_outside_factory(self, tmp_path):
+        """approve() must raise ValueError when draft_path is outside factory_root/drafts/."""
+        from audio_engine.integration import ApprovalWorkflow
+        import wave as wv
+
+        # Create a WAV file outside the factory's drafts tree.
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        wav_path = outside / "stray.wav"
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+
+        factory_root = tmp_path / "factory"
+        factory_root.mkdir()
+        workflow = ApprovalWorkflow()
+        with pytest.raises(ValueError, match="draft_path must be under"):
+            workflow.approve(factory_root, wav_path)
+
+    def test_approve_raises_on_traversal_in_asset_type(self, tmp_path):
+        """approve() must raise ValueError when the provenance 'type' contains path traversal."""
+        from audio_engine.integration import ApprovalWorkflow
+        import wave as wv
+        import json as _json
+
+        drafts_sfx = tmp_path / "drafts" / "sfx"
+        drafts_sfx.mkdir(parents=True)
+        wav_path = drafts_sfx / "req_traversal.wav"
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+
+        prov = {
+            "provenanceVersion": "1.0.0",
+            "requestId": "req_traversal",
+            "assetId": "traversal_test",
+            "type": "../outside",  # Malicious traversal value.
+            "reviewStatus": "draft",
+        }
+        prov_path = wav_path.with_name(wav_path.stem + ".provenance.json")
+        prov_path.write_text(_json.dumps(prov), encoding="utf-8")
+
+        workflow = ApprovalWorkflow()
+        with pytest.raises(ValueError, match="unsafe asset type"):
+            workflow.approve(tmp_path, wav_path)
+
     def test_approve_raises_on_missing_file(self, tmp_path):
         """approve() must raise FileNotFoundError when the draft file does not exist."""
         from audio_engine.integration import ApprovalWorkflow
 
         workflow = ApprovalWorkflow()
+        missing = tmp_path / "drafts" / "sfx" / "nonexistent.wav"
         with pytest.raises(FileNotFoundError, match="draft file not found"):
-            workflow.approve(tmp_path, tmp_path / "nonexistent.wav")
+            workflow.approve(tmp_path, missing)
 
     def test_approve_raises_on_unsupported_extension(self, tmp_path):
         """approve() must raise ValueError for unsupported file types."""
         from audio_engine.integration import ApprovalWorkflow
 
-        bad_file = tmp_path / "test.mp3"
+        drafts_sfx = tmp_path / "drafts" / "sfx"
+        drafts_sfx.mkdir(parents=True, exist_ok=True)
+        bad_file = drafts_sfx / "test.mp3"
         bad_file.write_bytes(b"MP3DATA")
         workflow = ApprovalWorkflow()
         with pytest.raises(ValueError, match="unsupported file type"):
@@ -1503,7 +1555,7 @@ class TestApprovalWorkflow:
         from audio_engine.integration import ApprovalWorkflow
 
         draft_path = self._make_draft_with_provenance(tmp_path)
-        missing_path = tmp_path / "does_not_exist.wav"
+        missing_path = tmp_path / "drafts" / "sfx" / "does_not_exist.wav"
         workflow = ApprovalWorkflow()
         records = workflow.approve_batch(tmp_path, [draft_path, missing_path])
 
@@ -1551,7 +1603,7 @@ class TestApprovalWorkflow:
         rc = main([
             "approve-draft",
             "--factory-root", str(tmp_path),
-            "--draft-file", str(tmp_path / "nonexistent.wav"),
+            "--draft-file", str(tmp_path / "drafts" / "sfx" / "nonexistent.wav"),
         ])
         assert rc != 0
 

@@ -106,4 +106,4 @@ None blocking the next session.
 
 ## Immediate interpretation
 
-This repo now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate validates generated outputs on every push. The next session (SESSION-008) should expand the committed audio taxonomy beyond the vertical slice and add OST variant request entries for key BGM tracks.
+This repo now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow itself (path-filtered). The next session (SESSION-008) should expand the committed audio taxonomy beyond the vertical slice and add OST variant request entries for key BGM tracks.

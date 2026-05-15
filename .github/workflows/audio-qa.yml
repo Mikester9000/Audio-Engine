@@ -33,12 +33,14 @@ on:
       - 'tests/**'
       - 'docs/AI_FACTORY/EXAMPLES/**'
       - '.github/workflows/audio-qa.yml'
+      - 'pyproject.toml'
   pull_request:
     paths:
       - 'audio_engine/**'
       - 'tests/**'
       - 'docs/AI_FACTORY/EXAMPLES/**'
       - '.github/workflows/audio-qa.yml'
+      - 'pyproject.toml'
   # Allow manual trigger from the GitHub Actions UI.
   workflow_dispatch:
 

@@ -48,10 +48,15 @@ when that asset is important enough for a soundtrack release.  The OST version:
 
 When generating via `generate-request-batch`:
 
-- Music requests with no explicit duration default to **30 s** (CLI flag:
-  `--music-duration`).  Override this flag when generating long-form tracks.
-- For major themes or OST variants, use `--music-duration 180` (or higher,
-  up to 300 s / 5 min).
+- Music requests with no explicit duration default to **30 s**.
+- The `--music-duration` CLI flag only applies to the `--request-file` /
+  `execute_request_batch` path; it is **ignored** by the `--batch-file` /
+  `RequestBatchPipeline` path, which calls `MusicGen.generate()` directly
+  without a duration override.
+- For long-form OST variants, use the `--request-file` path with
+  `--music-duration 180` (or higher, up to 300 s / 5 min), or embed
+  `durationTargetSeconds` in a future plan-driven pipeline.  The `--batch-file`
+  path does not yet consume this option.
 
 ## Near-term goals
 

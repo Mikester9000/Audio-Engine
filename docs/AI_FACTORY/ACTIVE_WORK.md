@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate (`audio-qa.yml`) validates generated outputs on every push. Music-duration policy is clearly documented. The next executable session is `SESSION-008` in `docs/AI_FACTORY/SESSION_QUEUE.md`: expand full-game taxonomy coverage.
+The repository now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate (`audio-qa.yml`) validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow file itself. Music-duration policy is clearly documented. The next executable session is `SESSION-008` in `docs/AI_FACTORY/SESSION_QUEUE.md`: expand full-game taxonomy coverage.
 
 ## Now
 
