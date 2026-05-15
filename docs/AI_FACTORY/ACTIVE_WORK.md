@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline with both request-driven and plan-driven execution: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. SESSION-011 and SESSION-012 now include executable behavior: backend evaluation metadata is exposed through registry/CLI surfaces, and repeated-SFX variation strategy is enforced in request parsing with variant provenance capture. The next executable session is `SESSION-013` in `docs/AI_FACTORY/SESSION_QUEUE.md`: define category-specific SFX loudness/readability targets.
+The repository now has a complete draft-to-approved pipeline with both request-driven and plan-driven execution: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. SESSION-013 and SESSION-014 are now complete as docs-only quality-contract updates: category-specific SFX/ambience loudness-readability targets are documented and review/report templates now include variant-family QA decision guidance. The next executable session is `SESSION-015` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add machine-readable review-log writing support.
 
 ## Now
 
@@ -29,14 +29,16 @@ The repository now has a complete draft-to-approved pipeline with both request-d
 - [x] Execute `SESSION-010` — expand neural/backend support surfaces
 - [x] Execute `SESSION-011` — implement backend evaluation metadata in backend registry/CLI
 - [x] Execute `SESSION-012` — implement repeated-SFX variation validation and provenance metadata
-- [ ] Execute `SESSION-013` — define category-specific SFX loudness/readability targets
+- [x] Execute `SESSION-013` — define category-specific SFX loudness/readability targets
+- [x] Execute `SESSION-014` — add review/report template updates for variant-family QA decisions
+- [ ] Execute `SESSION-015` — add machine-readable review-log writer for QA decisions
 
 ## Recommended next PRs
 
-1. **Define category-specific SFX loudness/readability targets (SESSION-013)**
-   - Align guidance with existing `qa` / `qa-batch` reporting surfaces.
-2. **Add review/report template updates for variant-family QA decisions (SESSION-014)**
-   - Make repeated-SFX review outcomes easier to track and hand off.
+1. **Add machine-readable review-log writer for QA decisions (SESSION-015)**
+   - Capture per-asset and variant-family review outcomes in a stable executable output path.
+2. **Integrate review-log output with approval/export handoff flow (SESSION-016)**
+   - Keep review decisions mechanically linked to downstream approval/export operations.
 
 ## Do not deprioritize
 

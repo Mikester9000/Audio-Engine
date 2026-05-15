@@ -1,5 +1,5 @@
 {
-  "reviewLogVersion": "1.0.0",
+  "reviewLogVersion": "1.1.0",
   "project": "GameRewritten",
   "scope": "vertical-slice",
   "entries": [
@@ -11,24 +11,82 @@
       "targetImportPath": "Content/Audio/bgm_field_day.ogg",
       "reviewStatus": "approved",
       "reviewer": "agent",
-      "reviewedAt": "2026-05-14T19:40:00Z",
+      "reviewedAt": "2026-05-15T13:20:00Z",
+      "qaSnapshot": {
+        "loudnessLufs": -13.8,
+        "truePeakDbfs": -0.3,
+        "loudnessOk": true,
+        "peakOk": true,
+        "clippingOk": true
+      },
       "notes": [
+        "QA snapshot captured from pre-encode WAV analysis before OGG export.",
         "Loop boundary acceptable.",
         "Fits field exploration mood."
       ]
     },
     {
-      "assetId": "sfx_spell_fire_small",
-      "requestId": "req_sfx_spell_fire_small_v1",
-      "seed": 305034,
-      "generatedOutputPath": "factory-output/drafts/sfx/sfx_spell_fire_small.wav",
-      "targetImportPath": "Content/Audio/sfx_spell_fire_small.wav",
+      "assetId": "sfx_ui_confirm_var01",
+      "requestId": "req_sfx_ui_confirm_var01_v1",
+      "seed": 305101,
+      "generatedOutputPath": "factory-output/drafts/sfx/sfx_ui_confirm_var01.wav",
+      "targetImportPath": "Content/Audio/sfx_ui_confirm_var01.wav",
+      "reviewStatus": "approved",
+      "reviewer": "agent",
+      "reviewedAt": "2026-05-15T13:24:00Z",
+      "variationFamily": "sfx_ui_confirm",
+      "variationIndex": 1,
+      "qaSnapshot": {
+        "loudnessLufs": -16.4,
+        "truePeakDbfs": -1.1,
+        "loudnessOk": true,
+        "peakOk": true,
+        "clippingOk": true
+      },
+      "notes": [
+        "Fast attack and clean short tail.",
+        "Distinct enough from var02 for repeated menu use."
+      ]
+    },
+    {
+      "assetId": "sfx_ui_confirm_var02",
+      "requestId": "req_sfx_ui_confirm_var02_v1",
+      "seed": 305102,
+      "generatedOutputPath": "factory-output/drafts/sfx/sfx_ui_confirm_var02.wav",
+      "targetImportPath": "Content/Audio/sfx_ui_confirm_var02.wav",
       "reviewStatus": "revise",
       "reviewer": "agent",
-      "reviewedAt": "2026-05-14T19:43:00Z",
+      "reviewedAt": "2026-05-15T13:25:00Z",
+      "variationFamily": "sfx_ui_confirm",
+      "variationIndex": 2,
+      "qaSnapshot": {
+        "loudnessLufs": -12.7,
+        "truePeakDbfs": -0.2,
+        "loudnessOk": true,
+        "peakOk": true,
+        "clippingOk": true
+      },
       "notes": [
-        "Transient is readable but tail is too noisy for repeated combat use.",
-        "Regenerate with shorter decay and lower high-frequency fizz."
+        "Readable but too bright for repeated UI usage.",
+        "Regenerate with softer high-frequency content."
+      ]
+    }
+  ],
+  "variationFamilyDecisions": [
+    {
+      "variationFamily": "sfx_ui_confirm",
+      "assetType": "sfx",
+      "acceptanceProfile": "sfx-ui",
+      "decision": "partial-revise",
+      "approvedVariantIds": [
+        "sfx_ui_confirm_var01"
+      ],
+      "reviseVariantIds": [
+        "sfx_ui_confirm_var02"
+      ],
+      "notes": [
+        "Family meets readability target when var01 is used as baseline.",
+        "Need at least one softer alternate variant before family-wide approval."
       ]
     }
   ]

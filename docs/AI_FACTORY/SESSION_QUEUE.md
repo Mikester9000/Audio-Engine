@@ -75,12 +75,24 @@
 - Added per-asset variant provenance fields (`variationFamily`, `variationIndex`) for SFX variant requests in `RequestBatchPipeline`.
 - Runtime in-game variant selection remains downstream/out of scope; factory-side deterministic variant generation/tracking is now implemented.
 
+### SESSION-013 — Define category-specific SFX loudness/readability targets
+- **Status:** `completed`
+- **Task type:** `docs_only`
+- Added category-specific SFX/ambience loudness-readability target guidance in `docs/AI_FACTORY/SUBSYSTEMS/SFX.md` and `docs/AI_FACTORY/QA/QUALITY_BARS.md`.
+- Kept guidance additive to existing QA surfaces (`qa`, `qa-batch`) without claiming automated per-category enforcement.
+
+### SESSION-014 — Add review/report template updates for variant-family QA decisions
+- **Status:** `completed`
+- **Task type:** `docs_only`
+- Updated review workflow guidance and committed review-log example template for variant-family QA decisions.
+- Added explicit family-level decision tracking guidance while preserving truthful docs-contract boundaries.
+
 ## Current next session
 
-### SESSION-013 — Define category-specific SFX loudness/readability targets
+### SESSION-015 — Add machine-readable review-log writer for QA decisions
 
 - **Status:** `ready`
-- **Task type:** `docs_only`
-- **Objective:** Define category-specific SFX loudness/readability target guidance and align it with existing QA/reporting surfaces so repeated-category variant assets can be reviewed consistently.
-- **Enqueue next session after completion:** `SESSION-014 — Add review/report template updates for variant-family QA decisions`
-- **Notes:** Keep guidance additive and truthful to existing checks (`qa`, `qa-batch`) without claiming new automated per-category enforcement.
+- **Task type:** `provenance`
+- **Objective:** Add an executable review-log writing path that captures per-asset review outcomes and variant-family decisions in a stable machine-readable file aligned with existing provenance and QA report surfaces.
+- **Enqueue next session after completion:** `SESSION-016 — Integrate review-log output with approval/export handoff flow`
+- **Notes:** Preserve existing `qa`, `qa-batch`, and `approve-draft` behavior; add review-log writing as an additive compatibility path.

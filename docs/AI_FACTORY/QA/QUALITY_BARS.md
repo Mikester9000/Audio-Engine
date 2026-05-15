@@ -109,12 +109,27 @@ Regenerate an asset when any of these change:
 
 ## Loudness and QA targets
 
-This repo already has QA utilities. Future automation should define explicit profiles such as:
+### Current executable checks (already implemented)
 
-- `music-loop`
-- `music-sting`
-- `ui-short`
-- `combat-sfx`
-- `ambient-loop`
+- `qa` / `qa-batch` use a global loudness pass band: **-30.0 to -9.0 LUFS** (`loudness_ok`).
+- True peak check is **≤ -0.1 dBFS** (`peak_ok`).
+- Clipping must be absent (`clipping_ok`).
+- Loop seam checks are optional and only evaluated when `--check-loop` is requested (`loop_ok`).
 
-Until those profiles are scripted, use the existing QA tools plus human listening review.
+### Category-specific SFX/ambience guidance (SESSION-013)
+
+These guidance ranges are for consistent review decisions and variant-family comparisons. They are **not** additional automated gates in current code.
+
+| Acceptance profile (request `qa.acceptanceProfile`) | Guidance loudness range | Readability/review emphasis |
+|---|---|---|
+| `sfx-ui` | `-22` to `-14` LUFS | Immediate click/chirp readability, short tail, low fatigue under repetition |
+| `sfx-combat` | `-18` to `-10` LUFS | Impact-first transient, retains cut-through in dense gameplay mix |
+| `sfx-magic` | `-20` to `-12` LUFS | Element identity clarity, controlled spectral tail, avoids masking |
+| `ambience-loop` | `-28` to `-18` LUFS | Stable bed texture, low distraction, seamless loop behavior |
+
+### How to apply with existing reports
+
+1. Run `qa` or `qa-batch` exactly as today.
+2. Use report fields (`loudness_lufs`, `true_peak_dbfs`, `loudness_ok`, `peak_ok`, `clipping_ok`, optional `loop_ok`) as the objective baseline.
+3. Apply category guidance and listening notes during review-log decisions (`approved`/`revise`/`rejected`).
+4. For repeated-variant families, compare members against each other for readability separation and fatigue risk before approval.
