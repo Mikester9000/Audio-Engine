@@ -45,11 +45,17 @@
 - `.github/workflows/audio-qa.yml` added; triggers on push/PR to audio source and fixture files.
 - Generates SFX batch from committed fixture then runs `qa-batch`; fails CI if any file fails loudness/peak/clipping checks.
 
+### SESSION-008 — Expand full-game taxonomy coverage
+- **Status:** `completed`
+- Expanded committed example fixtures across music/SFX/ambience/optional voice taxonomy coverage.
+- Added long-form OST request entries for key BGM loops (`field`, `town`, `dungeon`, `battle`, `boss`) plus tension/sadness music entries.
+
 ## Current next session
 
-### SESSION-008 — Expand full-game taxonomy coverage
+### SESSION-009 — Add plan-driven batch orchestration
 
 - **Status:** `ready`
-- **Task type:** `taxonomy`
-- **Objective:** Add committed taxonomy/backlog coverage for all needed audio families beyond the vertical slice: ambience, fanfares/stingers, UI, combat/spell SFX, tension, sadness, and optional voice. Add long-form OST variant request entries for the key BGM tracks marked `+ost` in `FULL_GAME_AUDIO_CHECKLIST.md` and `audio_plan.vertical_slice.v1.json`.
-- **Enqueue next session after completion:** `SESSION-009 — Add plan-driven batch orchestration`
+- **Task type:** `batch_generation`
+- **Objective:** Wire the committed audio-plan loader into the batch execution path so a plan can drive deterministic request generation using existing request-batch, provenance, QA, export, and approval surfaces without breaking current CLI compatibility.
+- **Enqueue next session after completion:** `SESSION-010 — Expand neural backend support`
+- **Notes:** Keep existing `generate-request-batch` behavior stable; prefer additive CLI/API surface.

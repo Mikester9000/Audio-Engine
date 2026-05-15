@@ -49,6 +49,28 @@
     },
     {
       "requestVersion": "1.0.0",
+      "requestId": "req_sfx_ui_error_v1",
+      "assetId": "sfx_ui_error",
+      "type": "sfx",
+      "backend": "procedural",
+      "seed": 305013,
+      "prompt": "short UI error chirp, clear negative feedback, no ringing tail",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/sfx_ui_error.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "sfx-ui",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
       "requestId": "req_sfx_attack_light_v1",
       "assetId": "sfx_attack_light",
       "type": "sfx",
@@ -58,6 +80,28 @@
       "styleFamily": "heroic-sci-fantasy",
       "output": {
         "targetPath": "Content/Audio/sfx_attack_light.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "sfx-combat",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_sfx_combat_parry_v1",
+      "assetId": "sfx_combat_parry",
+      "type": "sfx",
+      "backend": "procedural",
+      "seed": 305024,
+      "prompt": "metallic parry ring with quick damping and clear impact",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/sfx_combat_parry.wav",
         "format": "wav",
         "sampleRate": 44100,
         "channels": 1
@@ -93,6 +137,28 @@
     },
     {
       "requestVersion": "1.0.0",
+      "requestId": "req_sfx_spell_ice_shatter_v1",
+      "assetId": "sfx_spell_ice_shatter",
+      "type": "sfx",
+      "backend": "procedural",
+      "seed": 305035,
+      "prompt": "ice spell hit with brittle crystalline shatter and short tail",
+      "styleFamily": "melancholic-techno-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/sfx_spell_ice_shatter.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "sfx-magic",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
       "requestId": "req_sfx_amb_wind_ruins_loop_v1",
       "assetId": "amb_wind_ruins_loop",
       "type": "sfx",
@@ -102,6 +168,50 @@
       "styleFamily": "melancholic-techno-fantasy",
       "output": {
         "targetPath": "Content/Audio/amb_wind_ruins_loop.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "ambience-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_sfx_amb_forest_day_loop_v1",
+      "assetId": "amb_forest_day_loop",
+      "type": "sfx",
+      "backend": "procedural",
+      "seed": 305046,
+      "prompt": "forest day ambience loop with wind in leaves and distant birds",
+      "styleFamily": "melancholic-techno-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/amb_forest_day_loop.wav",
+        "format": "wav",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "ambience-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_sfx_amb_town_market_loop_v1",
+      "assetId": "amb_town_market_loop",
+      "type": "sfx",
+      "backend": "procedural",
+      "seed": 305047,
+      "prompt": "town market ambience loop with soft crowd texture and light motion",
+      "styleFamily": "heroic-sci-fantasy",
+      "output": {
+        "targetPath": "Content/Audio/amb_town_market_loop.wav",
         "format": "wav",
         "sampleRate": 44100,
         "channels": 2

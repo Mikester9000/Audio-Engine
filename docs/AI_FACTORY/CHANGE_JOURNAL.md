@@ -117,3 +117,13 @@
 - Updated `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md` with music duration expectations table and OST variant guidance.
 - Updated `docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md` with a duration key and duration annotations for every music checklist item; marked key BGM tracks `+ost`.
 - Updated `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json` with a `musicDurationPolicy` section and `ostVariant` entries for `bgm_field_day`, `bgm_town_evening`, `bgm_battle_standard`, and `bgm_boss_phase1`; boss target raised from 90 s to 120 s.
+
+## 2026-05-15 — Complete SESSION-008 (taxonomy coverage expansion)
+
+- Expanded `audio_plan.vertical_slice.v1.json` taxonomy coverage with additive groups/targets for fanfares/stingers, expanded UI/combat/spell SFX, ambience loops, tension/sadness music, and optional voice placeholders.
+- Added missing `ostVariant` for `bgm_dungeon_ruins` in the committed plan to match `+ost` checklist intent for key BGM loops.
+- Expanded `generation_requests.music.v1.json` from 4 to 13 requests, including base + OST entries for key BGM tracks (`field`, `town`, `dungeon`, `battle`, `boss`) plus tension/sadness cues.
+- Expanded `generation_requests.sfx.v1.json` from 5 to 10 requests with additional UI/combat/spell/ambience taxonomy coverage.
+- Added new optional fixture `generation_requests.voice.v1.json` with placeholder voice requests to track low-priority voice scope explicitly.
+- Updated loader fixture tests in `tests/test_integration.py` to match expanded fixture counts and include the voice fixture.
+- Updated continuity/session-control docs (`CURRENT_STATE.md`, `ACTIVE_WORK.md`, `HANDOFF.md`, `SESSION_QUEUE.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, `SESSION_HISTORY.md`, `IMPLEMENTATION_MATRIX.md`, `TASKS/BACKLOG.md`) and advanced the queue to `SESSION-009`.

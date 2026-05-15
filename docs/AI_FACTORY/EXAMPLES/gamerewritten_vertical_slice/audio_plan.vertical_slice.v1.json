@@ -67,7 +67,15 @@
           "loop": true,
           "durationTargetSeconds": 90,
           "mood": ["tension", "mystery", "danger"],
-          "reviewPriority": "high"
+          "reviewPriority": "high",
+          "ostVariant": {
+            "assetId": "bgm_dungeon_ruins_ost",
+            "gameplayRole": "ost-variant",
+            "targetPath": "Content/Audio/bgm_dungeon_ruins_ost.ogg",
+            "loop": false,
+            "durationTargetSeconds": 210,
+            "note": "Extended OST variant for soundtrack release"
+          }
         },
         {
           "assetId": "bgm_battle_standard",
@@ -104,6 +112,24 @@
           }
         },
         {
+          "assetId": "bgm_tension_stealth",
+          "gameplayRole": "tension / stealth gameplay",
+          "targetPath": "Content/Audio/bgm_tension_stealth.ogg",
+          "loop": true,
+          "durationTargetSeconds": 60,
+          "mood": ["suspense", "unease", "low-motion"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "bgm_sadness_memorial",
+          "gameplayRole": "sadness / loss / memorial",
+          "targetPath": "Content/Audio/bgm_sadness_memorial.ogg",
+          "loop": false,
+          "durationTargetSeconds": 90,
+          "mood": ["grief", "reflection", "soft-hope"],
+          "reviewPriority": "high"
+        },
+        {
           "assetId": "stinger_victory_short",
           "gameplayRole": "post-combat victory",
           "targetPath": "Content/Audio/stinger_victory_short.wav",
@@ -116,7 +142,32 @@
       ]
     },
     {
-      "groupId": "sfx-ui-combat-magic",
+      "groupId": "fanfares-stingers-core",
+      "type": "music",
+      "required": true,
+      "targets": [
+        {
+          "assetId": "fanfare_item_obtain",
+          "gameplayRole": "item obtain",
+          "targetPath": "Content/Audio/fanfare_item_obtain.wav",
+          "loop": false,
+          "durationTargetSeconds": 4,
+          "mood": ["reward", "sparkle"],
+          "reviewPriority": "medium"
+        },
+        {
+          "assetId": "fanfare_quest_complete",
+          "gameplayRole": "quest complete",
+          "targetPath": "Content/Audio/fanfare_quest_complete.wav",
+          "loop": false,
+          "durationTargetSeconds": 5,
+          "mood": ["achievement", "resolution"],
+          "reviewPriority": "medium"
+        }
+      ]
+    },
+    {
+      "groupId": "sfx-ui-combat-spell",
       "type": "sfx",
       "required": true,
       "targets": [
@@ -139,12 +190,30 @@
           "reviewPriority": "high"
         },
         {
+          "assetId": "sfx_ui_error",
+          "gameplayRole": "ui invalid/error",
+          "targetPath": "Content/Audio/sfx_ui_error.wav",
+          "loop": false,
+          "durationTargetSeconds": 0.2,
+          "mood": ["error", "clear"],
+          "reviewPriority": "high"
+        },
+        {
           "assetId": "sfx_attack_light",
           "gameplayRole": "light weapon hit",
           "targetPath": "Content/Audio/sfx_attack_light.wav",
           "loop": false,
           "durationTargetSeconds": 0.35,
           "mood": ["impact", "readable"],
+          "reviewPriority": "high"
+        },
+        {
+          "assetId": "sfx_combat_parry",
+          "gameplayRole": "block/parry",
+          "targetPath": "Content/Audio/sfx_combat_parry.wav",
+          "loop": false,
+          "durationTargetSeconds": 0.25,
+          "mood": ["metallic", "defensive"],
           "reviewPriority": "high"
         },
         {
@@ -157,6 +226,22 @@
           "reviewPriority": "high"
         },
         {
+          "assetId": "sfx_spell_ice_shatter",
+          "gameplayRole": "ice hit/shatter",
+          "targetPath": "Content/Audio/sfx_spell_ice_shatter.wav",
+          "loop": false,
+          "durationTargetSeconds": 0.8,
+          "mood": ["cold", "crisp", "fracture"],
+          "reviewPriority": "high"
+        }
+      ]
+    },
+    {
+      "groupId": "ambience-environment-core",
+      "type": "sfx",
+      "required": true,
+      "targets": [
+        {
           "assetId": "amb_wind_ruins_loop",
           "gameplayRole": "ruins ambience",
           "targetPath": "Content/Audio/amb_wind_ruins_loop.wav",
@@ -164,14 +249,57 @@
           "durationTargetSeconds": 20,
           "mood": ["empty", "windy", "ancient"],
           "reviewPriority": "medium"
+        },
+        {
+          "assetId": "amb_forest_day_loop",
+          "gameplayRole": "forest ambience",
+          "targetPath": "Content/Audio/amb_forest_day_loop.wav",
+          "loop": true,
+          "durationTargetSeconds": 25,
+          "mood": ["organic", "open", "alive"],
+          "reviewPriority": "medium"
+        },
+        {
+          "assetId": "amb_town_market_loop",
+          "gameplayRole": "town ambience",
+          "targetPath": "Content/Audio/amb_town_market_loop.wav",
+          "loop": true,
+          "durationTargetSeconds": 20,
+          "mood": ["busy", "safe", "everyday-life"],
+          "reviewPriority": "medium"
+        }
+      ]
+    },
+    {
+      "groupId": "voice-placeholders-optional",
+      "type": "voice",
+      "required": false,
+      "targets": [
+        {
+          "assetId": "voice_narrator_intro_placeholder",
+          "gameplayRole": "narrator placeholder intro",
+          "targetPath": "Content/Audio/voice_narrator_intro_placeholder.wav",
+          "loop": false,
+          "durationTargetSeconds": 5,
+          "mood": ["neutral", "clear"],
+          "reviewPriority": "low"
+        },
+        {
+          "assetId": "voice_npc_shop_greeting_placeholder",
+          "gameplayRole": "npc shop greeting placeholder",
+          "targetPath": "Content/Audio/voice_npc_shop_greeting_placeholder.wav",
+          "loop": false,
+          "durationTargetSeconds": 3,
+          "mood": ["friendly", "brief"],
+          "reviewPriority": "low"
         }
       ]
     }
   ],
   "notes": [
-    "Voice is intentionally out of scope for this vertical slice except optional placeholders.",
+    "Voice remains optional and lower-priority than music/SFX in this repository.",
     "This plan is a committed example/contract and not yet consumed by pipeline code.",
     "ostVariant entries are planned assets; long-form generation requires the --request-file path with --music-duration 180 or higher. The --batch-file path (generate-request-batch --batch-file) ignores --music-duration and does not yet support per-entry duration overrides.",
-    "SFX and ambience assets should remain short; see musicDurationPolicy for music-only guidance."
+    "SESSION-008 expands taxonomy coverage for ambience, fanfares/stingers, UI, combat/spell SFX, tension/sadness music, and optional voice placeholders."
   ]
 }

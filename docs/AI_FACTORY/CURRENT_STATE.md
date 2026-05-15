@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, a request-batch generation command, per-request provenance sidecars, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is now clearly documented.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, a request-batch generation command, per-request provenance sidecars, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, and taxonomy fixtures now cover ambience, fanfares/stingers, expanded UI/combat/spell SFX, tension/sadness music, optional voice placeholders, and key BGM OST request entries.
 
 ## What is implemented today
 
@@ -34,6 +34,7 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Example plan/request/review artifacts | Implemented (docs contracts) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` |
 | Session queue / autopilot control docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_QUEUE.md`, `docs/AI_FACTORY/SESSION_STATE.json`, `docs/AI_FACTORY/CURRENT_SESSION.json` |
 | Final execution-safety hardening docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_GATE_RULES.md`, `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`, `docs/AI_FACTORY/VERIFICATION_PROFILES.md`, `docs/AI_FACTORY/CANONICAL_OUTPUT_LAYOUT.md`, `docs/AI_FACTORY/FULL_GAME_AUDIO_CHECKLIST.md`, `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md` |
+| Full-game taxonomy fixture coverage | Implemented (docs fixtures) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json`, `generation_requests.music.v1.json`, `generation_requests.sfx.v1.json`, `generation_requests.voice.v1.json`, `docs/AI_FACTORY/TASKS/BACKLOG.md` |
 | Automated test suite | Implemented | `tests/` |
 
 ### Commands verified in this session
@@ -43,23 +44,18 @@ pip install -e ".[dev]"
 python -m pytest
 # 383 passed (SESSION-006 + SESSION-007)
 python tools/validate-assets.py assets/examples/ --verbose
-# SFX batch smoke run
-audio-engine generate-request-batch \
-  --batch-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json \
-  --output-dir /tmp/session006_smoke --quiet
-# Approve one draft
-audio-engine approve-draft \
-  --factory-root /tmp/session006_smoke \
-  --draft-file /tmp/session006_smoke/drafts/sfx/req_sfx_ui_confirm_v1.wav \
-  --output-report /tmp/session006_smoke/approval_report.json
+python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json
+python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json
+python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json
+python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.voice.v1.json
 ```
 
 Observed result in this session:
 
-- `383 passed` in pytest (up from 370 before SESSION-006/007)
+- `386 passed` in pytest
 - asset example manifests passed validation
-- 1 SFX draft approved: copied to `approved/sfx/`, provenance `reviewStatus=approved`, `approvedAt` timestamp written
-- `.github/workflows/audio-qa.yml` created; generates SFX batch and runs QA gate in CI
+- all edited taxonomy fixture JSON files parsed successfully
+- SESSION-008 taxonomy objective completed in docs fixtures and backlog coverage
 
 ## Current repository structure
 
@@ -91,8 +87,8 @@ Observed result in this session:
 1. The default backend is still primarily procedural rather than modern neural generation.
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
-4. Full-game taxonomy coverage is documented in `FULL_GAME_AUDIO_CHECKLIST.md` but not yet fully committed as generation-request fixtures (SESSION-008 target).
-5. OST variant generation entries are noted in `audio_plan.vertical_slice.v1.json` as planned but there are not yet committed request-batch fixtures for them.
+4. Full-game taxonomy is now covered in committed example fixtures, but plan-driven execution of `audio_plan.*.json` remains unimplemented (SESSION-009 target).
+5. OST request entries are now committed for key BGM tracks, but duration targets are still documentation/fixture guidance rather than enforced by the current `--batch-file` execution path.
 6. OGG export requires the optional `soundfile` dependency; the pipeline falls back to WAV when it is not installed.
 
 ## Current blockers
@@ -106,4 +102,4 @@ None blocking the next session.
 
 ## Immediate interpretation
 
-This repo now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow itself (path-filtered). The next session (SESSION-008) should expand the committed audio taxonomy beyond the vertical slice and add OST variant request entries for key BGM tracks.
+This repo now has a complete draft-to-approved pipeline: `generate-request-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. The CI QA gate validates generated outputs on pushes and PRs that touch audio engine source, tests, example fixtures, or the workflow itself (path-filtered). SESSION-008 completed taxonomy fixture expansion and added key BGM OST request entries; the next session (SESSION-009) should wire audio-plan artifacts into plan-driven batch orchestration.

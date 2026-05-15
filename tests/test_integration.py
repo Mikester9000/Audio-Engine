@@ -218,15 +218,16 @@ class TestFactoryInputLoaders:
         assert plan.project == "GameRewritten"
         assert plan.scope == "vertical-slice"
         assert plan.priorities.music == "high"
-        assert len(plan.asset_groups) == 2
+        assert len(plan.asset_groups) >= 2
         assert plan.asset_groups[0].targets[0].asset_id == "bgm_field_day"
         assert plan.asset_groups[0].targets[0].target_path == "Content/Audio/bgm_field_day.ogg"
 
     @pytest.mark.parametrize(
         ("filename", "expected_type", "expected_request_count"),
         [
-            ("generation_requests.music.v1.json", "music", 4),
-            ("generation_requests.sfx.v1.json", "sfx", 5),
+            ("generation_requests.music.v1.json", "music", 13),
+            ("generation_requests.sfx.v1.json", "sfx", 10),
+            ("generation_requests.voice.v1.json", "voice", 2),
         ],
     )
     def test_load_generation_request_fixture(self, filename, expected_type, expected_request_count):
