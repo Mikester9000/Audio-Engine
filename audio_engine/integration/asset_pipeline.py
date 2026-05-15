@@ -1081,11 +1081,28 @@ class PlanBatchOrchestrator:
                         f"plan={target.target_path}, request={request.output.target_path}"
                     )
 
-                expected_format = Path(target.target_path).suffix.lower().lstrip(".")
-                if expected_format in {"wav", "ogg"} and request.output.format.lower() != expected_format:
+                plan_format = Path(target.target_path).suffix.lower().lstrip(".")
+                if plan_format not in {"wav", "ogg"}:
+                    raise ValueError(
+                        f"unsupported plan target format for assetId {target.asset_id}: .{plan_format}"
+                    )
+
+                request_target_format = Path(request.output.target_path).suffix.lower().lstrip(".")
+                if request_target_format not in {"wav", "ogg"}:
+                    raise ValueError(
+                        f"unsupported request target format for assetId {target.asset_id}: .{request_target_format}"
+                    )
+
+                request_format = request.output.format.lower()
+                if request_format != request_target_format:
+                    raise ValueError(
+                        f"request output format/targetPath mismatch for assetId {target.asset_id}: "
+                        f"format={request.output.format}, targetPath={request.output.target_path}"
+                    )
+                if request_format != plan_format:
                     raise ValueError(
                         f"plan/request format mismatch for assetId {target.asset_id}: "
-                        f"plan={expected_format}, request={request.output.format}"
+                        f"plan={plan_format}, request={request.output.format}"
                     )
 
                 selected.append(request)

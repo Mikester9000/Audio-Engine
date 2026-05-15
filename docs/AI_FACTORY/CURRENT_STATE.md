@@ -45,14 +45,14 @@ The repository contains a working Python audio engine with tests, a manifest val
 pip install -e ".[dev]"
 pip install soundfile
 python -m pytest
-# 395 passed (SESSION-009 + SESSION-010)
+# 397 passed (SESSION-009 + SESSION-010)
 python tools/validate-assets.py assets/examples/ --verbose
 python -m audio_engine.cli generate-plan-batch --plan-file /tmp/session009010_smoke/plan.smoke.json --request-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json --output-dir /tmp/session009010_smoke --force --quiet
 ```
 
 Observed result in this session:
 
-- `395 passed` in pytest
+- `397 passed` in pytest
 - asset example manifests passed validation
 - deterministic plan-driven smoke run produced requested `.ogg` output plus provenance sidecar
 - SESSION-009 and SESSION-010 objectives completed

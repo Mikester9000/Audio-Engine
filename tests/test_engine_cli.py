@@ -539,3 +539,17 @@ def test_cli_generate_plan_batch_sfx_smoke(tmp_path, capsys):
     assert rc == 0
     output_files = list((tmp_path / "drafts" / "sfx").glob("*.wav"))
     assert len(output_files) == 2
+
+
+def test_cli_generate_voice_accepts_seed_and_backend(tmp_path):
+    out = str(tmp_path / "voice.wav")
+    rc = main([
+        "generate-voice",
+        "--text", "Welcome, hero.",
+        "--voice", "narrator",
+        "--output", out,
+        "--seed", "7",
+        "--backend", "procedural",
+    ])
+    assert rc == 0
+    assert Path(out).exists()

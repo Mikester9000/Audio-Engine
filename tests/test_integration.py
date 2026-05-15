@@ -1182,6 +1182,56 @@ class TestPlanBatchOrchestrator:
         with pytest.raises(ValueError, match="plan/request targetPath mismatch"):
             orchestrator.execute(plan, [bad_batch], tmp_path)
 
+    def test_execute_plan_rejects_unsupported_plan_format(self, tmp_path):
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        plan = self._make_sfx_plan_from_batch(batch)
+        target = plan.asset_groups[0].targets[0]
+        bad_plan = parse_audio_plan(
+            {
+                "planVersion": plan.plan_version,
+                "project": plan.project,
+                "scope": plan.scope,
+                "priorities": {
+                    "music": plan.priorities.music,
+                    "sfx": plan.priorities.sfx,
+                    "voice": plan.priorities.voice,
+                },
+                "styleFamilies": plan.style_families,
+                "assetGroups": [
+                    {
+                        "groupId": "sfx-required",
+                        "type": "sfx",
+                        "required": True,
+                        "targets": [
+                            {
+                                "assetId": target.asset_id,
+                                "gameplayRole": target.gameplay_role,
+                                "targetPath": target.target_path.replace(".wav", ".mp3"),
+                                "loop": target.loop,
+                                "durationTargetSeconds": target.duration_target_seconds,
+                            }
+                        ],
+                    }
+                ],
+            },
+            source="bad_plan",
+        )
+        bad_request = replace(
+            batch.requests[0],
+            output=replace(
+                batch.requests[0].output,
+                target_path=target.target_path.replace(".wav", ".mp3"),
+                format="mp3",
+            ),
+        )
+        bad_batch = replace(batch, requests=[bad_request])
+        orchestrator = PlanBatchOrchestrator(skip_existing=False)
+
+        with pytest.raises(ValueError, match="unsupported plan target format"):
+            orchestrator.execute(bad_plan, [bad_batch], tmp_path)
+
 
 # ---------------------------------------------------------------------------
 # RequestBatch execution

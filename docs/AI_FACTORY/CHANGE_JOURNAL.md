@@ -145,6 +145,6 @@
   - backend handling in request-batch execution
   - new CLI subcommands/options
 - Verification:
-  - `python -m pytest` → 395 passed
+  - `python -m pytest` → 397 passed
   - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
   - deterministic `/tmp` smoke run with `generate-plan-batch` produced requested `.ogg` output after installing `soundfile`.
