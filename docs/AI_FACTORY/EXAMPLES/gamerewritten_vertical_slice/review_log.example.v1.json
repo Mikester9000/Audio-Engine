@@ -20,6 +20,7 @@
         "clippingOk": true
       },
       "notes": [
+        "QA snapshot captured from pre-encode WAV analysis before OGG export.",
         "Loop boundary acceptable.",
         "Fits field exploration mood."
       ]
@@ -71,7 +72,7 @@
       ]
     }
   ],
-  "variantFamilyDecisions": [
+  "variationFamilyDecisions": [
     {
       "variationFamily": "sfx_ui_confirm",
       "assetType": "sfx",

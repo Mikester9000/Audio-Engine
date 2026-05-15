@@ -52,10 +52,12 @@ Use a two-level review model for repeated SFX families:
 - `generatedOutputPath`, `targetImportPath`
 - `reviewStatus`, `reviewer`, `reviewedAt`, `notes`
 - `qaSnapshot` (optional): `loudnessLufs`, `truePeakDbfs`, `loudnessOk`, `peakOk`, `clippingOk`, optional `loopOk`
+  - If the reviewed asset is stored as `.ogg`, capture `qaSnapshot` from the analyzed WAV input (for example pre-encode analysis or a decode-to-WAV verification step), since current `qa` / `qa-batch` execution loads WAV inputs.
 - `variationFamily`, `variationIndex` (for `_varNN` SFX variants)
 
 ### Variant-family decision fields (recommended)
 
+- Top-level collection name: `variationFamilyDecisions`
 - `variationFamily`
 - `assetType` (`sfx`)
 - `acceptanceProfile` (for example `sfx-ui`, `sfx-combat`, `sfx-magic`)

@@ -51,7 +51,7 @@ They align to existing QA outputs (`qa`, `qa-batch`) and do **not** imply new au
 | `sfx-magic` | Mid-band guidance (typically around `-20` to `-12` LUFS) | Identity should remain readable over music; spectral tail should support element identity without clutter |
 | `ambience-loop` | Lower-energy guidance inside pass band (typically around `-28` to `-18` LUFS) | Loop continuity and texture clarity should support scene mood without competing with foreground SFX/voice |
 
-Use these ranges as review anchors, not as hard CLI thresholds. Continue using `qa-batch` JSON fields (`loudness_lufs`, `true_peak_dbfs`, `loudness_ok`, `peak_ok`, `loop_ok`) plus listening notes for final approval decisions.
+Use these ranges as review anchors, not as hard CLI thresholds. Continue using `qa-batch` JSON fields (`loudness_lufs`, `true_peak_dbfs`, `has_clipping`, `clipped_samples`, `loudness_ok`, `peak_ok`, `clipping_ok`, optional `loop_ok`) plus listening notes for final approval decisions.
 
 ## Near-term goals
 

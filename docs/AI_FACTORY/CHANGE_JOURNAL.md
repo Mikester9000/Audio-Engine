@@ -199,7 +199,7 @@
 - Updated `docs/AI_FACTORY/SUBSYSTEMS/SFX.md` with category-specific SFX/ambience loudness-readability guidance mapped to existing acceptance profiles (`sfx-ui`, `sfx-combat`, `sfx-magic`, `ambience-loop`).
 - Updated `docs/AI_FACTORY/QA/QUALITY_BARS.md` to explicitly separate current executable QA checks from additive category guidance used during review.
 - Updated `docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md` with a two-level repeated-SFX review model (per-asset entry + per-family decision entry).
-- Updated `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json` to v1.1.0 with variant-aware review entries, optional QA snapshots, and `variantFamilyDecisions` examples.
+- Updated `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json` to v1.1.0 with variant-aware review entries, optional QA snapshots, and `variationFamilyDecisions` examples.
 - Updated `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md` with acceptance-profile alignment notes for category guidance/review consistency.
 - Synced continuity/session-control docs for SESSION-013 and SESSION-014 completion and advanced queue/state/current session to SESSION-015.
 - Verification:
