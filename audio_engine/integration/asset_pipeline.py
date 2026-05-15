@@ -1051,11 +1051,13 @@ class PlanBatchOrchestrator:
         for batch in request_batches:
             for request in batch.requests:
                 if request.request_id in seen_request_ids:
-                    raise ValueError(f"duplicate requestId across request batches: {request.request_id}")
+                    raise ValueError(
+                        f"duplicate request_id across request batches: {request.request_id}"
+                    )
                 seen_request_ids.add(request.request_id)
                 if request.asset_id in request_by_asset_id:
                     raise ValueError(
-                        f"duplicate assetId across request batches: {request.asset_id}"
+                        f"duplicate asset_id across request batches: {request.asset_id}"
                     )
                 request_by_asset_id[request.asset_id] = request
 

@@ -828,7 +828,7 @@ class TestRequestBatchPipeline:
             requests=[ogg_requests[0]],
         )
 
-        def _raise_missing_soundfile(self, audio, path):  # pragma: no cover - injected behavior
+        def _raise_missing_soundfile(self, _audio, _path):  # pragma: no cover - injected behavior
             raise ImportError("soundfile missing for test")
 
         monkeypatch.setattr(AudioExporter, "_write_ogg", _raise_missing_soundfile)
