@@ -178,11 +178,14 @@ class RequestBatchRecord:
     seed:
         Seed used for this request (taken verbatim from the request).
     output_path:
-        Absolute path to the output file (or intended path if skipped/failed).
+        Path to the output file (or intended path if skipped/failed).
     status:
         ``"ok"`` | ``"skipped"`` | ``"error"``.
     error:
         Error message when *status* is ``"error"``; ``None`` otherwise.
+    provenance_path:
+        Path to the ``.provenance.json`` sidecar written alongside the
+        output file when provenance writing was enabled; ``None`` otherwise.
     """
 
     request_id: str
@@ -192,6 +195,10 @@ class RequestBatchRecord:
     output_path: str
     status: str
     error: str | None = None
+    provenance_path: str | None = None
+    """Path to the ``.provenance.json`` sidecar written alongside the output file,
+    or ``None`` when provenance writing was not requested or the request did not
+    succeed."""
 
 
 @dataclass
@@ -246,6 +253,45 @@ class RequestBatchResult:
             },
             indent=2,
         )
+
+
+
+# ---------------------------------------------------------------------------
+# Provenance sidecar helper
+# ---------------------------------------------------------------------------
+
+def _write_provenance_sidecar(request: "GenerationRequest", output_path: Path) -> Path:
+    """Write a ``.provenance.json`` sidecar file next to *output_path*.
+
+    Returns the path of the written sidecar file.
+    """
+    import datetime
+
+    provenance: dict = {
+        "provenanceVersion": "1.0.0",
+        "requestId": request.request_id,
+        "assetId": request.asset_id,
+        "type": request.type,
+        "backend": request.backend,
+        "seed": request.seed,
+        "prompt": request.prompt,
+        "styleFamily": request.style_family,
+        "generatedOutputPath": str(output_path),
+        "targetImportPath": request.output.target_path,
+        "reviewStatus": request.qa.review_status,
+        "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+    if request.type == "sfx":
+        from audio_engine.integration.factory_inputs import parse_variant_suffix
+
+        parsed_variant = parse_variant_suffix(request.asset_id)
+        if parsed_variant is not None:
+            variation_family, variation_index = parsed_variant
+            provenance["variationFamily"] = variation_family
+            provenance["variationIndex"] = variation_index
+    provenance_path = output_path.with_name(output_path.stem + ".provenance.json")
+    provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
+    return provenance_path
 
 
 # ---------------------------------------------------------------------------
@@ -323,12 +369,14 @@ class ReviewLogWriter:
         notes: list[str] | None = None,
         reviewed_at: str | None = None,
         variation_family_decisions: list[dict] | None = None,
+        record_metadata_by_audio_path: dict[str, dict] | None = None,
     ) -> dict:
         """Build review-log entries from audio files + provenance sidecars."""
         import datetime
 
         factory_root = Path(factory_root).resolve()
         normalized_notes = list(notes or [])
+        metadata_by_audio_path = dict(record_metadata_by_audio_path or {})
         reviewed_at = reviewed_at or datetime.datetime.now(
             datetime.timezone.utc
         ).isoformat()
@@ -340,6 +388,7 @@ class ReviewLogWriter:
         entries: list[dict] = []
         for audio_path_value in audio_paths:
             audio_path = Path(audio_path_value).resolve()
+            metadata = metadata_by_audio_path.get(str(audio_path), {})
             if not audio_path.exists():
                 raise FileNotFoundError(f"audio file not found for review log: {audio_path}")
 
@@ -348,20 +397,29 @@ class ReviewLogWriter:
                 provenance: dict = json.loads(prov_path.read_text(encoding="utf-8"))
             else:
                 provenance = {
-                    "requestId": audio_path.stem,
-                    "assetId": audio_path.stem,
                     "type": audio_path.parent.name,
-                    "seed": None,
                     "generatedOutputPath": str(audio_path),
                     "targetImportPath": f"Content/Audio/{audio_path.name}",
                     "reviewStatus": "draft",
                 }
 
             entry: dict = {
-                "assetId": provenance.get("assetId", audio_path.stem),
-                "requestId": provenance.get("requestId", audio_path.stem),
-                "seed": provenance.get("seed"),
-                "generatedOutputPath": provenance.get("generatedOutputPath", str(audio_path)),
+                "assetId": (
+                    provenance.get("assetId")
+                    or metadata.get("asset_id")
+                    or audio_path.stem
+                ),
+                "requestId": (
+                    provenance.get("requestId")
+                    or metadata.get("request_id")
+                    or audio_path.stem
+                ),
+                "seed": provenance.get("seed", metadata.get("seed")),
+                "generatedOutputPath": (
+                    provenance.get("generatedOutputPath")
+                    or metadata.get("output_path")
+                    or str(audio_path)
+                ),
                 "targetImportPath": provenance.get(
                     "targetImportPath",
                     f"Content/Audio/{audio_path.name}",
@@ -398,6 +456,119 @@ class ReviewLogWriter:
             scope=scope,
             entries=entries,
             variation_family_decisions=variation_family_decisions,
+        )
+
+    def append_from_result_json(
+        self,
+        result_json_path: str | Path,
+        review_log_path: str | Path,
+        *,
+        factory_root: str | Path | None = None,
+        reviewer: str = "unspecified",
+        qa_report_path: str | Path | None = None,
+        notes: list[str] | None = None,
+        reviewed_at: str | None = None,
+        variation_family_decisions: list[dict] | None = None,
+        include_skipped: bool = False,
+        project: str | None = None,
+        scope: str | None = None,
+    ) -> dict:
+        """Build review-log entries from a ``request_batch_result.json`` file.
+
+        Reads the JSON result file produced by
+        :meth:`AssetPipeline.execute_request_batch` with ``--write-result`` and
+        delegates to :meth:`append_from_audio_files` for each ``ok`` record (and
+        optionally ``skipped`` records) so that provenance sidecars are picked up
+        automatically when they are present.
+
+        Parameters
+        ----------
+        result_json_path:
+            Path to the ``request_batch_result.json`` written by the legacy
+            execution path.
+        review_log_path:
+            Path to write/update the machine-readable review log JSON file.
+        factory_root:
+            Optional factory root directory used for QA-snapshot path
+            resolution.  Defaults to the parent of *result_json_path*.
+        reviewer:
+            Reviewer label written to each entry (default: ``"unspecified"``).
+        qa_report_path:
+            Optional ``qa-batch`` JSON report used to enrich ``qaSnapshot``
+            fields.
+        notes:
+            Optional list of note strings added to every entry.
+        reviewed_at:
+            ISO 8601 timestamp string for all entries.  Defaults to the
+            current UTC time when omitted.
+        variation_family_decisions:
+            Optional list of ``variationFamilyDecisions`` entries to upsert.
+        include_skipped:
+            If ``True``, also include ``skipped`` records in the review log
+            (audio files that were not regenerated because they already existed).
+            Defaults to ``False``.
+        project:
+            Optional project value to set/override in the review log.
+            When omitted, uses the value from the result JSON.
+        scope:
+            Optional scope value to set/override in the review log.
+            When omitted, uses the value from the result JSON.
+
+        Returns
+        -------
+        dict
+            The updated review log as a Python dict.
+
+        Raises
+        ------
+        FileNotFoundError
+            If *result_json_path* does not exist.
+        """
+        result_json_path = Path(result_json_path)
+        if not result_json_path.exists():
+            raise FileNotFoundError(f"result JSON not found: {result_json_path}")
+
+        data = json.loads(result_json_path.read_text(encoding="utf-8"))
+        effective_factory_root = Path(factory_root) if factory_root else result_json_path.parent
+
+        valid_statuses = {"ok", "skipped"} if include_skipped else {"ok"}
+        audio_paths: list[Path] = []
+        record_metadata_by_audio_path: dict[str, dict] = {}
+        output_dir_field = Path(data.get("output_dir", ""))
+        output_dir_base = result_json_path.parent.resolve()
+        for record in data.get("records", []):
+            if record.get("status") not in valid_statuses:
+                continue
+            output_path = record.get("output_path")
+            if not output_path:
+                continue
+            raw_output = Path(output_path)
+            if raw_output.is_absolute():
+                resolved_output = raw_output.resolve()
+            else:
+                relative_output = raw_output
+                if (
+                    output_dir_field.parts
+                    and len(raw_output.parts) >= len(output_dir_field.parts)
+                    and tuple(raw_output.parts[: len(output_dir_field.parts)]) == output_dir_field.parts
+                ):
+                    relative_output = Path(*raw_output.parts[len(output_dir_field.parts):])
+                resolved_output = (output_dir_base / relative_output).resolve()
+            audio_paths.append(resolved_output)
+            record_metadata_by_audio_path[str(resolved_output)] = record
+
+        return self.append_from_audio_files(
+            factory_root=effective_factory_root,
+            audio_paths=audio_paths,
+            review_log_path=review_log_path,
+            project=project if project is not None else data.get("project"),
+            scope=scope if scope is not None else data.get("scope"),
+            reviewer=reviewer,
+            qa_report_path=qa_report_path,
+            notes=notes,
+            reviewed_at=reviewed_at,
+            variation_family_decisions=variation_family_decisions,
+            record_metadata_by_audio_path=record_metadata_by_audio_path,
         )
 
     def _load_or_init(
@@ -718,6 +889,7 @@ class AssetPipeline:
         force: bool = False,
         default_music_duration: float = 30.0,
         default_sfx_duration: float = 2.0,
+        write_provenance: bool = False,
     ) -> RequestBatchResult:
         """Execute all requests in a :class:`~audio_engine.integration.factory_inputs.GenerationRequestBatch`.
 
@@ -742,11 +914,17 @@ class AssetPipeline:
         default_sfx_duration:
             Fallback duration in seconds used for SFX requests when no
             explicit request-level duration is present (default: 2 s).
+        write_provenance:
+            If ``True``, write a ``.provenance.json`` sidecar file next to each
+            successfully generated audio file.  The sidecar format is identical
+            to that produced by :class:`RequestBatchPipeline`.  Defaults to
+            ``False`` to preserve the legacy default output layout.
 
         Returns
         -------
         RequestBatchResult
-            Per-request execution records with status, seed, and output path.
+            Per-request execution records with status, seed, output path, and
+            (when *write_provenance* is ``True``) the path of each sidecar.
         """
         output_dir = Path(output_dir)
         result = RequestBatchResult(
@@ -797,6 +975,11 @@ class AssetPipeline:
                 else:
                     raise ValueError(f"unsupported request type: {request.type!r}")
 
+                prov_path: str | None = None
+                if write_provenance:
+                    sidecar = _write_provenance_sidecar(request, exported_path)
+                    prov_path = str(sidecar)
+
                 result.records.append(
                     RequestBatchRecord(
                         request_id=request.request_id,
@@ -805,6 +988,7 @@ class AssetPipeline:
                         seed=request.seed,
                         output_path=str(exported_path),
                         status="ok",
+                        provenance_path=prov_path,
                     )
                 )
                 self.progress_callback(f"  [ok]   {request.request_id} → {exported_path}")
@@ -1287,46 +1471,8 @@ class RequestBatchPipeline:
         request: GenerationRequest,
         output_path: Path,
     ) -> None:
-        """Write a machine-readable provenance sidecar file next to *output_path*.
-
-        The provenance file is named ``<stem>.provenance.json`` and contains
-        the request ID, seed, backend, review status, and generation timestamp
-        so that each generated file is independently traceable.
-
-        Parameters
-        ----------
-        request:
-            The :class:`~audio_engine.integration.factory_inputs.GenerationRequest`
-            that produced *output_path*.
-        output_path:
-            Path of the generated audio file.
-        """
-        import datetime
-
-        provenance = {
-            "provenanceVersion": "1.0.0",
-            "requestId": request.request_id,
-            "assetId": request.asset_id,
-            "type": request.type,
-            "backend": request.backend,
-            "seed": request.seed,
-            "prompt": request.prompt,
-            "styleFamily": request.style_family,
-            "generatedOutputPath": str(output_path),
-            "targetImportPath": request.output.target_path,
-            "reviewStatus": request.qa.review_status,
-            "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        }
-        if request.type == "sfx":
-            from audio_engine.integration.factory_inputs import parse_variant_suffix
-
-            parsed_variant = parse_variant_suffix(request.asset_id)
-            if parsed_variant is not None:
-                variation_family, variation_index = parsed_variant
-                provenance["variationFamily"] = variation_family
-                provenance["variationIndex"] = variation_index
-        provenance_path = output_path.with_name(output_path.stem + ".provenance.json")
-        provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
+        """Write a machine-readable provenance sidecar file next to *output_path*."""
+        _write_provenance_sidecar(request, output_path)
 
 
 # ---------------------------------------------------------------------------

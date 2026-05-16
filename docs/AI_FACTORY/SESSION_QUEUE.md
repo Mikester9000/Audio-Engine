@@ -136,11 +136,25 @@
 - Refreshed continuity/session-control docs to mark SESSION-021 complete and advance the queue.
 - Defined SESSION-023 as the next concrete executable implementation session.
 
-## Current next session
-
 ### SESSION-023 — Add optional provenance sidecars for legacy request-file execution path
 
-- **Status:** `ready`
+- **Status:** `completed`
 - **Task type:** `provenance + cli`
-- **Objective:** Allow backward-compatible `generate-request-batch --request-file` runs to optionally emit machine-readable provenance sidecars aligned with request metadata, without breaking the legacy output layout or default behavior.
-- **Notes:** Keep output paths and existing CLI flags stable; prefer additive opt-in behavior that narrows the gap with the newer drafts/provenance pipeline.
+- Added optional provenance sidecar writing for legacy `generate-request-batch --request-file` via additive `--write-provenance`.
+- Legacy `request_batch_result.json` records now include `provenance_path` when sidecars are written.
+
+### SESSION-024 — Add result-JSON sourcing path for review-log writing
+
+- **Status:** `completed`
+- **Task type:** `provenance + cli`
+- Added `ReviewLogWriter.append_from_result_json()` and `write-review-log --from-result` / `--include-skipped`.
+- Result-driven review-log writes now preserve request metadata from result records when sidecars are missing, resolve relative output paths against the result context, and support `--project` / `--scope` overrides.
+
+## Current next session
+
+### SESSION-025 — Define and queue the next executable implementation session
+
+- **Status:** `ready`
+- **Task type:** `docs_only`
+- **Objective:** Refresh continuity/session-control docs to reflect SESSION-023/024 completion and define the next concrete executable implementation task.
+- **Notes:** Keep queue/state/current-session/history synchronized and avoid claiming unverified implementation scope.

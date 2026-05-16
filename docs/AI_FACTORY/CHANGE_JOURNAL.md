@@ -2,6 +2,24 @@
 
 > Append a short entry for every substantial PR. Keep entries brief and factual.
 
+## 2026-05-16 — Complete SESSION-023 + SESSION-024 (legacy provenance sidecars + result-JSON review-log sourcing)
+
+- Added optional provenance-sidecar writing for legacy `generate-request-batch --request-file` via `--write-provenance`.
+- Extended `RequestBatchRecord`/`request_batch_result.json` records with `provenance_path` when sidecars are written.
+- Added result-driven review-log writing path:
+  - `ReviewLogWriter.append_from_result_json()`
+  - `audio-engine write-review-log --from-result ... [--include-skipped]`
+- Follow-up fixes from review:
+  - `--from-result` now honors `--project`/`--scope` overrides.
+  - Relative `output_path` values in result JSON are resolved from result context instead of caller CWD.
+  - Result-record metadata (`request_id`, `asset_id`, `seed`) is preserved when provenance sidecars are absent.
+- Added/updated tests in `tests/test_integration.py` and `tests/test_engine_cli.py` for metadata fallback, skipped-record inclusion, relative-path handling, and CLI override parity.
+- Verification:
+  - `python -m pytest tests/test_integration.py -k "append_from_result_json"` → PASS
+  - `python -m pytest tests/test_engine_cli.py -k "write_review_log_from_result"` → PASS
+  - `python -m pytest` → 433 passed
+  - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
+
 ## 2026-05-14 — SESSION-002: Add request-batch generation command
 
 - Added `RequestBatchRecord` and `RequestBatchResult` dataclasses to `audio_engine/integration/asset_pipeline.py`.

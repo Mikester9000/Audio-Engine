@@ -20,6 +20,7 @@
   - `write-review-log`
   - optional review-log update flags on `approve-draft` and `export-drafts`
   - review entries are sourced from provenance sidecars and can optionally include `qa-batch` snapshot fields
+  - `write-review-log --from-result <request_batch_result.json>` can source entries from legacy request-file execution results
 - Request format behavior is strict:
   - requested `.ogg` outputs must be produced as `.ogg`
   - no silent OGG→WAV fallback in request-batch execution paths
@@ -32,6 +33,7 @@
   - `generate-request-batch --batch-file` (`RequestBatchPipeline`)
   - backward-compatible `generate-request-batch --request-file` (`AssetPipeline.execute_request_batch`)
 - On the legacy `--request-file` path, `--music-duration` and `--sfx-duration` remain fallback defaults for requests that omit `durationSeconds`.
+- On the legacy `--request-file` path, provenance sidecars are now additive/optional via `generate-request-batch --write-provenance`; result records include `provenance_path` when written.
 - OGG export depends on `soundfile`; if unavailable, requests that specify `.ogg` fail.
 
 ## Near-term goal

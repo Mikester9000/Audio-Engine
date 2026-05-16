@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import json
+import os
 from pathlib import Path
 import wave
 
@@ -2010,6 +2011,93 @@ class TestRequestBatchExecution:
         assert result.records[0].status == "error"
         assert "unsupported channel count 3" in (result.records[0].error or "")
 
+    def test_execute_request_batch_no_provenance_by_default(self, tmp_path):
+        """execute_request_batch() must NOT write provenance sidecars by default (legacy behavior)."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            batch,
+            tmp_path,
+            default_sfx_duration=0.1,
+        )
+
+        assert not [r for r in result.records if r.status == "error"]
+        prov_files = list(tmp_path.rglob("*.provenance.json"))
+        assert not prov_files, f"Unexpected provenance files written by default: {prov_files}"
+        for record in result.records:
+            assert record.provenance_path is None
+
+    def test_execute_request_batch_write_provenance_creates_sidecars(self, tmp_path):
+        """When write_provenance=True, a .provenance.json sidecar must exist for every ok record."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            batch,
+            tmp_path,
+            default_sfx_duration=0.1,
+            write_provenance=True,
+            force=True,
+        )
+
+        ok_records = [r for r in result.records if r.status == "ok"]
+        assert ok_records, "Expected at least one ok record"
+        for record in ok_records:
+            assert record.provenance_path is not None
+            prov = Path(record.provenance_path)
+            assert prov.exists(), f"Provenance sidecar not found: {prov}"
+            assert prov.name.endswith(".provenance.json")
+
+    def test_execute_request_batch_write_provenance_content(self, tmp_path):
+        """Provenance sidecar content must include all required traceability fields."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        single_request = batch.requests[0]
+        single_batch = replace(batch, requests=[single_request])
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            single_batch,
+            tmp_path,
+            default_sfx_duration=0.1,
+            write_provenance=True,
+        )
+
+        assert result.records[0].status == "ok"
+        prov_path = Path(result.records[0].provenance_path)
+        data = json.loads(prov_path.read_text())
+
+        required_keys = {
+            "provenanceVersion", "requestId", "assetId", "type", "backend",
+            "seed", "generatedOutputPath", "targetImportPath", "reviewStatus", "generatedAt",
+        }
+        missing = required_keys - data.keys()
+        assert not missing, f"Provenance sidecar missing keys: {missing}"
+        assert data["requestId"] == single_request.request_id
+        assert data["seed"] == single_request.seed
+
+    def test_execute_request_batch_write_provenance_path_in_result_json(self, tmp_path):
+        """provenance_path must appear in the to_json() serialisation of each ok record."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        single_batch = replace(batch, requests=[batch.requests[0]])
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            single_batch,
+            tmp_path,
+            default_sfx_duration=0.1,
+            write_provenance=True,
+        )
+
+        data = json.loads(result.to_json())
+        record_data = data["records"][0]
+        assert record_data["provenance_path"] is not None
+        assert record_data["provenance_path"].endswith(".provenance.json")
+
 
 # ---------------------------------------------------------------------------
 # ApprovalWorkflow tests (SESSION-006)
@@ -2166,6 +2254,310 @@ class TestReviewLogWriter:
         )
 
         assert log["entries"][0]["qaSnapshot"]["loudnessLufs"] == -15.0
+
+    def test_append_from_result_json_creates_entries(self, tmp_path):
+        """append_from_result_json() should build review-log entries from a result JSON."""
+        from audio_engine.integration import ReviewLogWriter
+
+        # Build a small batch result + audio + provenance sidecar in a flat dir
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        wav_path = output_dir / "sfx_confirm.wav"
+        import wave as wv
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+        prov = {
+            "provenanceVersion": "1.0.0",
+            "requestId": "req_sfx_confirm_v1",
+            "assetId": "sfx_confirm",
+            "type": "sfx",
+            "backend": "procedural",
+            "seed": 77,
+            "prompt": "confirm chirp",
+            "styleFamily": "heroic-sci-fantasy",
+            "generatedOutputPath": str(wav_path),
+            "targetImportPath": "Content/Audio/sfx_confirm.wav",
+            "reviewStatus": "draft",
+            "generatedAt": "2026-05-16T00:00:00+00:00",
+        }
+        wav_path.with_name("sfx_confirm.provenance.json").write_text(
+            json.dumps(prov, indent=2), encoding="utf-8"
+        )
+        result_data = {
+            "output_dir": str(output_dir),
+            "project": "GameRewritten",
+            "scope": "session024-tests",
+            "records": [
+                {
+                    "request_id": "req_sfx_confirm_v1",
+                    "asset_id": "sfx_confirm",
+                    "type": "sfx",
+                    "seed": 77,
+                    "output_path": str(wav_path),
+                    "status": "ok",
+                    "error": None,
+                    "provenance_path": str(wav_path.with_name("sfx_confirm.provenance.json")),
+                }
+            ],
+            "total_duration_seconds": 0.1,
+        }
+        result_json_path = tmp_path / "request_batch_result.json"
+        result_json_path.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+        writer = ReviewLogWriter()
+        log = writer.append_from_result_json(
+            result_json_path=result_json_path,
+            review_log_path=tmp_path / "review_log.json",
+        )
+
+        assert len(log["entries"]) == 1
+        entry = log["entries"][0]
+        assert entry["requestId"] == "req_sfx_confirm_v1"
+        assert entry["seed"] == 77
+        assert log["project"] == "GameRewritten"
+        assert log["scope"] == "session024-tests"
+
+    def test_append_from_result_json_skips_error_records(self, tmp_path):
+        """append_from_result_json() should ignore records with status 'error'."""
+        from audio_engine.integration import ReviewLogWriter
+
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        wav_path = output_dir / "sfx_ok.wav"
+        import wave as wv
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+        result_data = {
+            "output_dir": str(output_dir),
+            "project": "GameRewritten",
+            "scope": "error-filter-test",
+            "records": [
+                {
+                    "request_id": "req_ok",
+                    "asset_id": "sfx_ok",
+                    "type": "sfx",
+                    "seed": 1,
+                    "output_path": str(wav_path),
+                    "status": "ok",
+                    "error": None,
+                    "provenance_path": None,
+                },
+                {
+                    "request_id": "req_err",
+                    "asset_id": "sfx_err",
+                    "type": "sfx",
+                    "seed": 2,
+                    "output_path": str(output_dir / "sfx_err.wav"),
+                    "status": "error",
+                    "error": "something failed",
+                    "provenance_path": None,
+                },
+            ],
+            "total_duration_seconds": 0.1,
+        }
+        result_json_path = tmp_path / "result.json"
+        result_json_path.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+        writer = ReviewLogWriter()
+        log = writer.append_from_result_json(
+            result_json_path=result_json_path,
+            review_log_path=tmp_path / "review_log.json",
+        )
+
+        assert len(log["entries"]) == 1
+        assert log["entries"][0]["requestId"] == "req_ok"
+        assert log["entries"][0]["assetId"] == "sfx_ok"
+        assert log["entries"][0]["seed"] == 1
+        assert Path(log["entries"][0]["generatedOutputPath"]).resolve() == wav_path.resolve()
+
+    def test_append_from_result_json_prefers_provenance_metadata(self, tmp_path):
+        """Provenance sidecars should override conflicting result-record metadata."""
+        from audio_engine.integration import ReviewLogWriter
+        import wave as wv
+
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        wav_path = output_dir / "sfx_from_provenance.wav"
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+
+        provenance = {
+            "provenanceVersion": "1.0.0",
+            "requestId": "req_from_provenance",
+            "assetId": "sfx_from_provenance",
+            "type": "sfx",
+            "seed": 777,
+            "generatedOutputPath": str(wav_path),
+            "targetImportPath": "Content/Audio/sfx_from_provenance.wav",
+            "reviewStatus": "draft",
+        }
+        wav_path.with_name("sfx_from_provenance.provenance.json").write_text(
+            json.dumps(provenance, indent=2), encoding="utf-8"
+        )
+
+        result_data = {
+            "output_dir": str(output_dir),
+            "project": "GameRewritten",
+            "scope": "provenance-precedence-test",
+            "records": [
+                {
+                    "request_id": "req_from_result",
+                    "asset_id": "sfx_from_result",
+                    "type": "sfx",
+                    "seed": 123,
+                    "output_path": str(wav_path),
+                    "status": "ok",
+                    "error": None,
+                    "provenance_path": str(
+                        wav_path.with_name("sfx_from_provenance.provenance.json")
+                    ),
+                }
+            ],
+            "total_duration_seconds": 0.1,
+        }
+        result_json_path = tmp_path / "result.json"
+        result_json_path.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+        writer = ReviewLogWriter()
+        log = writer.append_from_result_json(
+            result_json_path=result_json_path,
+            review_log_path=tmp_path / "review_log.json",
+        )
+
+        assert len(log["entries"]) == 1
+        assert log["entries"][0]["requestId"] == "req_from_provenance"
+        assert log["entries"][0]["assetId"] == "sfx_from_provenance"
+        assert log["entries"][0]["seed"] == 777
+
+    def test_append_from_result_json_include_skipped(self, tmp_path):
+        """append_from_result_json(include_skipped=True) should include skipped records."""
+        from audio_engine.integration import ReviewLogWriter
+        import wave as wv
+
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        ok_wav = output_dir / "sfx_ok.wav"
+        skipped_wav = output_dir / "sfx_skipped.wav"
+        for wav_path in (ok_wav, skipped_wav):
+            with wv.open(str(wav_path), "w") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(44100)
+                wf.writeframes(b"\x00\x00" * 100)
+
+        result_data = {
+            "output_dir": str(output_dir),
+            "project": "GameRewritten",
+            "scope": "include-skipped-test",
+            "records": [
+                {
+                    "request_id": "req_ok",
+                    "asset_id": "sfx_ok",
+                    "type": "sfx",
+                    "seed": 1,
+                    "output_path": str(ok_wav),
+                    "status": "ok",
+                    "error": None,
+                    "provenance_path": None,
+                },
+                {
+                    "request_id": "req_skipped",
+                    "asset_id": "sfx_skipped",
+                    "type": "sfx",
+                    "seed": 2,
+                    "output_path": str(skipped_wav),
+                    "status": "skipped",
+                    "error": None,
+                    "provenance_path": None,
+                },
+            ],
+            "total_duration_seconds": 0.1,
+        }
+        result_json_path = tmp_path / "result.json"
+        result_json_path.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+        writer = ReviewLogWriter()
+        log = writer.append_from_result_json(
+            result_json_path=result_json_path,
+            review_log_path=tmp_path / "review_log.json",
+            include_skipped=True,
+        )
+
+        request_ids = {entry["requestId"] for entry in log["entries"]}
+        assert request_ids == {"req_ok", "req_skipped"}
+
+    def test_append_from_result_json_resolves_relative_output_paths(self, tmp_path):
+        """Relative output paths should resolve from result JSON output directory context."""
+        from audio_engine.integration import ReviewLogWriter
+        import wave as wv
+
+        output_dir = tmp_path / "relative_out"
+        output_dir.mkdir()
+        wav_path = output_dir / "Content" / "Audio" / "sfx_relative.wav"
+        wav_path.parent.mkdir(parents=True, exist_ok=True)
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+
+        result_data = {
+            "output_dir": "relative_out",
+            "project": "GameRewritten",
+            "scope": "relative-path-test",
+            "records": [
+                {
+                    "request_id": "req_relative",
+                    "asset_id": "sfx_relative",
+                    "type": "sfx",
+                    "seed": 99,
+                    "output_path": "relative_out/Content/Audio/sfx_relative.wav",
+                    "status": "ok",
+                    "error": None,
+                    "provenance_path": None,
+                }
+            ],
+            "total_duration_seconds": 0.1,
+        }
+        result_json_path = output_dir / "request_batch_result.json"
+        result_json_path.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+        writer = ReviewLogWriter()
+        cwd_before = Path.cwd()
+        outside_dir = tmp_path / "outside"
+        outside_dir.mkdir(parents=True, exist_ok=True)
+        os.chdir(outside_dir)
+        try:
+            log = writer.append_from_result_json(
+                result_json_path=result_json_path,
+                review_log_path=tmp_path / "review_log.json",
+            )
+        finally:
+            os.chdir(cwd_before)
+
+        assert len(log["entries"]) == 1
+        assert log["entries"][0]["requestId"] == "req_relative"
+        assert Path(log["entries"][0]["generatedOutputPath"]).resolve() == wav_path.resolve()
+
+    def test_append_from_result_json_missing_file_raises(self, tmp_path):
+        """append_from_result_json() must raise FileNotFoundError when result JSON is absent."""
+        from audio_engine.integration import ReviewLogWriter
+
+        writer = ReviewLogWriter()
+        with pytest.raises(FileNotFoundError):
+            writer.append_from_result_json(
+                result_json_path=tmp_path / "nonexistent.json",
+                review_log_path=tmp_path / "review_log.json",
+            )
 
 
 class TestApprovalWorkflow:

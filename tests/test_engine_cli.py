@@ -481,6 +481,168 @@ def test_cli_write_review_log_smoke(tmp_path, capsys):
     assert len(data["entries"]) > 0
 
 
+def test_cli_write_review_log_from_result(tmp_path):
+    """write-review-log --from-result should source entries from request_batch_result.json."""
+    import json
+    import wave as wv
+
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    wav_path = output_dir / "sfx_from_result.wav"
+    with wv.open(str(wav_path), "w") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(44100)
+        wf.writeframes(b"\x00\x00" * 100)
+
+    result_data = {
+        "output_dir": str(output_dir),
+        "project": "GameRewritten",
+        "scope": "from-result-tests",
+        "records": [
+            {
+                "request_id": "req_sfx_from_result_v1",
+                "asset_id": "sfx_from_result",
+                "type": "sfx",
+                "seed": 55,
+                "output_path": str(wav_path),
+                "status": "ok",
+                "error": None,
+                "provenance_path": None,
+            }
+        ],
+        "total_duration_seconds": 0.1,
+    }
+    result_json = tmp_path / "request_batch_result.json"
+    result_json.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+    review_log = tmp_path / "review_log.json"
+    rc = main([
+        "write-review-log",
+        "--factory-root", str(tmp_path),
+        "--review-log", str(review_log),
+        "--from-result", str(result_json),
+        "--quiet",
+    ])
+    assert rc == 0
+    data = json.loads(review_log.read_text())
+    assert len(data["entries"]) == 1
+    assert data["project"] == "GameRewritten"
+
+
+def test_cli_write_review_log_from_result_honors_project_scope_override(tmp_path):
+    """--project/--scope should override result-json values on --from-result flow."""
+    import json
+    import wave as wv
+
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    wav_path = output_dir / "sfx_override.wav"
+    with wv.open(str(wav_path), "w") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(44100)
+        wf.writeframes(b"\x00\x00" * 100)
+
+    result_data = {
+        "output_dir": str(output_dir),
+        "project": "OriginalProject",
+        "scope": "original-scope",
+        "records": [
+            {
+                "request_id": "req_override",
+                "asset_id": "sfx_override",
+                "type": "sfx",
+                "seed": 56,
+                "output_path": str(wav_path),
+                "status": "ok",
+                "error": None,
+                "provenance_path": None,
+            }
+        ],
+        "total_duration_seconds": 0.1,
+    }
+    result_json = tmp_path / "request_batch_result.json"
+    result_json.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+    review_log = tmp_path / "review_log.json"
+    rc = main([
+        "write-review-log",
+        "--factory-root", str(tmp_path),
+        "--review-log", str(review_log),
+        "--from-result", str(result_json),
+        "--project", "GameRewritten",
+        "--scope", "override-tests",
+        "--quiet",
+    ])
+    assert rc == 0
+    data = json.loads(review_log.read_text())
+    assert data["project"] == "GameRewritten"
+    assert data["scope"] == "override-tests"
+
+
+def test_cli_write_review_log_from_result_include_skipped(tmp_path):
+    """--include-skipped should include skipped records from result JSON."""
+    import json
+    import wave as wv
+
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    ok_path = output_dir / "sfx_ok.wav"
+    skipped_path = output_dir / "sfx_skipped.wav"
+    for wav_path in (ok_path, skipped_path):
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+
+    result_data = {
+        "output_dir": str(output_dir),
+        "project": "GameRewritten",
+        "scope": "from-result-tests",
+        "records": [
+            {
+                "request_id": "req_ok",
+                "asset_id": "sfx_ok",
+                "type": "sfx",
+                "seed": 55,
+                "output_path": str(ok_path),
+                "status": "ok",
+                "error": None,
+                "provenance_path": None,
+            },
+            {
+                "request_id": "req_skipped",
+                "asset_id": "sfx_skipped",
+                "type": "sfx",
+                "seed": 56,
+                "output_path": str(skipped_path),
+                "status": "skipped",
+                "error": None,
+                "provenance_path": None,
+            },
+        ],
+        "total_duration_seconds": 0.1,
+    }
+    result_json = tmp_path / "request_batch_result.json"
+    result_json.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+    review_log = tmp_path / "review_log.json"
+    rc = main([
+        "write-review-log",
+        "--factory-root", str(tmp_path),
+        "--review-log", str(review_log),
+        "--from-result", str(result_json),
+        "--include-skipped",
+        "--quiet",
+    ])
+    assert rc == 0
+    data = json.loads(review_log.read_text())
+    request_ids = {entry["requestId"] for entry in data["entries"]}
+    assert request_ids == {"req_ok", "req_skipped"}
+
+
 def test_cli_approve_draft_with_review_log(tmp_path, capsys):
     """approve-draft should optionally update a review log."""
     import json
@@ -565,6 +727,35 @@ def test_cli_generate_request_batch_writes_result_json(tmp_path, capsys):
     data = json.loads(result_json.read_text())
     assert data["project"] == "GameRewritten"
     assert "records" in data
+
+
+def test_cli_generate_request_batch_write_provenance_creates_sidecars(tmp_path):
+    """--write-provenance should create .provenance.json sidecars for every generated file."""
+    rc = main([
+        "generate-request-batch",
+        "--request-file", str(_FIXTURE_DIR / "generation_requests.sfx.v1.json"),
+        "--output-dir", str(tmp_path),
+        "--sfx-duration", "0.1",
+        "--write-provenance",
+        "--quiet",
+    ])
+    assert rc == 0
+    prov_files = list(tmp_path.rglob("*.provenance.json"))
+    assert prov_files, "No provenance sidecars written by --write-provenance"
+
+
+def test_cli_generate_request_batch_no_provenance_by_default(tmp_path):
+    """Without --write-provenance, no .provenance.json sidecars should be created."""
+    rc = main([
+        "generate-request-batch",
+        "--request-file", str(_FIXTURE_DIR / "generation_requests.sfx.v1.json"),
+        "--output-dir", str(tmp_path),
+        "--sfx-duration", "0.1",
+        "--quiet",
+    ])
+    assert rc == 0
+    prov_files = list(tmp_path.rglob("*.provenance.json"))
+    assert not prov_files, f"Unexpected provenance sidecars: {prov_files}"
 
 
 def test_cli_generate_request_batch_request_file_honors_request_duration_seconds(

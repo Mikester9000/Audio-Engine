@@ -1,12 +1,12 @@
 {
-  "version": "1.5.0",
+  "version": "1.6.0",
   "lastUpdated": "2026-05-16",
   "currentSession": {
-    "id": "SESSION-023",
-    "title": "Add optional provenance sidecars for legacy request-file execution path",
+    "id": "SESSION-025",
+    "title": "Define and queue the next executable implementation session",
     "status": "ready",
-    "taskType": "provenance + cli",
-    "objective": "Allow backward-compatible generate-request-batch --request-file runs to optionally emit machine-readable provenance sidecars aligned with request metadata while preserving legacy output layout/default behavior.",
+    "taskType": "docs_only",
+    "objective": "Refresh continuity/session-control docs to reflect SESSION-023/024 completion and define the next concrete executable implementation task.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",
@@ -15,22 +15,18 @@
       "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
       "docs/AI_FACTORY/NEXT_PR_SEQUENCE.md",
       "docs/AI_FACTORY/NO_DECISION_ZONES.md",
-      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
-      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md"
+      "docs/AI_FACTORY/SESSION_STATE.json",
+      "docs/AI_FACTORY/SESSION_HISTORY.md"
     ],
     "likelyModify": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/CURRENT_SESSION.json",
       "docs/AI_FACTORY/SESSION_STATE.json",
+      "docs/AI_FACTORY/SESSION_HISTORY.md",
       "docs/AI_FACTORY/ACTIVE_WORK.md",
       "docs/AI_FACTORY/HANDOFF.md",
       "docs/AI_FACTORY/CURRENT_STATE.md",
-      "audio_engine/cli.py",
-      "audio_engine/integration/asset_pipeline.py",
-      "tests/test_integration.py",
-      "tests/test_engine_cli.py",
-      "docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md",
-      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md"
+      "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md"
     ]
   }
 }

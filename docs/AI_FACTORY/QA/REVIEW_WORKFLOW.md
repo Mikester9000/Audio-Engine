@@ -73,6 +73,26 @@ These fields now have executable writing paths:
 
 Existing per-asset approval/export behavior remains unchanged unless those additive flags are provided.
 
+## Result-JSON sourced review-log workflow (SESSION-024)
+
+For backward-compatible legacy request-file runs, review-log entries can be generated directly from the batch result JSON:
+
+```bash
+audio-engine generate-request-batch \
+  --request-file generation_requests.sfx.v1.json \
+  --output-dir /tmp/out \
+  --write-result \
+  --write-provenance
+
+audio-engine write-review-log \
+  --factory-root /tmp/out \
+  --review-log /tmp/out/review_log.json \
+  --from-result /tmp/out/request_batch_result.json
+```
+
+- `--include-skipped` includes previously generated files recorded as `skipped`.
+- `--project` and `--scope` remain available as explicit overrides on this path.
+
 ## Rule
 
 If an asset is not `approved`, it should not be treated as final downstream content even if it is technically usable.
