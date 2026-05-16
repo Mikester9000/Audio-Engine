@@ -4,24 +4,26 @@
 
 ## Last completed change
 
-SESSION-013 + SESSION-014: Added docs-only quality-contract updates for SFX QA consistency: category-specific loudness/readability guidance aligned with existing `qa`/`qa-batch` outputs, plus variant-family review/report template updates in workflow guidance and committed review-log example artifacts.
+SESSION-015 + SESSION-016: Added executable machine-readable review-log writing and integrated it as an additive handoff path for `approve-draft` and `export-drafts`.
 
 ## Verified in this session
 
 ```bash
-python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json
+python -m pytest tests/test_integration.py tests/test_engine_cli.py
+python -m pytest
+python tools/validate-assets.py assets/examples/ --verbose
 python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
 python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 ```
 
 Observed result:
-- edited review-log/session JSON files parse successfully
-- docs-only consistency review completed across SFX/QA/review/schema continuity docs
-- SESSION-013 and SESSION-014 completed and queue advanced to SESSION-015
+- targeted review-log integration tests passed (`160` tests across integration + CLI files)
+- full repo test suite passed (`404`) and asset-manifest validation passed
+- SESSION-015 and SESSION-016 completed; queue advanced to SESSION-017 planning step
 
 ## Immediate next best task
 
-Execute `SESSION-015` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add a machine-readable review-log writer aligned with provenance and existing QA/report surfaces.
+Execute `SESSION-017` from `docs/AI_FACTORY/SESSION_QUEUE.md`: define and queue the next executable implementation session after review-log integration.
 
 ## Files future agents should read first
 
@@ -49,3 +51,5 @@ Execute `SESSION-015` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add a machine-rea
 - [x] Repeated-SFX variation validation + provenance metadata in code (SESSION-012)
 - [x] Category-specific SFX loudness/readability guidance (SESSION-013, docs-only)
 - [x] Variant-family review/report template updates (SESSION-014, docs-only)
+- [x] Machine-readable review-log writer (`ReviewLogWriter` + `write-review-log`, SESSION-015)
+- [x] Review-log handoff integration for approval/export (`approve-draft`/`export-drafts` flags, SESSION-016)

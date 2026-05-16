@@ -74,7 +74,17 @@ from audio_engine.integration.game_state_map import (
 if TYPE_CHECKING:
     from audio_engine.integration.factory_inputs import AudioPlan, GenerationRequest, GenerationRequestBatch
 
-__all__ = ["ApprovalWorkflow", "AssetPipeline", "GenerationManifest", "RequestBatchPipeline", "PlanBatchOrchestrator", "DraftExportPipeline", "RequestBatchRecord", "RequestBatchResult"]
+__all__ = [
+    "ApprovalWorkflow",
+    "AssetPipeline",
+    "GenerationManifest",
+    "RequestBatchPipeline",
+    "PlanBatchOrchestrator",
+    "DraftExportPipeline",
+    "RequestBatchRecord",
+    "RequestBatchResult",
+    "ReviewLogWriter",
+]
 
 _SUPPORTED_REQUEST_FORMATS = frozenset({"wav", "ogg"})
 
@@ -235,6 +245,234 @@ class RequestBatchResult:
             },
             indent=2,
         )
+
+
+# ---------------------------------------------------------------------------
+# ReviewLogWriter
+# ---------------------------------------------------------------------------
+
+class ReviewLogWriter:
+    """Write machine-readable review logs aligned with provenance and QA surfaces."""
+
+    def __init__(
+        self,
+        progress_callback: Callable[[str], None] | None = None,
+    ) -> None:
+        self.progress_callback = progress_callback or (lambda msg: None)
+
+    def write_entries(
+        self,
+        review_log_path: str | Path,
+        project: str | None,
+        scope: str | None,
+        entries: list[dict],
+        variation_family_decisions: list[dict] | None = None,
+    ) -> dict:
+        """Write (or update) a review log with deterministic upsert behavior."""
+        review_log_path = Path(review_log_path)
+        log = self._load_or_init(review_log_path, project=project, scope=scope)
+
+        existing_entries: dict[str, dict] = {}
+        for entry in log.get("entries", []):
+            key = str(entry.get("assetId") or entry.get("requestId") or "")
+            if key:
+                existing_entries[key] = entry
+        for entry in entries:
+            key = str(entry.get("assetId") or entry.get("requestId") or "")
+            if key:
+                existing_entries[key] = entry
+        log["entries"] = sorted(
+            existing_entries.values(),
+            key=lambda item: (
+                str(item.get("assetId", "")),
+                str(item.get("requestId", "")),
+            ),
+        )
+
+        if variation_family_decisions:
+            existing_decisions: dict[str, dict] = {}
+            for decision in log.get("variationFamilyDecisions", []):
+                family = str(decision.get("variationFamily") or "")
+                if family:
+                    existing_decisions[family] = decision
+            for decision in variation_family_decisions:
+                family = str(decision.get("variationFamily") or "")
+                if family:
+                    existing_decisions[family] = decision
+            log["variationFamilyDecisions"] = sorted(
+                existing_decisions.values(),
+                key=lambda item: str(item.get("variationFamily", "")),
+            )
+
+        review_log_path.parent.mkdir(parents=True, exist_ok=True)
+        review_log_path.write_text(json.dumps(log, indent=2), encoding="utf-8")
+        self.progress_callback(f"review log written → {review_log_path}")
+        return log
+
+    def append_from_audio_files(
+        self,
+        factory_root: str | Path,
+        audio_paths: list[str | Path],
+        review_log_path: str | Path,
+        *,
+        project: str | None = None,
+        scope: str | None = None,
+        reviewer: str = "unspecified",
+        qa_report_path: str | Path | None = None,
+        notes: list[str] | None = None,
+        reviewed_at: str | None = None,
+        variation_family_decisions: list[dict] | None = None,
+    ) -> dict:
+        """Build review-log entries from audio files + provenance sidecars."""
+        import datetime
+
+        factory_root = Path(factory_root).resolve()
+        normalized_notes = list(notes or [])
+        reviewed_at = reviewed_at or datetime.datetime.now(
+            datetime.timezone.utc
+        ).isoformat()
+        qa_snapshots = self._load_qa_snapshots(
+            qa_report_path=qa_report_path,
+            factory_root=factory_root,
+        )
+
+        entries: list[dict] = []
+        for audio_path_value in audio_paths:
+            audio_path = Path(audio_path_value).resolve()
+            if not audio_path.exists():
+                raise FileNotFoundError(f"audio file not found for review log: {audio_path}")
+
+            prov_path = audio_path.with_name(audio_path.stem + ".provenance.json")
+            if prov_path.exists():
+                provenance: dict = json.loads(prov_path.read_text(encoding="utf-8"))
+            else:
+                provenance = {
+                    "requestId": audio_path.stem,
+                    "assetId": audio_path.stem,
+                    "type": audio_path.parent.name,
+                    "seed": None,
+                    "generatedOutputPath": str(audio_path),
+                    "targetImportPath": f"Content/Audio/{audio_path.name}",
+                    "reviewStatus": "draft",
+                }
+
+            entry: dict = {
+                "assetId": provenance.get("assetId", audio_path.stem),
+                "requestId": provenance.get("requestId", audio_path.stem),
+                "seed": provenance.get("seed"),
+                "generatedOutputPath": provenance.get("generatedOutputPath", str(audio_path)),
+                "targetImportPath": provenance.get(
+                    "targetImportPath",
+                    f"Content/Audio/{audio_path.name}",
+                ),
+                "reviewStatus": provenance.get("reviewStatus", "draft"),
+                "reviewer": reviewer,
+                "reviewedAt": reviewed_at,
+                "notes": list(normalized_notes),
+            }
+
+            if "variationFamily" in provenance:
+                entry["variationFamily"] = provenance["variationFamily"]
+            if "variationIndex" in provenance:
+                entry["variationIndex"] = provenance["variationIndex"]
+
+            qa_snapshot = qa_snapshots.get(str(audio_path))
+            if qa_snapshot is None:
+                try:
+                    rel_audio = audio_path.relative_to(factory_root)
+                    qa_snapshot = (
+                        qa_snapshots.get(str(rel_audio))
+                        or qa_snapshots.get(rel_audio.as_posix())
+                    )
+                except ValueError:
+                    qa_snapshot = None
+            if qa_snapshot:
+                entry["qaSnapshot"] = qa_snapshot
+
+            entries.append(entry)
+
+        return self.write_entries(
+            review_log_path=review_log_path,
+            project=project,
+            scope=scope,
+            entries=entries,
+            variation_family_decisions=variation_family_decisions,
+        )
+
+    def _load_or_init(
+        self,
+        review_log_path: Path,
+        *,
+        project: str | None,
+        scope: str | None,
+    ) -> dict:
+        if review_log_path.exists():
+            data = json.loads(review_log_path.read_text(encoding="utf-8"))
+        else:
+            data = {
+                "reviewLogVersion": "1.1.0",
+                "project": project or "unknown",
+                "scope": scope or "unknown",
+                "entries": [],
+                "variationFamilyDecisions": [],
+            }
+
+        if project:
+            data["project"] = project
+        elif "project" not in data:
+            data["project"] = "unknown"
+
+        if scope:
+            data["scope"] = scope
+        elif "scope" not in data:
+            data["scope"] = "unknown"
+
+        if "reviewLogVersion" not in data:
+            data["reviewLogVersion"] = "1.1.0"
+        if "entries" not in data or not isinstance(data["entries"], list):
+            data["entries"] = []
+        if (
+            "variationFamilyDecisions" not in data
+            or not isinstance(data["variationFamilyDecisions"], list)
+        ):
+            data["variationFamilyDecisions"] = []
+        return data
+
+    @staticmethod
+    def _load_qa_snapshots(
+        *,
+        qa_report_path: str | Path | None,
+        factory_root: Path,
+    ) -> dict[str, dict]:
+        if qa_report_path is None:
+            return {}
+        qa_report_path = Path(qa_report_path)
+        data = json.loads(qa_report_path.read_text(encoding="utf-8"))
+        snapshots: dict[str, dict] = {}
+        for result in data.get("results", []):
+            raw_path = result.get("file")
+            if not raw_path:
+                continue
+            checks = result.get("checks", {})
+            snapshot = {
+                "loudnessLufs": checks.get("loudness_lufs"),
+                "truePeakDbfs": checks.get("true_peak_dbfs"),
+                "loudnessOk": checks.get("loudness_ok"),
+                "peakOk": checks.get("peak_ok"),
+                "clippingOk": checks.get("clipping_ok"),
+            }
+            if "loop_ok" in checks:
+                snapshot["loopOk"] = checks.get("loop_ok")
+            raw = Path(raw_path)
+            snapshots[str(raw)] = snapshot
+            snapshots[raw.as_posix()] = snapshot
+
+            if raw.is_absolute():
+                snapshots[str(raw.resolve())] = snapshot
+            else:
+                snapshots[str((factory_root / raw).resolve())] = snapshot
+                snapshots[str((qa_report_path.parent / raw).resolve())] = snapshot
+        return snapshots
 
 
 # ---------------------------------------------------------------------------
@@ -1188,7 +1426,17 @@ class DraftExportPipeline:
     ) -> None:
         self.progress_callback = progress_callback or (lambda msg: None)
 
-    def export(self, factory_root: str | Path) -> dict:
+    def export(
+        self,
+        factory_root: str | Path,
+        *,
+        review_log_path: str | Path | None = None,
+        reviewer: str = "unspecified",
+        qa_report_path: str | Path | None = None,
+        project: str | None = None,
+        scope: str | None = None,
+        review_notes: list[str] | None = None,
+    ) -> dict:
         """Copy all draft audio files to the GameRewritten export surface.
 
         Parameters
@@ -1250,6 +1498,19 @@ class DraftExportPipeline:
         manifest_path = export_root / "export_manifest.json"
         manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
         self.progress_callback(f"export manifest written → {manifest_path}")
+
+        if review_log_path is not None:
+            review_writer = ReviewLogWriter(progress_callback=self.progress_callback)
+            review_writer.append_from_audio_files(
+                factory_root=factory_root,
+                audio_paths=[entry["source"] for entry in entries],
+                review_log_path=review_log_path,
+                reviewer=reviewer,
+                qa_report_path=qa_report_path,
+                project=project,
+                scope=scope,
+                notes=review_notes or ["Included in export-drafts handoff."],
+            )
 
         return manifest
 
@@ -1454,6 +1715,13 @@ class ApprovalWorkflow:
         self,
         factory_root: str | Path,
         draft_paths: list[str | Path],
+        *,
+        review_log_path: str | Path | None = None,
+        reviewer: str = "unspecified",
+        qa_report_path: str | Path | None = None,
+        project: str | None = None,
+        scope: str | None = None,
+        review_notes: list[str] | None = None,
     ) -> list[dict]:
         """Approve multiple draft assets in a single call.
 
@@ -1484,4 +1752,22 @@ class ApprovalWorkflow:
                     "status": "error",
                     "error": str(exc),
                 })
+        if review_log_path is not None:
+            approved_paths = [
+                record["approvedPath"]
+                for record in records
+                if record.get("status") == "ok" and record.get("approvedPath")
+            ]
+            if approved_paths:
+                review_writer = ReviewLogWriter(progress_callback=self.progress_callback)
+                review_writer.append_from_audio_files(
+                    factory_root=factory_root,
+                    audio_paths=approved_paths,
+                    review_log_path=review_log_path,
+                    reviewer=reviewer,
+                    qa_report_path=qa_report_path,
+                    project=project,
+                    scope=scope,
+                    notes=review_notes or ["Approved via approval workflow."],
+                )
         return records

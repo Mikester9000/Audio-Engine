@@ -430,6 +430,96 @@ def test_cli_export_drafts_smoke(tmp_path, capsys):
     assert len(exported_wavs) > 0, "No WAV files exported"
 
 
+def test_cli_write_review_log_subcommand_registered(capsys):
+    """write-review-log should be registered in the CLI parser."""
+    import argparse
+
+    parser = build_parser()
+    subparsers_actions = [
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    ]
+    assert subparsers_actions
+    assert "write-review-log" in subparsers_actions[0].choices
+
+
+def test_cli_review_log_reviewer_default_is_unspecified():
+    """Review-log related commands should default reviewer to 'unspecified'."""
+    parser = build_parser()
+    assert parser.parse_args(["approve-draft", "--factory-root", "x", "--draft-file", "y.wav"]).reviewer == "unspecified"
+    assert parser.parse_args(["export-drafts", "--output-dir", "x"]).reviewer == "unspecified"
+    assert parser.parse_args(["write-review-log", "--factory-root", "x", "--review-log", "y.json"]).reviewer == "unspecified"
+
+
+def test_cli_write_review_log_smoke(tmp_path, capsys):
+    """write-review-log should generate a machine-readable review log for drafts."""
+    import json
+
+    batch_file = str(_FIXTURE_DIR / "generation_requests.sfx.v1.json")
+    rc_gen = main([
+        "generate-request-batch",
+        "--batch-file", batch_file,
+        "--output-dir", str(tmp_path),
+        "--quiet",
+    ])
+    assert rc_gen == 0
+
+    review_log = tmp_path / "review_log.json"
+    rc_log = main([
+        "write-review-log",
+        "--factory-root", str(tmp_path),
+        "--review-log", str(review_log),
+        "--audio-dir", str(tmp_path / "drafts" / "sfx"),
+        "--project", "GameRewritten",
+        "--scope", "tests",
+        "--quiet",
+    ])
+    assert rc_log == 0
+    assert review_log.exists()
+    data = json.loads(review_log.read_text())
+    assert data["project"] == "GameRewritten"
+    assert len(data["entries"]) > 0
+
+
+def test_cli_approve_draft_with_review_log(tmp_path, capsys):
+    """approve-draft should optionally update a review log."""
+    import json
+    import wave as wv
+
+    drafts_sfx = tmp_path / "drafts" / "sfx"
+    drafts_sfx.mkdir(parents=True, exist_ok=True)
+    wav_path = drafts_sfx / "req_cli_review.wav"
+    with wv.open(str(wav_path), "w") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(44100)
+        wf.writeframes(b"\x00\x00" * 100)
+    prov = {
+        "provenanceVersion": "1.0.0",
+        "requestId": "req_cli_review",
+        "assetId": "sfx_cli_review",
+        "type": "sfx",
+        "reviewStatus": "draft",
+        "generatedOutputPath": str(wav_path),
+        "targetImportPath": "Content/Audio/req_cli_review.wav",
+    }
+    wav_path.with_name(wav_path.stem + ".provenance.json").write_text(
+        json.dumps(prov, indent=2), encoding="utf-8"
+    )
+
+    review_log = tmp_path / "review_log.json"
+    rc = main([
+        "approve-draft",
+        "--factory-root", str(tmp_path),
+        "--draft-file", str(wav_path),
+        "--review-log", str(review_log),
+        "--project", "GameRewritten",
+        "--scope", "tests",
+    ])
+    assert rc == 0
+    data = json.loads(review_log.read_text())
+    assert len(data["entries"]) == 1
+    assert data["entries"][0]["reviewStatus"] == "approved"
+
 def test_cli_generate_request_batch_sfx_via_request_file(tmp_path, capsys):
     """generate-request-batch should return 0 and create output files for the SFX fixture."""
     rc = main([

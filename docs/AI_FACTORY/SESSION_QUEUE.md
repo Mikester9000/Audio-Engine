@@ -87,12 +87,23 @@
 - Updated review workflow guidance and committed review-log example template for variant-family QA decisions.
 - Added explicit family-level decision tracking guidance while preserving truthful docs-contract boundaries.
 
+### SESSION-015 — Add machine-readable review-log writer for QA decisions
+- **Status:** `completed`
+- **Task type:** `provenance`
+- Added executable `ReviewLogWriter` path and `write-review-log` CLI command that writes stable machine-readable review logs from provenance sidecars.
+- Added optional QA snapshot alignment from `qa-batch` JSON report fields and optional `variationFamilyDecisions` ingestion.
+
+### SESSION-016 — Integrate review-log output with approval/export handoff flow
+- **Status:** `completed`
+- **Task type:** `integration_export + provenance`
+- Added additive review-log integration flags to `approve-draft` and `export-drafts`.
+- Approval/export flows can now update review-log entries without changing default behavior when flags are omitted.
+
 ## Current next session
 
-### SESSION-015 — Add machine-readable review-log writer for QA decisions
+### SESSION-017 — Define the next executable implementation session
 
 - **Status:** `ready`
-- **Task type:** `provenance`
-- **Objective:** Add an executable review-log writing path that captures per-asset review outcomes and variant-family decisions in a stable machine-readable file aligned with existing provenance and QA report surfaces.
-- **Enqueue next session after completion:** `SESSION-016 — Integrate review-log output with approval/export handoff flow`
-- **Notes:** Preserve existing `qa`, `qa-batch`, and `approve-draft` behavior; add review-log writing as an additive compatibility path.
+- **Task type:** `docs_only`
+- **Objective:** Refresh queue priority and define the next concrete executable implementation session after SESSION-015/016 completion.
+- **Notes:** Keep continuity docs synchronized and avoid inventing unverified downstream contracts.

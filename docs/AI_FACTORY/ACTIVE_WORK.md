@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline with both request-driven and plan-driven execution: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. SESSION-013 and SESSION-014 are now complete as docs-only quality-contract updates: category-specific SFX/ambience loudness-readability targets are documented and review/report templates now include variant-family QA decision guidance. The next executable session is `SESSION-015` in `docs/AI_FACTORY/SESSION_QUEUE.md`: add machine-readable review-log writing support.
+The repository now has a complete draft-to-approved pipeline with both request-driven and plan-driven execution: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. SESSION-015 and SESSION-016 are now complete: machine-readable review-log writing is executable and can be integrated directly during approval/export handoff. The next executable work item is queue refresh/planning for `SESSION-017`.
 
 ## Now
 
@@ -31,14 +31,14 @@ The repository now has a complete draft-to-approved pipeline with both request-d
 - [x] Execute `SESSION-012` — implement repeated-SFX variation validation and provenance metadata
 - [x] Execute `SESSION-013` — define category-specific SFX loudness/readability targets
 - [x] Execute `SESSION-014` — add review/report template updates for variant-family QA decisions
-- [ ] Execute `SESSION-015` — add machine-readable review-log writer for QA decisions
+- [x] Execute `SESSION-015` — add machine-readable review-log writer for QA decisions
+- [x] Execute `SESSION-016` — integrate review-log output with approval/export handoff flow
+- [ ] Execute `SESSION-017` — define next implementation session after review-log integration
 
 ## Recommended next PRs
 
-1. **Add machine-readable review-log writer for QA decisions (SESSION-015)**
-   - Capture per-asset and variant-family review outcomes in a stable executable output path.
-2. **Integrate review-log output with approval/export handoff flow (SESSION-016)**
-   - Keep review decisions mechanically linked to downstream approval/export operations.
+1. **Define and queue next executable session (SESSION-017)**
+   - Refresh queue order against current implementation state and roadmap.
 
 ## Do not deprioritize
 

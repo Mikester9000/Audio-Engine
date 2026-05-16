@@ -206,3 +206,22 @@
   - `python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json` → PASS
   - `python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json` → PASS
   - `python -m json.tool docs/AI_FACTORY/SESSION_STATE.json` → PASS
+
+## 2026-05-15 — Complete SESSION-015 + SESSION-016 (executable review-log writer + handoff integration)
+
+- Added `ReviewLogWriter` to `audio_engine/integration/asset_pipeline.py` for stable machine-readable review-log writing/upsert behavior.
+- Added `audio-engine write-review-log` CLI command to build review-log entries from audio files and provenance sidecars.
+- Added optional QA snapshot mapping from `qa-batch` report JSON fields into review-log `qaSnapshot`.
+- Added optional `variationFamilyDecisions` ingestion on review-log writes.
+- Integrated review-log updates into handoff paths:
+  - `approve-draft --review-log ...`
+  - `export-drafts --review-log ...`
+- Kept all approval/export behavior additive and backward compatible when review-log flags are not supplied.
+- Added tests in `tests/test_integration.py` and `tests/test_engine_cli.py` for:
+  - review-log writer output alignment with provenance + QA report fields
+  - approval/export review-log integration
+  - new CLI command and flags
+- Verification:
+  - `python -m pytest tests/test_integration.py tests/test_engine_cli.py` → 160 passed
+  - `python -m pytest` → 404 passed
+  - `python tools/validate-assets.py assets/examples/ --verbose` → PASS

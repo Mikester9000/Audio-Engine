@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, and review logs now have an executable writer path integrated with approval/export handoff.
 
 ## What is implemented today
 
@@ -41,21 +41,22 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Repeated SFX variation strategy guidance | Implemented (factory-side) | `audio_engine/integration/factory_inputs.py` (variant-family validation), `audio_engine/integration/asset_pipeline.py` (variant provenance fields) |
 | Category-specific SFX loudness/readability guidance | Implemented (docs) | `docs/AI_FACTORY/SUBSYSTEMS/SFX.md`, `docs/AI_FACTORY/QA/QUALITY_BARS.md` |
 | Variant-family QA review/report templates | Implemented (docs-contract) | `docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md`, `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json` |
+| Machine-readable review-log writer + handoff integration | Implemented | `audio_engine/integration/asset_pipeline.py` (`ReviewLogWriter`), `audio_engine/cli.py` (`write-review-log`, review-log flags on `approve-draft`/`export-drafts`) |
 | Automated test suite | Implemented | `tests/` |
 
 ### Commands verified in this session
 
 ```bash
-python -m json.tool docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json
-python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
-python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
+python -m pytest tests/test_integration.py tests/test_engine_cli.py
+python -m pytest
+python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result in this session:
 
-- docs-only consistency review completed across SFX/QA/schema/review workflow/session continuity surfaces
-- edited machine-readable JSON files parse cleanly (`review_log.example.v1.json`, `CURRENT_SESSION.json`, `SESSION_STATE.json`)
-- SESSION-013 and SESSION-014 objectives completed as docs-only contract updates
+- review-log writer path is executable (`write-review-log`) and aligns entries with provenance + optional `qa-batch` report data
+- `approve-draft` and `export-drafts` can now update review logs as additive handoff integration
+- test suite passed (`404`) and targeted integration/CLI review-log tests passed
 
 ## Current repository structure
 
@@ -102,4 +103,4 @@ None blocking the next session.
 
 ## Immediate interpretation
 
-This repo now has a complete draft-to-approved pipeline with both request-driven and plan-driven entrypoints: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery includes executable backend evaluation metadata, repeated-SFX variation strategy has executable request-validation and provenance tracking support, and docs now define category-specific SFX/ambience loudness-readability guidance plus variant-family review/report templates for consistent manual QA decisions.
+This repo now has a complete draft-to-approved pipeline with both request-driven and plan-driven entrypoints: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery includes executable backend evaluation metadata, repeated-SFX variation strategy has executable request-validation and provenance tracking support, and review logs now have executable generation/update surfaces (`write-review-log`, plus optional integration into approval/export commands) aligned with provenance and QA report fields.
