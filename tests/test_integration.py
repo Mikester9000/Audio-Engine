@@ -2374,6 +2374,69 @@ class TestReviewLogWriter:
         assert log["entries"][0]["requestId"] == "req_ok"
         assert log["entries"][0]["assetId"] == "sfx_ok"
         assert log["entries"][0]["seed"] == 1
+        assert Path(log["entries"][0]["generatedOutputPath"]).resolve() == wav_path.resolve()
+
+    def test_append_from_result_json_prefers_provenance_metadata(self, tmp_path):
+        """Provenance sidecars should override conflicting result-record metadata."""
+        from audio_engine.integration import ReviewLogWriter
+        import wave as wv
+
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        wav_path = output_dir / "sfx_from_provenance.wav"
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+
+        provenance = {
+            "provenanceVersion": "1.0.0",
+            "requestId": "req_from_provenance",
+            "assetId": "sfx_from_provenance",
+            "type": "sfx",
+            "seed": 777,
+            "generatedOutputPath": str(wav_path),
+            "targetImportPath": "Content/Audio/sfx_from_provenance.wav",
+            "reviewStatus": "draft",
+        }
+        wav_path.with_name("sfx_from_provenance.provenance.json").write_text(
+            json.dumps(provenance, indent=2), encoding="utf-8"
+        )
+
+        result_data = {
+            "output_dir": str(output_dir),
+            "project": "GameRewritten",
+            "scope": "provenance-precedence-test",
+            "records": [
+                {
+                    "request_id": "req_from_result",
+                    "asset_id": "sfx_from_result",
+                    "type": "sfx",
+                    "seed": 123,
+                    "output_path": str(wav_path),
+                    "status": "ok",
+                    "error": None,
+                    "provenance_path": str(
+                        wav_path.with_name("sfx_from_provenance.provenance.json")
+                    ),
+                }
+            ],
+            "total_duration_seconds": 0.1,
+        }
+        result_json_path = tmp_path / "result.json"
+        result_json_path.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+        writer = ReviewLogWriter()
+        log = writer.append_from_result_json(
+            result_json_path=result_json_path,
+            review_log_path=tmp_path / "review_log.json",
+        )
+
+        assert len(log["entries"]) == 1
+        assert log["entries"][0]["requestId"] == "req_from_provenance"
+        assert log["entries"][0]["assetId"] == "sfx_from_provenance"
+        assert log["entries"][0]["seed"] == 777
 
     def test_append_from_result_json_include_skipped(self, tmp_path):
         """append_from_result_json(include_skipped=True) should include skipped records."""
