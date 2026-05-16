@@ -28,3 +28,5 @@
 | `SESSION-018` | 2026-05-16 | completed | Implemented plan-target duration enforcement by forwarding `durationTargetSeconds` to request execution as per-request duration overrides; added targeted integration tests. | this PR |
 | `SESSION-019` | 2026-05-16 | completed | Added additive optional request-level `durationSeconds` parsing and direct request-batch duration behavior in `RequestBatchPipeline`, with plan-driven overrides preserved as higher priority. | this PR |
 | `SESSION-020` | 2026-05-16 | completed | Advanced continuity/session-control docs after SESSION-019 and queued SESSION-021 as the next executable implementation task. | this PR |
+| `SESSION-021` | 2026-05-16 | completed | Legacy `generate-request-batch --request-file` / `AssetPipeline.execute_request_batch` now honors request-level `durationSeconds` for music/SFX while keeping CLI duration flags as fallback defaults. | this PR |
+| `SESSION-022` | 2026-05-16 | completed | Refreshed continuity/session-control docs after SESSION-021 and queued SESSION-023 as the next executable implementation task. | this PR |

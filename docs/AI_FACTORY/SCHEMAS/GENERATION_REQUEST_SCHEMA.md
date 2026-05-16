@@ -56,7 +56,10 @@ Committed examples:
 ## Optional request-level duration field (SESSION-019)
 
 - `durationSeconds` is an additive optional numeric field on each request.
-- When present on `music` or `sfx` requests, direct request-batch execution (`generate-request-batch --batch-file`, `RequestBatchPipeline`) uses it as the explicit generation duration.
+- When present on `music` or `sfx` requests, both request-batch execution entrypoints use it as the explicit generation duration:
+  - `generate-request-batch --batch-file` / `RequestBatchPipeline`
+  - backward-compatible `generate-request-batch --request-file` / `AssetPipeline.execute_request_batch`
+- On the legacy `--request-file` path, CLI `--music-duration` / `--sfx-duration` values remain additive fallback defaults for requests that omit `durationSeconds`.
 - Plan-driven execution still forwards plan `durationTargetSeconds` as per-request overrides; those overrides take precedence over request-level `durationSeconds` when both are present.
 - `durationSeconds` must be a finite positive number when provided.
 

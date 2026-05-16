@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline with both request-driven and plan-driven execution: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. SESSION-019 and SESSION-020 are now complete: direct request-batch execution supports optional request-level `durationSeconds`, and the queue has advanced to SESSION-021.
+The repository now has a complete draft-to-approved pipeline on the newer request-driven (`generate-request-batch --batch-file`) and plan-driven execution paths. SESSION-021 and SESSION-022 are now complete: the legacy request-file path now honors request-level `durationSeconds`, and the queue has advanced to SESSION-023.
 
 ## Now
 
@@ -37,12 +37,14 @@ The repository now has a complete draft-to-approved pipeline with both request-d
 - [x] Execute `SESSION-018` — enforce plan-target duration overrides in plan-driven execution
 - [x] Execute `SESSION-019` — add optional per-request duration field for direct request-batch execution
 - [x] Execute `SESSION-020` — define and queue the next executable implementation session
-- [ ] Execute `SESSION-021` — unify explicit-duration behavior for legacy request-file execution path
+- [x] Execute `SESSION-021` — unify explicit-duration behavior for legacy request-file execution path
+- [x] Execute `SESSION-022` — define and queue the next executable implementation session
+- [ ] Execute `SESSION-023` — add optional provenance sidecars for legacy request-file execution path
 
 ## Recommended next PRs
 
-1. **Unify legacy request-file duration handling (SESSION-021)**
-   - Keep `--request-file` behavior backward compatible while honoring explicit per-request durations when present.
+1. **Add optional provenance sidecars for legacy request-file runs (SESSION-023)**
+   - Narrow the gap between the legacy `--request-file` path and the newer drafts/provenance pipeline without breaking stable outputs.
 
 ## Do not deprioritize
 
