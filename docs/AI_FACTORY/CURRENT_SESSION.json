@@ -1,12 +1,12 @@
 {
   "version": "1.3.0",
-  "lastUpdated": "2026-05-15",
+  "lastUpdated": "2026-05-16",
   "currentSession": {
-    "id": "SESSION-017",
-    "title": "Define the next executable implementation session",
+    "id": "SESSION-019",
+    "title": "Add optional per-request duration field for direct request-batch execution",
     "status": "ready",
-    "taskType": "docs_only",
-    "objective": "Refresh queue priority and define the next concrete executable implementation session after SESSION-015 and SESSION-016.",
+    "taskType": "loader_parsing + batch_generation",
+    "objective": "Add an additive optional per-request duration field so direct request-batch execution can honor explicit duration without requiring a plan file.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",
@@ -14,7 +14,9 @@
       "docs/AI_FACTORY/ACTIVE_WORK.md",
       "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
       "docs/AI_FACTORY/NEXT_PR_SEQUENCE.md",
-      "docs/AI_FACTORY/NO_DECISION_ZONES.md"
+      "docs/AI_FACTORY/NO_DECISION_ZONES.md",
+      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md"
     ],
     "likelyModify": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
@@ -22,7 +24,12 @@
       "docs/AI_FACTORY/SESSION_STATE.json",
       "docs/AI_FACTORY/ACTIVE_WORK.md",
       "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/CURRENT_STATE.md"
+      "docs/AI_FACTORY/CURRENT_STATE.md",
+      "audio_engine/integration/factory_inputs.py",
+      "audio_engine/integration/asset_pipeline.py",
+      "tests/test_integration.py",
+      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md"
     ]
   }
 }

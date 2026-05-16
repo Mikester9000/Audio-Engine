@@ -225,3 +225,19 @@
   - `python -m pytest tests/test_integration.py tests/test_engine_cli.py` → 160 passed
   - `python -m pytest` → 404 passed
   - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
+
+## 2026-05-16 — Complete SESSION-017 + SESSION-018 (queue refresh + plan-duration enforcement)
+
+- Completed SESSION-017 by refreshing queue priority and defining SESSION-018 as the next concrete executable implementation session.
+- Implemented SESSION-018 in `audio_engine/integration/asset_pipeline.py`:
+  - added optional per-request `duration_overrides` support to `RequestBatchPipeline.execute()`
+  - forwarded overrides through generation internals for music and SFX requests
+  - wired `PlanBatchOrchestrator` to map plan `durationTargetSeconds` onto matched request IDs
+- Added targeted tests in `tests/test_integration.py`:
+  - `RequestBatchPipeline` applies per-request duration overrides
+  - `PlanBatchOrchestrator` forwards plan target durations as request overrides
+- Synced continuity/session-control docs and advanced current session to `SESSION-019`.
+- Verification:
+  - `python -m pytest tests/test_integration.py -k "duration_override or applies_duration_overrides or passes_duration_overrides_from_plan_targets"` → 2 passed
+  - `python -m pytest` → 415 passed
+  - `python tools/validate-assets.py assets/examples/ --verbose` → PASS

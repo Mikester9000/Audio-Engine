@@ -65,9 +65,10 @@ When generating via `generate-request-batch`:
   `RequestBatchPipeline` path, which calls `MusicGen.generate()` directly
   without a duration override.
 - For long-form OST variants, use the `--request-file` path with
-  `--music-duration 180` (or higher, up to 300 s / 5 min), or embed
-  `durationTargetSeconds` in a future plan-driven pipeline.  The `--batch-file`
-  path does not yet consume this option.
+  `--music-duration 180` (or higher, up to 300 s / 5 min), or use
+  plan-driven orchestration where `durationTargetSeconds` is enforced per
+  target. The `--batch-file` path still does not consume an explicit
+  per-request duration field.
 
 ## Near-term goals
 

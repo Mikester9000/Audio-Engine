@@ -4,12 +4,12 @@
 
 ## Last completed change
 
-SESSION-015 + SESSION-016: Added executable machine-readable review-log writing and integrated it as an additive handoff path for `approve-draft` and `export-drafts`.
+SESSION-017 + SESSION-018: Refreshed the queue and completed executable plan-duration enforcement so `generate-plan-batch` now applies plan `durationTargetSeconds` as per-request duration overrides during request execution.
 
 ## Verified in this session
 
 ```bash
-python -m pytest tests/test_integration.py tests/test_engine_cli.py
+python -m pytest tests/test_integration.py -k "duration_override or applies_duration_overrides or passes_duration_overrides_from_plan_targets"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
@@ -17,13 +17,13 @@ python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 ```
 
 Observed result:
-- targeted review-log integration tests passed (`160` tests across integration + CLI files)
-- full repo test suite passed (`404`) and asset-manifest validation passed
-- SESSION-015 and SESSION-016 completed; queue advanced to SESSION-017 planning step
+- targeted duration-override tests passed (`2` selected tests)
+- full repo test suite passed (`415`) and asset-manifest validation passed
+- SESSION-017 and SESSION-018 completed; queue advanced to SESSION-019
 
 ## Immediate next best task
 
-Execute `SESSION-017` from `docs/AI_FACTORY/SESSION_QUEUE.md`: define and queue the next executable implementation session after review-log integration.
+Execute `SESSION-019` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add additive optional per-request duration support for direct request-batch execution (`generate-request-batch --batch-file` / `RequestBatchPipeline`).
 
 ## Files future agents should read first
 
@@ -53,3 +53,5 @@ Execute `SESSION-017` from `docs/AI_FACTORY/SESSION_QUEUE.md`: define and queue 
 - [x] Variant-family review/report template updates (SESSION-014, docs-only)
 - [x] Machine-readable review-log writer (`ReviewLogWriter` + `write-review-log`, SESSION-015)
 - [x] Review-log handoff integration for approval/export (`approve-draft`/`export-drafts` flags, SESSION-016)
+- [x] Session queue refresh to define next executable implementation session (SESSION-017)
+- [x] Plan target duration enforcement in plan-driven execution (SESSION-018)

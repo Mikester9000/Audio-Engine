@@ -27,9 +27,10 @@
 ## Current constraints
 
 - Plan-driven execution requires request batches that contain executable entries for all required plan targets.
-- Per-target duration from plan metadata (`durationTargetSeconds`) is still guidance; current request-batch execution does not yet enforce this value as a hard duration override.
+- Plan-driven execution now enforces per-target plan durations (`durationTargetSeconds`) by forwarding them as per-request duration overrides in request execution.
+- Direct request-batch execution (`generate-request-batch --batch-file`) still uses generator defaults unless prompt text encodes duration, since request files do not yet carry an explicit duration field.
 - OGG export depends on `soundfile`; if unavailable, requests that specify `.ogg` fail.
 
 ## Near-term goal
 
-Define and queue the next executable session (`SESSION-017`) after review-log writing and handoff integration.
+Add additive optional per-request duration support for direct request-batch execution (`SESSION-019`) so explicit duration can be expressed without requiring a plan file.
