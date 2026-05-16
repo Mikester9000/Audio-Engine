@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 import json
+import os
 from pathlib import Path
 import wave
 
@@ -2370,7 +2371,119 @@ class TestReviewLogWriter:
         )
 
         assert len(log["entries"]) == 1
-        assert log["entries"][0]["requestId"] == "sfx_ok"  # falls back to file stem (no provenance sidecar)
+        assert log["entries"][0]["requestId"] == "req_ok"
+        assert log["entries"][0]["assetId"] == "sfx_ok"
+        assert log["entries"][0]["seed"] == 1
+
+    def test_append_from_result_json_include_skipped(self, tmp_path):
+        """append_from_result_json(include_skipped=True) should include skipped records."""
+        from audio_engine.integration import ReviewLogWriter
+        import wave as wv
+
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        ok_wav = output_dir / "sfx_ok.wav"
+        skipped_wav = output_dir / "sfx_skipped.wav"
+        for wav_path in (ok_wav, skipped_wav):
+            with wv.open(str(wav_path), "w") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(44100)
+                wf.writeframes(b"\x00\x00" * 100)
+
+        result_data = {
+            "output_dir": str(output_dir),
+            "project": "GameRewritten",
+            "scope": "include-skipped-test",
+            "records": [
+                {
+                    "request_id": "req_ok",
+                    "asset_id": "sfx_ok",
+                    "type": "sfx",
+                    "seed": 1,
+                    "output_path": str(ok_wav),
+                    "status": "ok",
+                    "error": None,
+                    "provenance_path": None,
+                },
+                {
+                    "request_id": "req_skipped",
+                    "asset_id": "sfx_skipped",
+                    "type": "sfx",
+                    "seed": 2,
+                    "output_path": str(skipped_wav),
+                    "status": "skipped",
+                    "error": None,
+                    "provenance_path": None,
+                },
+            ],
+            "total_duration_seconds": 0.1,
+        }
+        result_json_path = tmp_path / "result.json"
+        result_json_path.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+        writer = ReviewLogWriter()
+        log = writer.append_from_result_json(
+            result_json_path=result_json_path,
+            review_log_path=tmp_path / "review_log.json",
+            include_skipped=True,
+        )
+
+        request_ids = {entry["requestId"] for entry in log["entries"]}
+        assert request_ids == {"req_ok", "req_skipped"}
+
+    def test_append_from_result_json_resolves_relative_output_paths(self, tmp_path):
+        """Relative output paths should resolve from result JSON output directory context."""
+        from audio_engine.integration import ReviewLogWriter
+        import wave as wv
+
+        output_dir = tmp_path / "relative_out"
+        output_dir.mkdir()
+        wav_path = output_dir / "Content" / "Audio" / "sfx_relative.wav"
+        wav_path.parent.mkdir(parents=True, exist_ok=True)
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+
+        result_data = {
+            "output_dir": "relative_out",
+            "project": "GameRewritten",
+            "scope": "relative-path-test",
+            "records": [
+                {
+                    "request_id": "req_relative",
+                    "asset_id": "sfx_relative",
+                    "type": "sfx",
+                    "seed": 99,
+                    "output_path": "relative_out/Content/Audio/sfx_relative.wav",
+                    "status": "ok",
+                    "error": None,
+                    "provenance_path": None,
+                }
+            ],
+            "total_duration_seconds": 0.1,
+        }
+        result_json_path = output_dir / "request_batch_result.json"
+        result_json_path.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+        writer = ReviewLogWriter()
+        cwd_before = Path.cwd()
+        outside_dir = tmp_path / "outside"
+        outside_dir.mkdir(parents=True, exist_ok=True)
+        os.chdir(outside_dir)
+        try:
+            log = writer.append_from_result_json(
+                result_json_path=result_json_path,
+                review_log_path=tmp_path / "review_log.json",
+            )
+        finally:
+            os.chdir(cwd_before)
+
+        assert len(log["entries"]) == 1
+        assert log["entries"][0]["requestId"] == "req_relative"
+        assert Path(log["entries"][0]["generatedOutputPath"]).resolve() == wav_path.resolve()
 
     def test_append_from_result_json_missing_file_raises(self, tmp_path):
         """append_from_result_json() must raise FileNotFoundError when result JSON is absent."""

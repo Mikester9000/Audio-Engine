@@ -420,6 +420,8 @@ def _cmd_write_review_log(args: argparse.Namespace) -> None:
             notes=args.note or [],
             variation_family_decisions=variation_family_decisions,
             include_skipped=args.include_skipped,
+            project=args.project,
+            scope=args.scope,
         )
         print(
             f"Review log updated — {len(log.get('entries', []))} entries, "

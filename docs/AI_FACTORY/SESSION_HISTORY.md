@@ -30,3 +30,5 @@
 | `SESSION-020` | 2026-05-16 | completed | Advanced continuity/session-control docs after SESSION-019 and queued SESSION-021 as the next executable implementation task. | this PR |
 | `SESSION-021` | 2026-05-16 | completed | Legacy `generate-request-batch --request-file` / `AssetPipeline.execute_request_batch` now honors request-level `durationSeconds` for music/SFX while keeping CLI duration flags as fallback defaults. | this PR |
 | `SESSION-022` | 2026-05-16 | completed | Refreshed continuity/session-control docs after SESSION-021 and queued SESSION-023 as the next executable implementation task. | this PR |
+| `SESSION-023` | 2026-05-16 | completed | Added additive provenance support for legacy `generate-request-batch --request-file` runs (`--write-provenance`) and recorded per-record `provenance_path` in `request_batch_result.json`. | this PR |
+| `SESSION-024` | 2026-05-16 | completed | Added result-driven review-log writing (`write-review-log --from-result`) with optional skipped-record inclusion and metadata continuity from request-batch result JSON. | this PR |

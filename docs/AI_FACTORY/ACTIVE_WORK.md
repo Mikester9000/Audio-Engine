@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline on the newer request-driven (`generate-request-batch --batch-file`) and plan-driven execution paths. SESSION-021 and SESSION-022 are now complete: the legacy request-file path now honors request-level `durationSeconds`, and the queue has advanced to SESSION-023.
+The repository now has a complete draft-to-approved pipeline on the newer request-driven (`generate-request-batch --batch-file`) and plan-driven execution paths. SESSION-023 and SESSION-024 are now complete: the legacy request-file path can emit optional provenance sidecars and `write-review-log` can source entries directly from `request_batch_result.json`.
 
 ## Now
 
@@ -39,12 +39,14 @@ The repository now has a complete draft-to-approved pipeline on the newer reques
 - [x] Execute `SESSION-020` — define and queue the next executable implementation session
 - [x] Execute `SESSION-021` — unify explicit-duration behavior for legacy request-file execution path
 - [x] Execute `SESSION-022` — define and queue the next executable implementation session
-- [ ] Execute `SESSION-023` — add optional provenance sidecars for legacy request-file execution path
+- [x] Execute `SESSION-023` — add optional provenance sidecars for legacy request-file execution path
+- [x] Execute `SESSION-024` — add result-JSON sourcing path for review-log writing
+- [ ] Execute `SESSION-025` — define and queue the next executable implementation session
 
 ## Recommended next PRs
 
-1. **Add optional provenance sidecars for legacy request-file runs (SESSION-023)**
-   - Narrow the gap between the legacy `--request-file` path and the newer drafts/provenance pipeline without breaking stable outputs.
+1. **Define and queue the next executable implementation session (SESSION-025)**
+   - Refresh continuity/session-control docs and set the next concrete implementation objective.
 
 ## Do not deprioritize
 

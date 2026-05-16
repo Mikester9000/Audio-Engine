@@ -530,6 +530,119 @@ def test_cli_write_review_log_from_result(tmp_path):
     assert data["project"] == "GameRewritten"
 
 
+def test_cli_write_review_log_from_result_honors_project_scope_override(tmp_path):
+    """--project/--scope should override result-json values on --from-result flow."""
+    import json
+    import wave as wv
+
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    wav_path = output_dir / "sfx_override.wav"
+    with wv.open(str(wav_path), "w") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(44100)
+        wf.writeframes(b"\x00\x00" * 100)
+
+    result_data = {
+        "output_dir": str(output_dir),
+        "project": "OriginalProject",
+        "scope": "original-scope",
+        "records": [
+            {
+                "request_id": "req_override",
+                "asset_id": "sfx_override",
+                "type": "sfx",
+                "seed": 56,
+                "output_path": str(wav_path),
+                "status": "ok",
+                "error": None,
+                "provenance_path": None,
+            }
+        ],
+        "total_duration_seconds": 0.1,
+    }
+    result_json = tmp_path / "request_batch_result.json"
+    result_json.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+    review_log = tmp_path / "review_log.json"
+    rc = main([
+        "write-review-log",
+        "--factory-root", str(tmp_path),
+        "--review-log", str(review_log),
+        "--from-result", str(result_json),
+        "--project", "GameRewritten",
+        "--scope", "override-tests",
+        "--quiet",
+    ])
+    assert rc == 0
+    data = json.loads(review_log.read_text())
+    assert data["project"] == "GameRewritten"
+    assert data["scope"] == "override-tests"
+
+
+def test_cli_write_review_log_from_result_include_skipped(tmp_path):
+    """--include-skipped should include skipped records from result JSON."""
+    import json
+    import wave as wv
+
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+    ok_path = output_dir / "sfx_ok.wav"
+    skipped_path = output_dir / "sfx_skipped.wav"
+    for wav_path in (ok_path, skipped_path):
+        with wv.open(str(wav_path), "w") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(44100)
+            wf.writeframes(b"\x00\x00" * 100)
+
+    result_data = {
+        "output_dir": str(output_dir),
+        "project": "GameRewritten",
+        "scope": "from-result-tests",
+        "records": [
+            {
+                "request_id": "req_ok",
+                "asset_id": "sfx_ok",
+                "type": "sfx",
+                "seed": 55,
+                "output_path": str(ok_path),
+                "status": "ok",
+                "error": None,
+                "provenance_path": None,
+            },
+            {
+                "request_id": "req_skipped",
+                "asset_id": "sfx_skipped",
+                "type": "sfx",
+                "seed": 56,
+                "output_path": str(skipped_path),
+                "status": "skipped",
+                "error": None,
+                "provenance_path": None,
+            },
+        ],
+        "total_duration_seconds": 0.1,
+    }
+    result_json = tmp_path / "request_batch_result.json"
+    result_json.write_text(json.dumps(result_data, indent=2), encoding="utf-8")
+
+    review_log = tmp_path / "review_log.json"
+    rc = main([
+        "write-review-log",
+        "--factory-root", str(tmp_path),
+        "--review-log", str(review_log),
+        "--from-result", str(result_json),
+        "--include-skipped",
+        "--quiet",
+    ])
+    assert rc == 0
+    data = json.loads(review_log.read_text())
+    request_ids = {entry["requestId"] for entry in data["entries"]}
+    assert request_ids == {"req_ok", "req_skipped"}
+
+
 def test_cli_approve_draft_with_review_log(tmp_path, capsys):
     """approve-draft should optionally update a review log."""
     import json

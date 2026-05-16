@@ -178,13 +178,13 @@ class RequestBatchRecord:
     seed:
         Seed used for this request (taken verbatim from the request).
     output_path:
-        Absolute path to the output file (or intended path if skipped/failed).
+        Path to the output file (or intended path if skipped/failed).
     status:
         ``"ok"`` | ``"skipped"`` | ``"error"``.
     error:
         Error message when *status* is ``"error"``; ``None`` otherwise.
     provenance_path:
-        Absolute path to the ``.provenance.json`` sidecar written alongside the
+        Path to the ``.provenance.json`` sidecar written alongside the
         output file when provenance writing was enabled; ``None`` otherwise.
     """
 
@@ -369,12 +369,14 @@ class ReviewLogWriter:
         notes: list[str] | None = None,
         reviewed_at: str | None = None,
         variation_family_decisions: list[dict] | None = None,
+        record_metadata_by_audio_path: dict[str, dict] | None = None,
     ) -> dict:
         """Build review-log entries from audio files + provenance sidecars."""
         import datetime
 
         factory_root = Path(factory_root).resolve()
         normalized_notes = list(notes or [])
+        metadata_by_audio_path = dict(record_metadata_by_audio_path or {})
         reviewed_at = reviewed_at or datetime.datetime.now(
             datetime.timezone.utc
         ).isoformat()
@@ -386,6 +388,7 @@ class ReviewLogWriter:
         entries: list[dict] = []
         for audio_path_value in audio_paths:
             audio_path = Path(audio_path_value).resolve()
+            metadata = metadata_by_audio_path.get(str(audio_path), {})
             if not audio_path.exists():
                 raise FileNotFoundError(f"audio file not found for review log: {audio_path}")
 
@@ -394,20 +397,29 @@ class ReviewLogWriter:
                 provenance: dict = json.loads(prov_path.read_text(encoding="utf-8"))
             else:
                 provenance = {
-                    "requestId": audio_path.stem,
-                    "assetId": audio_path.stem,
                     "type": audio_path.parent.name,
-                    "seed": None,
                     "generatedOutputPath": str(audio_path),
                     "targetImportPath": f"Content/Audio/{audio_path.name}",
                     "reviewStatus": "draft",
                 }
 
             entry: dict = {
-                "assetId": provenance.get("assetId", audio_path.stem),
-                "requestId": provenance.get("requestId", audio_path.stem),
-                "seed": provenance.get("seed"),
-                "generatedOutputPath": provenance.get("generatedOutputPath", str(audio_path)),
+                "assetId": (
+                    provenance.get("assetId")
+                    or metadata.get("asset_id")
+                    or audio_path.stem
+                ),
+                "requestId": (
+                    provenance.get("requestId")
+                    or metadata.get("request_id")
+                    or audio_path.stem
+                ),
+                "seed": provenance.get("seed", metadata.get("seed")),
+                "generatedOutputPath": (
+                    provenance.get("generatedOutputPath")
+                    or metadata.get("output_path")
+                    or str(audio_path)
+                ),
                 "targetImportPath": provenance.get(
                     "targetImportPath",
                     f"Content/Audio/{audio_path.name}",
@@ -458,6 +470,8 @@ class ReviewLogWriter:
         reviewed_at: str | None = None,
         variation_family_decisions: list[dict] | None = None,
         include_skipped: bool = False,
+        project: str | None = None,
+        scope: str | None = None,
     ) -> dict:
         """Build review-log entries from a ``request_batch_result.json`` file.
 
@@ -493,6 +507,12 @@ class ReviewLogWriter:
             If ``True``, also include ``skipped`` records in the review log
             (audio files that were not regenerated because they already existed).
             Defaults to ``False``.
+        project:
+            Optional project value to set/override in the review log.
+            When omitted, uses the value from the result JSON.
+        scope:
+            Optional scope value to set/override in the review log.
+            When omitted, uses the value from the result JSON.
 
         Returns
         -------
@@ -513,25 +533,42 @@ class ReviewLogWriter:
 
         valid_statuses = {"ok", "skipped"} if include_skipped else {"ok"}
         audio_paths: list[Path] = []
+        record_metadata_by_audio_path: dict[str, dict] = {}
+        output_dir_field = Path(data.get("output_dir", ""))
+        output_dir_base = result_json_path.parent.resolve()
         for record in data.get("records", []):
             if record.get("status") not in valid_statuses:
                 continue
             output_path = record.get("output_path")
             if not output_path:
                 continue
-            audio_paths.append(Path(output_path))
+            raw_output = Path(output_path)
+            if raw_output.is_absolute():
+                resolved_output = raw_output.resolve()
+            else:
+                relative_output = raw_output
+                if (
+                    output_dir_field.parts
+                    and len(raw_output.parts) >= len(output_dir_field.parts)
+                    and tuple(raw_output.parts[: len(output_dir_field.parts)]) == output_dir_field.parts
+                ):
+                    relative_output = Path(*raw_output.parts[len(output_dir_field.parts):])
+                resolved_output = (output_dir_base / relative_output).resolve()
+            audio_paths.append(resolved_output)
+            record_metadata_by_audio_path[str(resolved_output)] = record
 
         return self.append_from_audio_files(
             factory_root=effective_factory_root,
             audio_paths=audio_paths,
             review_log_path=review_log_path,
-            project=data.get("project"),
-            scope=data.get("scope"),
+            project=project if project is not None else data.get("project"),
+            scope=scope if scope is not None else data.get("scope"),
             reviewer=reviewer,
             qa_report_path=qa_report_path,
             notes=notes,
             reviewed_at=reviewed_at,
             variation_family_decisions=variation_family_decisions,
+            record_metadata_by_audio_path=record_metadata_by_audio_path,
         )
 
     def _load_or_init(
