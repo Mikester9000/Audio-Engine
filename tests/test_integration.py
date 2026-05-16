@@ -917,6 +917,58 @@ class TestRequestBatchPipeline:
             assert Path(record["file"]).exists(), f"Missing output: {record['file']}"
             assert record["seed"] > 0
 
+    def test_execute_applies_duration_overrides(self, tmp_path, monkeypatch):
+        """duration_overrides should override default generation durations per request."""
+        from audio_engine.ai.music_gen import MusicGen
+        from audio_engine.ai.sfx_gen import SFXGen
+        from audio_engine.integration import RequestBatchPipeline
+
+        import numpy as np
+
+        music_batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        sfx_batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        music_request = next(request for request in music_batch.requests if request.output.format == "wav")
+        sfx_request = sfx_batch.requests[0]
+
+        combined_batch = GenerationRequestBatch(
+            request_batch_version="1.0.0",
+            project="GameRewritten",
+            scope="duration-override-tests",
+            requests=[music_request, sfx_request],
+        )
+
+        observed_music_durations: list[float] = []
+        observed_sfx_durations: list[float] = []
+
+        def _patched_music_generate(self, prompt, duration=30.0, loopable=False):
+            observed_music_durations.append(duration)
+            return np.zeros((2048, 2), dtype=np.float32)
+
+        def _patched_sfx_generate(self, prompt, duration=1.0, pitch_hz=None):
+            observed_sfx_durations.append(duration)
+            return np.zeros(2048, dtype=np.float32)
+
+        monkeypatch.setattr(MusicGen, "generate", _patched_music_generate)
+        monkeypatch.setattr(SFXGen, "generate", _patched_sfx_generate)
+
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(
+            combined_batch,
+            tmp_path,
+            duration_overrides={
+                music_request.request_id: 0.75,
+                sfx_request.request_id: 0.15,
+            },
+        )
+
+        assert not manifest.errors
+        assert observed_music_durations == [0.75]
+        assert observed_sfx_durations == [0.15]
+
     def test_execute_request_batch_ogg_missing_encoder_is_error(self, tmp_path, monkeypatch):
         """OGG requests must fail (not silently fall back to WAV) when OGG export is unavailable."""
         from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
@@ -1439,6 +1491,64 @@ class TestPlanBatchOrchestrator:
 
         with pytest.raises(ValueError, match="unsupported plan target format"):
             orchestrator.execute(bad_plan, [bad_batch], tmp_path)
+
+    def test_execute_passes_duration_overrides_from_plan_targets(self, tmp_path, monkeypatch):
+        """Plan target durations should be forwarded as request duration overrides."""
+        from audio_engine.integration.asset_pipeline import RequestBatchPipeline
+
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        selected = batch.requests[:2]
+        plan = parse_audio_plan(
+            {
+                "planVersion": "1.0.0",
+                "project": batch.project,
+                "scope": batch.scope,
+                "priorities": {"music": "high", "sfx": "high", "voice": "low"},
+                "styleFamilies": ["heroic-sci-fantasy"],
+                "assetGroups": [
+                    {
+                        "groupId": "sfx-required",
+                        "type": "sfx",
+                        "required": True,
+                        "targets": [
+                            {
+                                "assetId": selected[0].asset_id,
+                                "gameplayRole": "role-0",
+                                "targetPath": selected[0].output.target_path,
+                                "loop": selected[0].qa.loop_required,
+                                "durationTargetSeconds": 0.11,
+                            },
+                            {
+                                "assetId": selected[1].asset_id,
+                                "gameplayRole": "role-1",
+                                "targetPath": selected[1].output.target_path,
+                                "loop": selected[1].qa.loop_required,
+                                "durationTargetSeconds": 0.27,
+                            },
+                        ],
+                    }
+                ],
+            },
+            source="duration_override_plan",
+        )
+
+        captured: dict[str, dict[str, float] | None] = {"duration_overrides": None}
+
+        def _patched_execute(self, merged_batch, output_dir, *, duration_overrides=None):
+            captured["duration_overrides"] = duration_overrides
+            return GenerationManifest(output_dir=str(output_dir))
+
+        monkeypatch.setattr(RequestBatchPipeline, "execute", _patched_execute)
+
+        orchestrator = PlanBatchOrchestrator(skip_existing=False)
+        orchestrator.execute(plan, [batch], tmp_path)
+
+        assert captured["duration_overrides"] == {
+            selected[0].request_id: 0.11,
+            selected[1].request_id: 0.27,
+        }
 
 
 # ---------------------------------------------------------------------------

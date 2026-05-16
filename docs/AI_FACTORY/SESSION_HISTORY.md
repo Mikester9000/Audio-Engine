@@ -24,3 +24,5 @@
 | `SESSION-014` | 2026-05-15 | completed | Updated review/report templates for repeated-SFX variant-family QA decisions in `REVIEW_WORKFLOW.md` and `review_log.example.v1.json`. | this PR |
 | `SESSION-015` | 2026-05-15 | completed | Added executable machine-readable review-log writing via `ReviewLogWriter` and `audio-engine write-review-log`, aligned with provenance sidecars and optional `qa-batch` snapshot fields. | this PR |
 | `SESSION-016` | 2026-05-15 | completed | Integrated review-log updates into handoff operations with additive flags on `approve-draft` and `export-drafts`, preserving default compatibility behavior. | this PR |
+| `SESSION-017` | 2026-05-16 | completed | Refreshed queue priority and defined the next concrete executable implementation session, then synchronized session-control/continuity docs. | this PR |
+| `SESSION-018` | 2026-05-16 | completed | Implemented plan-target duration enforcement by forwarding `durationTargetSeconds` to request execution as per-request duration overrides; added targeted integration tests. | this PR |

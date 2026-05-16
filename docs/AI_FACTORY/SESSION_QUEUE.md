@@ -99,11 +99,23 @@
 - Added additive review-log integration flags to `approve-draft` and `export-drafts`.
 - Approval/export flows can now update review-log entries without changing default behavior when flags are omitted.
 
+### SESSION-017 — Define the next executable implementation session
+- **Status:** `completed`
+- **Task type:** `docs_only`
+- Refreshed queue priority and defined SESSION-018 as the next concrete executable implementation session.
+- Updated continuity/session-control docs to keep queue/state/current-session synchronized.
+
+### SESSION-018 — Enforce plan-target duration overrides in plan-driven execution
+- **Status:** `completed`
+- **Task type:** `batch_generation`
+- Plan-driven execution now forwards `durationTargetSeconds` to request execution as explicit per-request duration overrides for matched plan targets.
+- Added tests covering duration-override behavior in `RequestBatchPipeline` and `PlanBatchOrchestrator`.
+
 ## Current next session
 
-### SESSION-017 — Define the next executable implementation session
+### SESSION-019 — Add optional per-request duration field for direct request-batch execution
 
 - **Status:** `ready`
-- **Task type:** `docs_only`
-- **Objective:** Refresh queue priority and define the next concrete executable implementation session after SESSION-015/016 completion.
-- **Notes:** Keep continuity docs synchronized and avoid inventing unverified downstream contracts.
+- **Task type:** `loader_parsing + batch_generation`
+- **Objective:** Add an additive optional request field (for example `durationSeconds`) that allows `generate-request-batch --batch-file` / `RequestBatchPipeline` runs to set explicit per-request durations without requiring a plan file.
+- **Notes:** Preserve backward compatibility for existing fixtures and keep duration behavior explicit across music/SFX request execution paths.

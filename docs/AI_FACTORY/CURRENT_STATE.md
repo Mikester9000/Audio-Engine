@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, and review logs now have an executable writer path integrated with approval/export handoff.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, review logs now have an executable writer path integrated with approval/export handoff, and plan-driven execution now enforces per-target plan durations via request duration overrides.
 
 ## What is implemented today
 
@@ -47,16 +47,16 @@ The repository contains a working Python audio engine with tests, a manifest val
 ### Commands verified in this session
 
 ```bash
-python -m pytest tests/test_integration.py tests/test_engine_cli.py
+python -m pytest tests/test_integration.py -k "duration_override or applies_duration_overrides or passes_duration_overrides_from_plan_targets"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result in this session:
 
-- review-log writer path is executable (`write-review-log`) and aligns entries with provenance + optional `qa-batch` report data
-- `approve-draft` and `export-drafts` can now update review logs as additive handoff integration
-- test suite passed (`404`) and targeted integration/CLI review-log tests passed
+- plan-driven execution now forwards `durationTargetSeconds` into request execution as explicit per-request duration overrides
+- targeted duration-override integration tests passed (`2` selected tests)
+- test suite passed (`415`)
 
 ## Current repository structure
 
@@ -89,7 +89,7 @@ Observed result in this session:
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
 4. Plan-driven orchestration currently requires explicit request-batch files that provide prompts/seeds/backends for all required plan targets; missing required requests are treated as execution errors.
-5. OST request entries are committed for key BGM tracks and fanfare entries now exist, but duration targets are still documentation/fixture guidance rather than enforced per target by `RequestBatchPipeline`.
+5. Per-target duration enforcement currently applies when executing through plan-driven orchestration (`generate-plan-batch`); direct request-batch execution (`generate-request-batch --batch-file`) still uses generator defaults unless prompt-level duration text is parsed.
 6. OGG export depends on `soundfile`; `.ogg` requests fail (no fallback-to-WAV) when encoder support is unavailable.
 
 ## Current blockers
@@ -103,4 +103,4 @@ None blocking the next session.
 
 ## Immediate interpretation
 
-This repo now has a complete draft-to-approved pipeline with both request-driven and plan-driven entrypoints: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery includes executable backend evaluation metadata, repeated-SFX variation strategy has executable request-validation and provenance tracking support, and review logs now have executable generation/update surfaces (`write-review-log`, plus optional integration into approval/export commands) aligned with provenance and QA report fields.
+This repo now has a complete draft-to-approved pipeline with both request-driven and plan-driven entrypoints: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery includes executable backend evaluation metadata, repeated-SFX variation strategy has executable request-validation and provenance tracking support, review logs have executable generation/update surfaces (`write-review-log`, plus optional integration into approval/export commands), and plan-driven orchestration now enforces `durationTargetSeconds` on matched requests during execution.

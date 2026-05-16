@@ -71,4 +71,4 @@ Committed example:
 
 ## Rule
 
-Plan-driven execution should continue using this schema as the canonical selection contract, with executable prompt/seed/backend details supplied by generation-request batches.
+Plan-driven execution should continue using this schema as the canonical selection contract, with executable prompt/seed/backend details supplied by generation-request batches, and `durationTargetSeconds` forwarded as per-request duration overrides for matched plan targets.

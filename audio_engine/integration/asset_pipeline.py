@@ -54,6 +54,7 @@ AudioSystem can verify all assets are present at startup.
 from __future__ import annotations
 
 import json
+import math
 import os
 import time
 from dataclasses import asdict, dataclass, field
@@ -1063,6 +1064,8 @@ class RequestBatchPipeline:
         self,
         batch: GenerationRequestBatch,
         output_dir: str | Path,
+        *,
+        duration_overrides: dict[str, float] | None = None,
     ) -> GenerationManifest:
         """Execute all requests in *batch* and return a :class:`GenerationManifest`.
 
@@ -1073,6 +1076,10 @@ class RequestBatchPipeline:
         output_dir:
             Root output directory.  Each request is written to
             ``<output_dir>/drafts/<type>/<filename>``.
+        duration_overrides:
+            Optional mapping of ``request_id`` to explicit duration (seconds)
+            used for music/SFX generation.  Requests not present in this map
+            keep default generator durations.
 
         Returns
         -------
@@ -1105,7 +1112,15 @@ class RequestBatchPipeline:
                 continue
 
             try:
-                actual_path = self._generate_one(request, output_path)
+                duration_override = self._resolve_duration_override(
+                    request=request,
+                    duration_overrides=duration_overrides,
+                )
+                actual_path = self._generate_one(
+                    request,
+                    output_path,
+                    duration_override=duration_override,
+                )
                 self._write_provenance(request, actual_path)
                 self.progress_callback(f"  [ok]   {request.request_id} → {actual_path}")
                 self._append_record(manifest, request, actual_path, "ok")
@@ -1129,7 +1144,13 @@ class RequestBatchPipeline:
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _generate_one(self, request: GenerationRequest, output_path: Path) -> Path:
+    def _generate_one(
+        self,
+        request: GenerationRequest,
+        output_path: Path,
+        *,
+        duration_override: float | None = None,
+    ) -> Path:
         """Generate audio for one request and write it to *output_path*.
 
         Parameters
@@ -1147,7 +1168,7 @@ class RequestBatchPipeline:
         """
         from audio_engine.export.audio_exporter import AudioExporter
 
-        audio = self._generate_audio(request)
+        audio = self._generate_audio(request, duration_override=duration_override)
         audio = _convert_channels(audio, request.output.channels)
 
         exporter = AudioExporter(sample_rate=request.output.sample_rate, bit_depth=16)
@@ -1160,7 +1181,12 @@ class RequestBatchPipeline:
 
         return written
 
-    def _generate_audio(self, request: GenerationRequest) -> np.ndarray:
+    def _generate_audio(
+        self,
+        request: GenerationRequest,
+        *,
+        duration_override: float | None = None,
+    ) -> np.ndarray:
         """Generate raw audio for *request* using the appropriate generator."""
         sr = request.output.sample_rate
 
@@ -1170,13 +1196,17 @@ class RequestBatchPipeline:
             gen = MusicGen(sample_rate=sr, backend=request.backend, seed=request.seed)
             return gen.generate(
                 prompt=request.prompt,
+                duration=duration_override if duration_override is not None else 30.0,
                 loopable=request.qa.loop_required,
             )
         elif request.type == "sfx":
             from audio_engine.ai.sfx_gen import SFXGen
 
             gen = SFXGen(sample_rate=sr, backend=request.backend, seed=request.seed)
-            return gen.generate(prompt=request.prompt)
+            return gen.generate(
+                prompt=request.prompt,
+                duration=duration_override if duration_override is not None else 1.0,
+            )
         elif request.type == "voice":
             from audio_engine.ai.voice_gen import VoiceGen
 
@@ -1184,6 +1214,28 @@ class RequestBatchPipeline:
             return gen.generate(request.prompt)
         else:
             raise ValueError(f"Unknown request type: {request.type!r}")
+
+    @staticmethod
+    def _resolve_duration_override(
+        *,
+        request: GenerationRequest,
+        duration_overrides: dict[str, float] | None,
+    ) -> float | None:
+        """Resolve an optional per-request duration override."""
+        if duration_overrides is None:
+            return None
+        duration = duration_overrides.get(request.request_id)
+        if duration is None:
+            return None
+        if not isinstance(duration, (int, float)) or isinstance(duration, bool):
+            raise ValueError(
+                f"duration override for request {request.request_id!r} must be numeric"
+            )
+        if not math.isfinite(float(duration)) or float(duration) <= 0.0:
+            raise ValueError(
+                f"duration override for request {request.request_id!r} must be > 0"
+            )
+        return float(duration)
 
     def _append_record(
         self,
@@ -1284,11 +1336,16 @@ class PlanBatchOrchestrator:
         """Select plan-targeted requests and execute via :class:`RequestBatchPipeline`."""
         selected_requests = self._select_requests(plan, request_batches)
         merged_batch = self._merge_selected_requests(plan, selected_requests)
+        duration_overrides = self._build_duration_overrides(plan, selected_requests)
         pipeline = RequestBatchPipeline(
             progress_callback=self.progress_callback,
             skip_existing=self.skip_existing,
         )
-        return pipeline.execute(merged_batch, output_dir)
+        return pipeline.execute(
+            merged_batch,
+            output_dir,
+            duration_overrides=duration_overrides,
+        )
 
     def _select_requests(
         self,
@@ -1381,6 +1438,24 @@ class PlanBatchOrchestrator:
             scope=plan.scope,
             requests=selected_requests,
         )
+
+    @staticmethod
+    def _build_duration_overrides(
+        plan: "AudioPlan",
+        selected_requests: list["GenerationRequest"],
+    ) -> dict[str, float]:
+        """Build per-request duration overrides from matched plan targets."""
+        target_duration_by_asset_id: dict[str, float] = {}
+        for group in plan.asset_groups:
+            for target in group.targets:
+                target_duration_by_asset_id[target.asset_id] = target.duration_target_seconds
+
+        overrides: dict[str, float] = {}
+        for request in selected_requests:
+            duration = target_duration_by_asset_id.get(request.asset_id)
+            if duration is not None:
+                overrides[request.request_id] = float(duration)
+        return overrides
 
 
 # ---------------------------------------------------------------------------

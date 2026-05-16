@@ -1,11 +1,11 @@
 {
   "version": "1.3.0",
-  "lastUpdated": "2026-05-15",
+  "lastUpdated": "2026-05-16",
   "currentSession": {
-    "id": "SESSION-017",
-    "title": "Define the next executable implementation session",
+    "id": "SESSION-019",
+    "title": "Add optional per-request duration field for direct request-batch execution",
     "status": "ready",
-    "taskType": "docs_only"
+    "taskType": "loader_parsing + batch_generation"
   },
   "completedSessions": [
     {
@@ -87,6 +87,16 @@
       "id": "SESSION-016",
       "status": "completed",
       "completedDate": "2026-05-15"
+    },
+    {
+      "id": "SESSION-017",
+      "status": "completed",
+      "completedDate": "2026-05-16"
+    },
+    {
+      "id": "SESSION-018",
+      "status": "completed",
+      "completedDate": "2026-05-16"
     }
   ]
 }
