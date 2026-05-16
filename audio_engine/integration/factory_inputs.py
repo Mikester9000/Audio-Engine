@@ -85,11 +85,11 @@ class GenerationRequest:
     seed: int
     prompt: str
     style_family: str
-    duration_seconds: float | None
     output: GenerationRequestOutput
     qa: GenerationRequestQA
     replace_existing: bool | None = None
     supersedes_request_id: str | None = None
+    duration_seconds: float | None = None
 
 
 @dataclass(frozen=True)
