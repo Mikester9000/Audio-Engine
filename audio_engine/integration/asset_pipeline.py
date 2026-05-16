@@ -317,7 +317,7 @@ class ReviewLogWriter:
         *,
         project: str | None = None,
         scope: str | None = None,
-        reviewer: str = "agent",
+        reviewer: str = "unspecified",
         qa_report_path: str | Path | None = None,
         notes: list[str] | None = None,
         reviewed_at: str | None = None,
@@ -331,7 +331,10 @@ class ReviewLogWriter:
         reviewed_at = reviewed_at or datetime.datetime.now(
             datetime.timezone.utc
         ).isoformat()
-        qa_snapshots = self._load_qa_snapshots(qa_report_path=qa_report_path)
+        qa_snapshots = self._load_qa_snapshots(
+            qa_report_path=qa_report_path,
+            factory_root=factory_root,
+        )
 
         entries: list[dict] = []
         for audio_path_value in audio_paths:
@@ -365,7 +368,7 @@ class ReviewLogWriter:
                 "reviewStatus": provenance.get("reviewStatus", "draft"),
                 "reviewer": reviewer,
                 "reviewedAt": reviewed_at,
-                "notes": normalized_notes,
+                "notes": list(normalized_notes),
             }
 
             if "variationFamily" in provenance:
@@ -374,6 +377,15 @@ class ReviewLogWriter:
                 entry["variationIndex"] = provenance["variationIndex"]
 
             qa_snapshot = qa_snapshots.get(str(audio_path))
+            if qa_snapshot is None:
+                try:
+                    rel_audio = audio_path.relative_to(factory_root)
+                    qa_snapshot = (
+                        qa_snapshots.get(str(rel_audio))
+                        or qa_snapshots.get(rel_audio.as_posix())
+                    )
+                except ValueError:
+                    qa_snapshot = None
             if qa_snapshot:
                 entry["qaSnapshot"] = qa_snapshot
 
@@ -430,6 +442,7 @@ class ReviewLogWriter:
     def _load_qa_snapshots(
         *,
         qa_report_path: str | Path | None,
+        factory_root: Path,
     ) -> dict[str, dict]:
         if qa_report_path is None:
             return {}
@@ -450,7 +463,16 @@ class ReviewLogWriter:
             }
             if "loop_ok" in checks:
                 snapshot["loopOk"] = checks.get("loop_ok")
-            snapshots[str(Path(raw_path).resolve())] = snapshot
+            raw = Path(raw_path)
+            snapshots[str(raw)] = snapshot
+            snapshots[raw.as_posix()] = snapshot
+
+            if raw.is_absolute():
+                snapshots[str(raw.resolve())] = snapshot
+            else:
+                snapshots[str((factory_root / raw).resolve())] = snapshot
+                snapshots[str((qa_report_path.parent / raw).resolve())] = snapshot
+                snapshots[str(raw.resolve())] = snapshot
         return snapshots
 
 
@@ -1410,7 +1432,7 @@ class DraftExportPipeline:
         factory_root: str | Path,
         *,
         review_log_path: str | Path | None = None,
-        reviewer: str = "agent",
+        reviewer: str = "unspecified",
         qa_report_path: str | Path | None = None,
         project: str | None = None,
         scope: str | None = None,
@@ -1696,7 +1718,7 @@ class ApprovalWorkflow:
         draft_paths: list[str | Path],
         *,
         review_log_path: str | Path | None = None,
-        reviewer: str = "agent",
+        reviewer: str = "unspecified",
         qa_report_path: str | Path | None = None,
         project: str | None = None,
         scope: str | None = None,

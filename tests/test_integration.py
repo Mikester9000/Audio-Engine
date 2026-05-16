@@ -1878,6 +1878,63 @@ class TestReviewLogWriter:
         assert entry["qaSnapshot"]["loudnessLufs"] == -16.4
         assert len(log["variationFamilyDecisions"]) == 1
 
+    def test_writer_copies_notes_per_entry(self, tmp_path):
+        """Each review-log entry should hold its own notes list instance."""
+        from audio_engine.integration import ReviewLogWriter
+
+        first = self._make_draft_with_provenance(tmp_path, "sfx_ui_confirm_var01")
+        second = self._make_draft_with_provenance(tmp_path, "sfx_ui_confirm_var02")
+
+        writer = ReviewLogWriter()
+        log = writer.append_from_audio_files(
+            factory_root=tmp_path,
+            audio_paths=[first, second],
+            review_log_path=tmp_path / "review_log.json",
+            notes=["Looks good."],
+        )
+
+        assert len(log["entries"]) == 2
+        assert log["entries"][0]["notes"] == ["Looks good."]
+        assert log["entries"][1]["notes"] == ["Looks good."]
+        assert log["entries"][0]["notes"] is not log["entries"][1]["notes"]
+
+    def test_writer_matches_relative_qa_paths_from_factory_root(self, tmp_path, monkeypatch):
+        """Relative qa-batch report paths should match audio even with a different CWD."""
+        from audio_engine.integration import ReviewLogWriter
+
+        draft_path = self._make_draft_with_provenance(tmp_path, "sfx_ui_confirm_var03")
+        qa_report_path = tmp_path / "qa_report.json"
+        qa_report = {
+            "qaBatchVersion": "1.0.0",
+            "results": [
+                {
+                    "file": "drafts/sfx/sfx_ui_confirm_var03.wav",
+                    "status": "pass",
+                    "checks": {
+                        "loudness_lufs": -15.0,
+                        "true_peak_dbfs": -1.0,
+                        "loudness_ok": True,
+                        "peak_ok": True,
+                        "clipping_ok": True,
+                    },
+                }
+            ],
+        }
+        qa_report_path.write_text(json.dumps(qa_report, indent=2), encoding="utf-8")
+        outside_dir = tmp_path / "outside"
+        outside_dir.mkdir(parents=True, exist_ok=True)
+        monkeypatch.chdir(outside_dir)
+
+        writer = ReviewLogWriter()
+        log = writer.append_from_audio_files(
+            factory_root=tmp_path,
+            audio_paths=[draft_path],
+            review_log_path=tmp_path / "review_log.json",
+            qa_report_path=qa_report_path,
+        )
+
+        assert log["entries"][0]["qaSnapshot"]["loudnessLufs"] == -15.0
+
 
 class TestApprovalWorkflow:
     """Tests for the approval workflow (draft → approved promotion)."""

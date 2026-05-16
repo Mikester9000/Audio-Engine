@@ -651,8 +651,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     apd.add_argument(
         "--reviewer",
-        default="agent",
-        help="Reviewer label written to review-log entries (default: agent).",
+        default="unspecified",
+        help="Reviewer label written to review-log entries (default: unspecified).",
     )
     apd.add_argument(
         "--qa-report",
@@ -691,8 +691,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     exportdrafts.add_argument(
         "--reviewer",
-        default="agent",
-        help="Reviewer label written to review-log entries (default: agent).",
+        default="unspecified",
+        help="Reviewer label written to review-log entries (default: unspecified).",
     )
     exportdrafts.add_argument(
         "--qa-report",
@@ -730,8 +730,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     wrl.add_argument(
         "--reviewer",
-        default="agent",
-        help="Reviewer label written to each entry (default: agent).",
+        default="unspecified",
+        help="Reviewer label written to each entry (default: unspecified).",
     )
     wrl.add_argument(
         "--qa-report",

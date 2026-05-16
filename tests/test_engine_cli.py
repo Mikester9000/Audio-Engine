@@ -442,6 +442,14 @@ def test_cli_write_review_log_subcommand_registered(capsys):
     assert "write-review-log" in subparsers_actions[0].choices
 
 
+def test_cli_review_log_reviewer_default_is_unspecified():
+    """Review-log related commands should default reviewer to 'unspecified'."""
+    parser = build_parser()
+    assert parser.parse_args(["approve-draft", "--factory-root", "x", "--draft-file", "y.wav"]).reviewer == "unspecified"
+    assert parser.parse_args(["export-drafts", "--output-dir", "x"]).reviewer == "unspecified"
+    assert parser.parse_args(["write-review-log", "--factory-root", "x", "--review-log", "y.json"]).reviewer == "unspecified"
+
+
 def test_cli_write_review_log_smoke(tmp_path, capsys):
     """write-review-log should generate a machine-readable review log for drafts."""
     import json
