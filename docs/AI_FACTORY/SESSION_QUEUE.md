@@ -111,11 +111,24 @@
 - Plan-driven execution now forwards `durationTargetSeconds` to request execution as explicit per-request duration overrides for matched plan targets.
 - Added tests covering duration-override behavior in `RequestBatchPipeline` and `PlanBatchOrchestrator`.
 
+### SESSION-019 — Add optional per-request duration field for direct request-batch execution
+- **Status:** `completed`
+- **Task type:** `loader_parsing + batch_generation`
+- Added additive optional `durationSeconds` parsing on generation requests.
+- `RequestBatchPipeline` now applies request-level `durationSeconds` for music/SFX in direct request-batch execution, with plan-driven per-request overrides still taking precedence.
+- Added integration coverage for parsing validation and execution precedence/behavior.
+
+### SESSION-020 — Define and queue the next executable implementation session
+- **Status:** `completed`
+- **Task type:** `docs_only`
+- Refreshed continuity/session-control docs to mark SESSION-019 complete and advance the queue.
+- Defined SESSION-021 as the next concrete executable implementation session.
+
 ## Current next session
 
-### SESSION-019 — Add optional per-request duration field for direct request-batch execution
+### SESSION-021 — Unify explicit-duration behavior for legacy request-file execution path
 
 - **Status:** `ready`
-- **Task type:** `loader_parsing + batch_generation`
-- **Objective:** Add an additive optional request field (for example `durationSeconds`) that allows `generate-request-batch --batch-file` / `RequestBatchPipeline` runs to set explicit per-request durations without requiring a plan file.
-- **Notes:** Preserve backward compatibility for existing fixtures and keep duration behavior explicit across music/SFX request execution paths.
+- **Task type:** `cli + batch_generation`
+- **Objective:** Ensure `generate-request-batch --request-file` (legacy `AssetPipeline.execute_request_batch` path) can honor explicit per-request duration values from request artifacts in a backward-compatible way.
+- **Notes:** Preserve existing CLI flags/defaults as additive fallback behavior and keep duration precedence deterministic/documented.

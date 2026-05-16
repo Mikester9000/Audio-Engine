@@ -28,9 +28,9 @@
 
 - Plan-driven execution requires request batches that contain executable entries for all required plan targets.
 - Plan-driven execution now enforces per-target plan durations (`durationTargetSeconds`) by forwarding them as per-request duration overrides in request execution.
-- Direct request-batch execution (`generate-request-batch --batch-file`) still uses generator defaults unless prompt text encodes duration, since request files do not yet carry an explicit duration field.
+- Direct request-batch execution (`generate-request-batch --batch-file`) now supports additive optional request-level `durationSeconds` for explicit music/SFX durations without requiring a plan file.
 - OGG export depends on `soundfile`; if unavailable, requests that specify `.ogg` fail.
 
 ## Near-term goal
 
-Add additive optional per-request duration support for direct request-batch execution (`SESSION-019`) so explicit duration can be expressed without requiring a plan file.
+Unify explicit-duration behavior across both request-batch execution paths (`--batch-file` and backward-compat `--request-file`) while preserving additive compatibility.

@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline with both request-driven and plan-driven execution: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. SESSION-017 and SESSION-018 are now complete: queue refresh is done and plan-driven execution now enforces plan `durationTargetSeconds` via per-request duration overrides.
+The repository now has a complete draft-to-approved pipeline with both request-driven and plan-driven execution: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. SESSION-019 and SESSION-020 are now complete: direct request-batch execution supports optional request-level `durationSeconds`, and the queue has advanced to SESSION-021.
 
 ## Now
 
@@ -35,12 +35,14 @@ The repository now has a complete draft-to-approved pipeline with both request-d
 - [x] Execute `SESSION-016` — integrate review-log output with approval/export handoff flow
 - [x] Execute `SESSION-017` — define next implementation session after review-log integration
 - [x] Execute `SESSION-018` — enforce plan-target duration overrides in plan-driven execution
-- [ ] Execute `SESSION-019` — add optional per-request duration field for direct request-batch execution
+- [x] Execute `SESSION-019` — add optional per-request duration field for direct request-batch execution
+- [x] Execute `SESSION-020` — define and queue the next executable implementation session
+- [ ] Execute `SESSION-021` — unify explicit-duration behavior for legacy request-file execution path
 
 ## Recommended next PRs
 
-1. **Add direct request-batch duration field (SESSION-019)**
-   - Add additive optional per-request duration support for `RequestBatchPipeline` without requiring a plan file.
+1. **Unify legacy request-file duration handling (SESSION-021)**
+   - Keep `--request-file` behavior backward compatible while honoring explicit per-request durations when present.
 
 ## Do not deprioritize
 

@@ -330,6 +330,9 @@ class TestFactoryInputLoaders:
             ("requests[0].output.channels", -2, "positive integer"),
             ("requests[0].output.format", "mp3", "one of"),
             ("requests[0].qa.reviewStatus", "drfat", "one of"),
+            ("requests[0].durationSeconds", 0, "finite positive number"),
+            ("requests[0].durationSeconds", -0.5, "finite positive number"),
+            ("requests[0].durationSeconds", float("inf"), "finite positive number"),
         ]
 
         for path, value, expected_error in invalid_cases:
@@ -346,6 +349,14 @@ class TestFactoryInputLoaders:
 
             with pytest.raises(FactoryInputError, match=expected_error):
                 parse_generation_request_batch(invalid_batch, source="invalid_generation_request")
+
+    def test_generation_request_loader_parses_optional_duration_seconds(self):
+        batch_data = self._base_generation_request_batch()
+        batch_data["requests"][0]["durationSeconds"] = 12.5
+
+        parsed = parse_generation_request_batch(batch_data, source="duration_seconds_request")
+
+        assert parsed.requests[0].duration_seconds == 12.5
 
     def test_generation_request_loader_rejects_duplicates(self):
         invalid_batch = self._base_generation_request_batch()
@@ -938,7 +949,10 @@ class TestRequestBatchPipeline:
             request_batch_version="1.0.0",
             project="GameRewritten",
             scope="duration-override-tests",
-            requests=[music_request, sfx_request],
+            requests=[
+                replace(music_request, duration_seconds=0.5),
+                replace(sfx_request, duration_seconds=0.05),
+            ],
         )
 
         observed_music_durations: list[float] = []
@@ -968,6 +982,54 @@ class TestRequestBatchPipeline:
         assert not manifest.errors
         assert observed_music_durations == [0.75]
         assert observed_sfx_durations == [0.15]
+
+    def test_execute_uses_request_duration_seconds_when_no_overrides(self, tmp_path, monkeypatch):
+        """durationSeconds in requests should apply for direct request-batch execution."""
+        from audio_engine.ai.music_gen import MusicGen
+        from audio_engine.ai.sfx_gen import SFXGen
+        from audio_engine.integration import RequestBatchPipeline
+
+        import numpy as np
+
+        music_batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        sfx_batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        music_request = replace(
+            next(request for request in music_batch.requests if request.output.format == "wav"),
+            duration_seconds=0.66,
+        )
+        sfx_request = replace(sfx_batch.requests[0], duration_seconds=0.22)
+
+        combined_batch = GenerationRequestBatch(
+            request_batch_version="1.0.0",
+            project="GameRewritten",
+            scope="duration-field-tests",
+            requests=[music_request, sfx_request],
+        )
+
+        observed_music_durations: list[float] = []
+        observed_sfx_durations: list[float] = []
+
+        def _patched_music_generate(self, prompt, duration=30.0, loopable=False):
+            observed_music_durations.append(duration)
+            return np.zeros((2048, 2), dtype=np.float32)
+
+        def _patched_sfx_generate(self, prompt, duration=1.0, pitch_hz=None):
+            observed_sfx_durations.append(duration)
+            return np.zeros(2048, dtype=np.float32)
+
+        monkeypatch.setattr(MusicGen, "generate", _patched_music_generate)
+        monkeypatch.setattr(SFXGen, "generate", _patched_sfx_generate)
+
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(combined_batch, tmp_path)
+
+        assert not manifest.errors
+        assert observed_music_durations == [0.66]
+        assert observed_sfx_durations == [0.22]
 
     def test_execute_request_batch_ogg_missing_encoder_is_error(self, tmp_path, monkeypatch):
         """OGG requests must fail (not silently fall back to WAV) when OGG export is unavailable."""

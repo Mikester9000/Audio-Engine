@@ -25,6 +25,7 @@ Committed examples:
   "seed": 42,
   "prompt": "uplifting exploration field theme with melancholic sci-fantasy undertone, loopable",
   "styleFamily": "heroic-sci-fantasy",
+  "durationSeconds": 90,
   "output": {
     "targetPath": "Content/Audio/bgm_field_day.ogg",
     "format": "ogg",
@@ -51,6 +52,13 @@ Committed examples:
 - `prompt`
 - `styleFamily`
 - `output.targetPath`
+
+## Optional request-level duration field (SESSION-019)
+
+- `durationSeconds` is an additive optional numeric field on each request.
+- When present on `music` or `sfx` requests, direct request-batch execution (`generate-request-batch --batch-file`, `RequestBatchPipeline`) uses it as the explicit generation duration.
+- Plan-driven execution still forwards plan `durationTargetSeconds` as per-request overrides; those overrides take precedence over request-level `durationSeconds` when both are present.
+- `durationSeconds` must be a finite positive number when provided.
 
 ## Backend field guidance (SESSION-011)
 
