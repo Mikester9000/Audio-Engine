@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, review logs now have an executable writer path integrated with approval/export handoff, and plan-driven execution now enforces per-target plan durations via request duration overrides.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, review logs now have an executable writer path integrated with approval/export handoff, and both plan-driven and direct request-batch execution now support explicit per-request duration control.
 
 ## What is implemented today
 
@@ -42,21 +42,23 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Category-specific SFX loudness/readability guidance | Implemented (docs) | `docs/AI_FACTORY/SUBSYSTEMS/SFX.md`, `docs/AI_FACTORY/QA/QUALITY_BARS.md` |
 | Variant-family QA review/report templates | Implemented (docs-contract) | `docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md`, `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json` |
 | Machine-readable review-log writer + handoff integration | Implemented | `audio_engine/integration/asset_pipeline.py` (`ReviewLogWriter`), `audio_engine/cli.py` (`write-review-log`, review-log flags on `approve-draft`/`export-drafts`) |
+| Optional request-level duration field for direct request batches | Implemented | `audio_engine/integration/factory_inputs.py` (`durationSeconds` parsing), `audio_engine/integration/asset_pipeline.py` (`RequestBatchPipeline` duration resolution), `tests/test_integration.py` |
 | Automated test suite | Implemented | `tests/` |
 
 ### Commands verified in this session
 
 ```bash
-python -m pytest tests/test_integration.py -k "duration_override or applies_duration_overrides or passes_duration_overrides_from_plan_targets"
+python -m pytest tests/test_integration.py -k "duration or generation_request_loader"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result in this session:
 
-- plan-driven execution now forwards `durationTargetSeconds` into request execution as explicit per-request duration overrides
-- targeted duration-override integration tests passed (`2` selected tests)
-- test suite passed (`415`)
+- request-batch loaders now accept optional `durationSeconds` and validate it as finite/positive when present
+- direct request-batch execution now applies request-level `durationSeconds` for music/SFX, with plan-driven overrides taking precedence
+- targeted integration tests passed (`12` selected tests)
+- test suite passed (`417`)
 
 ## Current repository structure
 
@@ -89,7 +91,7 @@ Observed result in this session:
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
 4. Plan-driven orchestration currently requires explicit request-batch files that provide prompts/seeds/backends for all required plan targets; missing required requests are treated as execution errors.
-5. Per-target duration enforcement currently applies when executing through plan-driven orchestration (`generate-plan-batch`); direct request-batch execution (`generate-request-batch --batch-file`) still uses generator defaults unless prompt-level duration text is parsed.
+5. Explicit duration parity is not yet complete across both request-batch entrypoints: `--batch-file` now honors request-level `durationSeconds`, while backward-compat `--request-file` still uses explicit CLI defaults unless manually overridden.
 6. OGG export depends on `soundfile`; `.ogg` requests fail (no fallback-to-WAV) when encoder support is unavailable.
 
 ## Current blockers
@@ -103,4 +105,4 @@ None blocking the next session.
 
 ## Immediate interpretation
 
-This repo now has a complete draft-to-approved pipeline with both request-driven and plan-driven entrypoints: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery includes executable backend evaluation metadata, repeated-SFX variation strategy has executable request-validation and provenance tracking support, review logs have executable generation/update surfaces (`write-review-log`, plus optional integration into approval/export commands), and plan-driven orchestration now enforces `durationTargetSeconds` on matched requests during execution.
+This repo now has a complete draft-to-approved pipeline with both request-driven and plan-driven entrypoints: `generate-request-batch` or `generate-plan-batch` → provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery includes executable backend evaluation metadata, repeated-SFX variation strategy has executable request-validation and provenance tracking support, review logs have executable generation/update surfaces (`write-review-log`, plus optional integration into approval/export commands), plan-driven orchestration enforces `durationTargetSeconds` on matched requests during execution, and direct request-batch execution now supports additive request-level `durationSeconds`.

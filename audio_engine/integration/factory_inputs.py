@@ -89,6 +89,7 @@ class GenerationRequest:
     qa: GenerationRequestQA
     replace_existing: bool | None = None
     supersedes_request_id: str | None = None
+    duration_seconds: float | None = None
 
 
 @dataclass(frozen=True)
@@ -218,6 +219,11 @@ def _parse_generation_request(data: Any, *, index: int, source: str) -> Generati
         seed=_require_non_negative_int(mapping.get("seed"), "seed", context),
         prompt=_require_str(mapping.get("prompt"), "prompt", context),
         style_family=_require_str(mapping.get("styleFamily"), "styleFamily", context),
+        duration_seconds=_optional_positive_finite_number(
+            mapping.get("durationSeconds"),
+            "durationSeconds",
+            context,
+        ),
         output=GenerationRequestOutput(
             target_path=_require_str(output_data.get("targetPath"), "targetPath", f"{context}.output"),
             format=_require_output_format(output_data.get("format"), "format", f"{context}.output"),
@@ -440,6 +446,12 @@ def _require_positive_finite_number(value: Any, field_name: str, context: str) -
     if not math.isfinite(parsed) or parsed <= 0:
         raise FactoryInputError(f"{context}.{field_name} must be a finite positive number")
     return parsed
+
+
+def _optional_positive_finite_number(value: Any, field_name: str, context: str) -> float | None:
+    if value is None:
+        return None
+    return _require_positive_finite_number(value, field_name, context)
 
 
 def _require_value_in_set(value: Any, field_name: str, context: str, allowed: set[str]) -> str:

@@ -241,3 +241,27 @@
   - `python -m pytest tests/test_integration.py -k "duration_override or applies_duration_overrides or passes_duration_overrides_from_plan_targets"` → 2 passed
   - `python -m pytest` → 415 passed
   - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
+
+## 2026-05-16 — Complete SESSION-019 + SESSION-020 (request-level duration field + queue advancement)
+
+- Implemented additive optional request-level `durationSeconds` support in `audio_engine/integration/factory_inputs.py`:
+  - added `GenerationRequest.duration_seconds`
+  - added parsing/validation (`durationSeconds` must be finite positive when provided)
+- Updated `RequestBatchPipeline` in `audio_engine/integration/asset_pipeline.py`:
+  - direct request-batch execution now applies request `durationSeconds` for `music`/`sfx`
+  - plan-driven override map remains higher precedence when both sources exist
+- Expanded integration coverage in `tests/test_integration.py`:
+  - invalid `durationSeconds` loader rejection
+  - optional `durationSeconds` parse success
+  - execution behavior using request-level durations
+  - precedence behavior where explicit override map wins
+- Updated schema/subsystem docs:
+  - `docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md`
+  - `docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md`
+- Completed continuity/session-control updates for SESSION-019 and SESSION-020:
+  - `SESSION_QUEUE.md`, `CURRENT_SESSION.json`, `SESSION_STATE.json`, `SESSION_HISTORY.md`, `ACTIVE_WORK.md`, `CURRENT_STATE.md`, `HANDOFF.md`, `IMPLEMENTATION_MATRIX.md`
+  - queued SESSION-021 as next executable task
+- Verification:
+  - `python -m pytest tests/test_integration.py -k "duration or generation_request_loader"` → 12 passed
+  - `python -m pytest` → 417 passed
+  - `python tools/validate-assets.py assets/examples/ --verbose` → PASS

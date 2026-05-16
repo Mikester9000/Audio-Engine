@@ -1,11 +1,11 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "lastUpdated": "2026-05-16",
   "currentSession": {
-    "id": "SESSION-019",
-    "title": "Add optional per-request duration field for direct request-batch execution",
+    "id": "SESSION-021",
+    "title": "Unify explicit-duration behavior for legacy request-file execution path",
     "status": "ready",
-    "taskType": "loader_parsing + batch_generation"
+    "taskType": "cli + batch_generation"
   },
   "completedSessions": [
     {
@@ -95,6 +95,16 @@
     },
     {
       "id": "SESSION-018",
+      "status": "completed",
+      "completedDate": "2026-05-16"
+    },
+    {
+      "id": "SESSION-019",
+      "status": "completed",
+      "completedDate": "2026-05-16"
+    },
+    {
+      "id": "SESSION-020",
       "status": "completed",
       "completedDate": "2026-05-16"
     }

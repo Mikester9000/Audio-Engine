@@ -4,12 +4,12 @@
 
 ## Last completed change
 
-SESSION-017 + SESSION-018: Refreshed the queue and completed executable plan-duration enforcement so `generate-plan-batch` now applies plan `durationTargetSeconds` as per-request duration overrides during request execution.
+SESSION-019 + SESSION-020: Added optional request-level `durationSeconds` parsing/execution for direct request-batch runs and advanced session-control docs to queue SESSION-021.
 
 ## Verified in this session
 
 ```bash
-python -m pytest tests/test_integration.py -k "duration_override or applies_duration_overrides or passes_duration_overrides_from_plan_targets"
+python -m pytest tests/test_integration.py -k "duration or generation_request_loader"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
@@ -17,13 +17,13 @@ python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 ```
 
 Observed result:
-- targeted duration-override tests passed (`2` selected tests)
-- full repo test suite passed (`415`) and asset-manifest validation passed
-- SESSION-017 and SESSION-018 completed; queue advanced to SESSION-019
+- targeted duration/parsing integration tests passed (`12` selected tests)
+- full repo test suite passed (`417`) and asset-manifest validation passed
+- SESSION-019 and SESSION-020 completed; queue advanced to SESSION-021
 
 ## Immediate next best task
 
-Execute `SESSION-019` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add additive optional per-request duration support for direct request-batch execution (`generate-request-batch --batch-file` / `RequestBatchPipeline`).
+Execute `SESSION-021` from `docs/AI_FACTORY/SESSION_QUEUE.md`: unify explicit-duration behavior for backward-compat `generate-request-batch --request-file` (`AssetPipeline.execute_request_batch`) while preserving additive compatibility.
 
 ## Files future agents should read first
 
@@ -55,3 +55,5 @@ Execute `SESSION-019` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add additive opti
 - [x] Review-log handoff integration for approval/export (`approve-draft`/`export-drafts` flags, SESSION-016)
 - [x] Session queue refresh to define next executable implementation session (SESSION-017)
 - [x] Plan target duration enforcement in plan-driven execution (SESSION-018)
+- [x] Optional request-level `durationSeconds` parsing + direct request-batch execution support (SESSION-019)
+- [x] Queue advancement and next executable session definition (SESSION-020)

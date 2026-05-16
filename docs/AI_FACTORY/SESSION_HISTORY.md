@@ -26,3 +26,5 @@
 | `SESSION-016` | 2026-05-15 | completed | Integrated review-log updates into handoff operations with additive flags on `approve-draft` and `export-drafts`, preserving default compatibility behavior. | this PR |
 | `SESSION-017` | 2026-05-16 | completed | Refreshed queue priority and defined the next concrete executable implementation session, then synchronized session-control/continuity docs. | this PR |
 | `SESSION-018` | 2026-05-16 | completed | Implemented plan-target duration enforcement by forwarding `durationTargetSeconds` to request execution as per-request duration overrides; added targeted integration tests. | this PR |
+| `SESSION-019` | 2026-05-16 | completed | Added additive optional request-level `durationSeconds` parsing and direct request-batch duration behavior in `RequestBatchPipeline`, with plan-driven overrides preserved as higher priority. | this PR |
+| `SESSION-020` | 2026-05-16 | completed | Advanced continuity/session-control docs after SESSION-019 and queued SESSION-021 as the next executable implementation task. | this PR |

@@ -1222,9 +1222,11 @@ class RequestBatchPipeline:
         duration_overrides: dict[str, float] | None,
     ) -> float | None:
         """Resolve an optional per-request duration override."""
-        if duration_overrides is None:
-            return None
-        duration = duration_overrides.get(request.request_id)
+        duration = None
+        if duration_overrides is not None:
+            duration = duration_overrides.get(request.request_id)
+        if duration is None and request.type in {"music", "sfx"}:
+            duration = request.duration_seconds
         if duration is None:
             return None
         if not isinstance(duration, (int, float)) or isinstance(duration, bool):
