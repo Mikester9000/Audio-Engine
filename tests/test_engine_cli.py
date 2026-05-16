@@ -1,5 +1,6 @@
 """Tests for the AudioEngine façade and CLI."""
 
+import json
 import sys
 from pathlib import Path
 
@@ -564,6 +565,65 @@ def test_cli_generate_request_batch_writes_result_json(tmp_path, capsys):
     data = json.loads(result_json.read_text())
     assert data["project"] == "GameRewritten"
     assert "records" in data
+
+
+def test_cli_generate_request_batch_request_file_honors_request_duration_seconds(
+    tmp_path, monkeypatch
+):
+    """Legacy request-file CLI path should prefer request durationSeconds over default flags."""
+    from audio_engine.ai.sfx_gen import SFXGen
+
+    request = {
+        "requestBatchVersion": "1.0.0",
+        "project": "GameRewritten",
+        "scope": "cli-duration-tests",
+        "requests": [
+            {
+                "requestVersion": "1.0.0",
+                "requestId": "req_cli_sfx_duration_v1",
+                "assetId": "sfx_cli_duration",
+                "type": "sfx",
+                "backend": "procedural",
+                "seed": 7,
+                "prompt": "short confirm chirp",
+                "styleFamily": "heroic-sci-fantasy",
+                "durationSeconds": 0.23,
+                "output": {
+                    "targetPath": "Content/Audio/sfx_cli_duration.wav",
+                    "format": "wav",
+                    "sampleRate": 44100,
+                    "channels": 1,
+                },
+                "qa": {
+                    "loopRequired": False,
+                    "reviewStatus": "draft",
+                    "notes": [],
+                },
+            }
+        ],
+    }
+    request_path = tmp_path / "request.json"
+    request_path.write_text(json.dumps(request), encoding="utf-8")
+
+    observed_durations: list[float] = []
+
+    def _patched_generate(self, prompt, duration=1.0, pitch_hz=None):
+        observed_durations.append(duration)
+        return np.zeros(2048, dtype=np.float32)
+
+    monkeypatch.setattr(SFXGen, "generate", _patched_generate)
+
+    rc = main([
+        "generate-request-batch",
+        "--request-file", str(request_path),
+        "--output-dir", str(tmp_path),
+        "--sfx-duration", "0.1",
+        "--quiet",
+    ])
+
+    assert rc == 0
+    assert observed_durations == [0.23]
+    assert (tmp_path / "Content" / "Audio" / "sfx_cli_duration.wav").exists()
 
 
 def test_cli_list_backends(capsys):

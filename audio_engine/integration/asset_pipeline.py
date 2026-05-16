@@ -737,11 +737,11 @@ class AssetPipeline:
             If ``True``, regenerate files that already exist.  If ``False``
             (default), skip existing files.
         default_music_duration:
-            Duration in seconds used for music requests that do not embed a
-            duration in their prompt (default: 30 s).
+            Fallback duration in seconds used for music requests when no
+            explicit request-level duration is present (default: 30 s).
         default_sfx_duration:
-            Duration in seconds used for SFX requests that do not embed a
-            duration in their prompt (default: 2 s).
+            Fallback duration in seconds used for SFX requests when no
+            explicit request-level duration is present (default: 2 s).
 
         Returns
         -------
@@ -781,9 +781,17 @@ class AssetPipeline:
                     continue
 
                 if request.type == "music":
-                    exported_path = self._execute_music_request(request, output_path, default_music_duration)
+                    duration = self._resolve_request_duration(
+                        request=request,
+                        fallback_duration=default_music_duration,
+                    )
+                    exported_path = self._execute_music_request(request, output_path, duration)
                 elif request.type == "sfx":
-                    exported_path = self._execute_sfx_request(request, output_path, default_sfx_duration)
+                    duration = self._resolve_request_duration(
+                        request=request,
+                        fallback_duration=default_sfx_duration,
+                    )
+                    exported_path = self._execute_sfx_request(request, output_path, duration)
                 elif request.type == "voice":
                     exported_path = self._execute_voice_request(request, output_path)
                 else:
@@ -818,6 +826,18 @@ class AssetPipeline:
 
         result.total_duration_seconds = time.monotonic() - t_start
         return result
+
+    @staticmethod
+    def _resolve_request_duration(*, request: "GenerationRequest", fallback_duration: float) -> float:
+        """Resolve the effective legacy-path duration for one request."""
+        duration = request.duration_seconds if request.type in {"music", "sfx"} else None
+        if duration is None:
+            duration = fallback_duration
+        if not isinstance(duration, (int, float)) or isinstance(duration, bool):
+            raise ValueError(f"duration for request {request.request_id!r} must be numeric")
+        if not math.isfinite(float(duration)) or float(duration) <= 0.0:
+            raise ValueError(f"duration for request {request.request_id!r} must be > 0")
+        return float(duration)
 
     def _execute_music_request(
         self,

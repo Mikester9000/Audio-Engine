@@ -40,6 +40,7 @@ from audio_engine.integration import (
     parse_audio_plan,
     parse_generation_request_batch,
 )
+import numpy as np
 from audio_engine.integration.game_state_map import (
     MUSIC_MANIFEST,
     SFX_MANIFEST,
@@ -1718,6 +1719,65 @@ class TestRequestBatchExecution:
                 f"Seed mismatch for {record.request_id}: "
                 f"expected {request_seeds[record.request_id]}, got {record.seed}"
             )
+
+    def test_execute_request_batch_prefers_request_duration_seconds(self, tmp_path, monkeypatch):
+        """Legacy request-file execution should honor request-level durations before CLI defaults."""
+        from audio_engine.ai.music_gen import MusicGen
+        from audio_engine.ai.sfx_gen import SFXGen
+        from audio_engine.integration.factory_inputs import GenerationRequestBatch
+
+        music_batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        sfx_batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        music_request = replace(
+            next(request for request in music_batch.requests if request.output.format == "wav"),
+            duration_seconds=0.66,
+        )
+        sfx_request = replace(sfx_batch.requests[0], duration_seconds=0.22)
+        batch = GenerationRequestBatch(
+            request_batch_version="1.0.0",
+            project="GameRewritten",
+            scope="legacy-duration-tests",
+            requests=[music_request, sfx_request],
+        )
+
+        observed_music_durations: list[float] = []
+        observed_sfx_durations: list[float] = []
+
+        def _patched_generate_to_file(
+            self,
+            *,
+            prompt,
+            output_path,
+            duration=30.0,
+            loopable=False,
+            fmt="wav",
+        ):
+            observed_music_durations.append(duration)
+            output_path.write_bytes(b"music")
+            return output_path
+
+        def _patched_sfx_generate(self, prompt, duration=1.0, pitch_hz=None):
+            observed_sfx_durations.append(duration)
+            return np.zeros(2048, dtype=np.float32)
+
+        monkeypatch.setattr(MusicGen, "generate_to_file", _patched_generate_to_file)
+        monkeypatch.setattr(SFXGen, "generate", _patched_sfx_generate)
+
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            batch,
+            tmp_path,
+            default_music_duration=3.0,
+            default_sfx_duration=0.1,
+        )
+
+        assert not [record for record in result.records if record.status == "error"]
+        assert observed_music_durations == [0.66]
+        assert observed_sfx_durations == [0.22]
 
     def test_skip_existing_files(self, tmp_path):
         """force=False should skip files that already exist."""

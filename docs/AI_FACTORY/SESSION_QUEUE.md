@@ -124,11 +124,23 @@
 - Refreshed continuity/session-control docs to mark SESSION-019 complete and advance the queue.
 - Defined SESSION-021 as the next concrete executable implementation session.
 
+### SESSION-021 — Unify explicit-duration behavior for legacy request-file execution path
+- **Status:** `completed`
+- **Task type:** `cli + batch_generation`
+- Legacy `generate-request-batch --request-file` / `AssetPipeline.execute_request_batch` now honors request-level `durationSeconds` for music/SFX while preserving `--music-duration` / `--sfx-duration` as fallback defaults.
+- Added regression coverage for legacy integration execution and CLI behavior so duration precedence is explicit and stable.
+
+### SESSION-022 — Define and queue the next executable implementation session
+- **Status:** `completed`
+- **Task type:** `docs_only`
+- Refreshed continuity/session-control docs to mark SESSION-021 complete and advance the queue.
+- Defined SESSION-023 as the next concrete executable implementation session.
+
 ## Current next session
 
-### SESSION-021 — Unify explicit-duration behavior for legacy request-file execution path
+### SESSION-023 — Add optional provenance sidecars for legacy request-file execution path
 
 - **Status:** `ready`
-- **Task type:** `cli + batch_generation`
-- **Objective:** Ensure `generate-request-batch --request-file` (legacy `AssetPipeline.execute_request_batch` path) can honor explicit per-request duration values from request artifacts in a backward-compatible way.
-- **Notes:** Preserve existing CLI flags/defaults as additive fallback behavior and keep duration precedence deterministic/documented.
+- **Task type:** `provenance + cli`
+- **Objective:** Allow backward-compatible `generate-request-batch --request-file` runs to optionally emit machine-readable provenance sidecars aligned with request metadata, without breaking the legacy output layout or default behavior.
+- **Notes:** Keep output paths and existing CLI flags stable; prefer additive opt-in behavior that narrows the gap with the newer drafts/provenance pipeline.

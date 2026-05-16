@@ -265,3 +265,22 @@
   - `python -m pytest tests/test_integration.py -k "duration or generation_request_loader"` → 12 passed
   - `python -m pytest` → 417 passed
   - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
+
+## 2026-05-16 — Complete SESSION-021 + SESSION-022 (legacy duration parity + queue advancement)
+
+- Implemented legacy request-file duration parity in `audio_engine/integration/asset_pipeline.py`:
+  - `AssetPipeline.execute_request_batch()` now prefers request-level `durationSeconds` for `music`/`sfx`
+  - `--music-duration` / `--sfx-duration` remain fallback defaults for requests that omit explicit durations
+- Added regression coverage in:
+  - `tests/test_integration.py` for legacy `AssetPipeline.execute_request_batch()` duration precedence
+  - `tests/test_engine_cli.py` for `generate-request-batch --request-file` duration precedence
+- Updated schema/subsystem docs to document explicit-duration parity across both request-batch entrypoints.
+- Completed continuity/session-control updates for SESSION-021 and SESSION-022:
+  - `SESSION_QUEUE.md`, `CURRENT_SESSION.json`, `SESSION_STATE.json`, `SESSION_HISTORY.md`, `ACTIVE_WORK.md`, `CURRENT_STATE.md`, `HANDOFF.md`, `IMPLEMENTATION_MATRIX.md`
+  - queued SESSION-023 as next executable task
+- Verification:
+  - `python -m pytest tests/test_integration.py -k "request_duration_seconds or legacy-duration-tests or execute_request_batch_prefers_request_duration_seconds"` → 2 passed
+  - `python -m pytest tests/test_engine_cli.py -k "request_duration_seconds or via_request_file"` → 3 passed
+  - `python -m pytest` → 419 passed
+  - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
+  - `python -m audio_engine.cli generate-request-batch --request-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json --output-dir /tmp/session021_legacy_smoke --sfx-duration 0.1 --quiet` → PASS (10 OK)

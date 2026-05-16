@@ -4,26 +4,30 @@
 
 ## Last completed change
 
-SESSION-019 + SESSION-020: Added optional request-level `durationSeconds` parsing/execution for direct request-batch runs and advanced session-control docs to queue SESSION-021.
+SESSION-021 + SESSION-022: Added explicit `durationSeconds` parity for legacy `generate-request-batch --request-file` runs and advanced session-control docs to queue SESSION-023.
 
 ## Verified in this session
 
 ```bash
-python -m pytest tests/test_integration.py -k "duration or generation_request_loader"
+python -m pytest tests/test_integration.py -k "request_duration_seconds or legacy-duration-tests or execute_request_batch_prefers_request_duration_seconds"
+python -m pytest tests/test_engine_cli.py -k "request_duration_seconds or via_request_file"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
+python -m audio_engine.cli generate-request-batch --request-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json --output-dir /tmp/session021_legacy_smoke --sfx-duration 0.1 --quiet
 python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
 python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 ```
 
 Observed result:
-- targeted duration/parsing integration tests passed (`12` selected tests)
-- full repo test suite passed (`417`) and asset-manifest validation passed
-- SESSION-019 and SESSION-020 completed; queue advanced to SESSION-021
+- targeted legacy-duration integration tests passed (`2` selected tests)
+- targeted legacy-duration CLI tests passed (`3` selected tests)
+- full repo test suite passed (`419`), asset-manifest validation passed, and legacy CLI smoke run succeeded (`10` requests OK)
+- updated session-control JSON files parsed successfully
+- SESSION-021 and SESSION-022 completed; queue advanced to SESSION-023
 
 ## Immediate next best task
 
-Execute `SESSION-021` from `docs/AI_FACTORY/SESSION_QUEUE.md`: unify explicit-duration behavior for backward-compat `generate-request-batch --request-file` (`AssetPipeline.execute_request_batch`) while preserving additive compatibility.
+Execute `SESSION-023` from `docs/AI_FACTORY/SESSION_QUEUE.md`: add optional provenance sidecars for backward-compatible `generate-request-batch --request-file` runs while preserving legacy output layout/default behavior.
 
 ## Files future agents should read first
 
@@ -57,3 +61,5 @@ Execute `SESSION-021` from `docs/AI_FACTORY/SESSION_QUEUE.md`: unify explicit-du
 - [x] Plan target duration enforcement in plan-driven execution (SESSION-018)
 - [x] Optional request-level `durationSeconds` parsing + direct request-batch execution support (SESSION-019)
 - [x] Queue advancement and next executable session definition (SESSION-020)
+- [x] Legacy request-file explicit-duration parity (SESSION-021)
+- [x] Queue advancement and next executable session definition (SESSION-022)
