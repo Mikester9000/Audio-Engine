@@ -399,6 +399,34 @@ def _cmd_write_review_log(args: argparse.Namespace) -> None:
     factory_root = Path(args.factory_root)
     review_log_path = Path(args.review_log)
 
+    writer = ReviewLogWriter(progress_callback=(lambda msg: print(msg) if not args.quiet else None))
+
+    variation_family_decisions = None
+    if args.variation_family_decisions:
+        variation_family_decisions = json.loads(
+            Path(args.variation_family_decisions).read_text(encoding="utf-8")
+        )
+        if not isinstance(variation_family_decisions, list):
+            raise ValueError("--variation-family-decisions JSON must be a list")
+
+    # --from-result path: source entries from a request_batch_result.json
+    if args.from_result:
+        log = writer.append_from_result_json(
+            result_json_path=Path(args.from_result),
+            review_log_path=review_log_path,
+            factory_root=factory_root,
+            reviewer=args.reviewer,
+            qa_report_path=args.qa_report,
+            notes=args.note or [],
+            variation_family_decisions=variation_family_decisions,
+            include_skipped=args.include_skipped,
+        )
+        print(
+            f"Review log updated — {len(log.get('entries', []))} entries, "
+            f"{len(log.get('variationFamilyDecisions', []))} family decision(s)"
+        )
+        return
+
     audio_files: list[Path] = []
     if args.audio_file:
         audio_files.extend(Path(p) for p in args.audio_file)
@@ -427,15 +455,6 @@ def _cmd_write_review_log(args: argparse.Namespace) -> None:
     if not unique_audio_files:
         raise ValueError("no audio files found for review-log writing")
 
-    variation_family_decisions = None
-    if args.variation_family_decisions:
-        variation_family_decisions = json.loads(
-            Path(args.variation_family_decisions).read_text(encoding="utf-8")
-        )
-        if not isinstance(variation_family_decisions, list):
-            raise ValueError("--variation-family-decisions JSON must be a list")
-
-    writer = ReviewLogWriter(progress_callback=(lambda msg: print(msg) if not args.quiet else None))
     log = writer.append_from_audio_files(
         factory_root=factory_root,
         audio_paths=unique_audio_files,
@@ -759,6 +778,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Suppress writer progress messages.",
     )
+    wrl.add_argument(
+        "--from-result",
+        help=(
+            "Path to a request_batch_result.json written by generate-request-batch. "
+            "When provided, entries are sourced from the recorded output paths in the result "
+            "file instead of scanning audio directories."
+        ),
+    )
+    wrl.add_argument(
+        "--include-skipped",
+        action="store_true",
+        help="When using --from-result, also include 'skipped' records (default: only 'ok').",
+    )
 
     # --- sfx (instrument-based) ---
     sfx = sub.add_parser("sfx", help="Render a quick sound effect using an instrument.")
@@ -826,6 +858,13 @@ def build_parser() -> argparse.ArgumentParser:
     grb.add_argument(
         "--write-result", action="store_true",
         help="Write request_batch_result.json to the output directory.",
+    )
+    grb.add_argument(
+        "--write-provenance", action="store_true",
+        help=(
+            "Write a .provenance.json sidecar alongside each generated file "
+            "(only effective when --request-file is used)."
+        ),
     )
 
     # --- generate-plan-batch ---
@@ -924,6 +963,7 @@ def _cmd_generate_request_batch(args: argparse.Namespace) -> None:
             force=args.force,
             default_music_duration=args.music_duration,
             default_sfx_duration=args.sfx_duration,
+            write_provenance=args.write_provenance,
         )
         print()
         print(result.summary())
