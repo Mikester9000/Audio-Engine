@@ -1898,7 +1898,7 @@ class TestReviewLogWriter:
         assert log["entries"][1]["notes"] == ["Looks good."]
         assert log["entries"][0]["notes"] is not log["entries"][1]["notes"]
 
-    def test_writer_matches_relative_qa_paths_from_factory_root(self, tmp_path, monkeypatch):
+    def test_writer_matches_relative_qa_paths_with_different_cwd(self, tmp_path, monkeypatch):
         """Relative qa-batch report paths should match audio even with a different CWD."""
         from audio_engine.integration import ReviewLogWriter
 

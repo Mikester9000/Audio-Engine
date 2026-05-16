@@ -472,7 +472,6 @@ class ReviewLogWriter:
             else:
                 snapshots[str((factory_root / raw).resolve())] = snapshot
                 snapshots[str((qa_report_path.parent / raw).resolve())] = snapshot
-                snapshots[str(raw.resolve())] = snapshot
         return snapshots
 
 
