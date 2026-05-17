@@ -248,6 +248,8 @@ class PS1EffectsChain:
                 delay_n = _ms_to_samples(delay_ms, sr) + pre_delay_n
                 tail = np.zeros(n, dtype=np.float64)
                 for i in range(n):
+                    # Both sig[i-delay_n] and tail[i-delay_n] are in-range
+                    # because the guard ensures i >= delay_n (so i-delay_n >= 0).
                     if i >= delay_n:
                         tail[i] = sig[i - delay_n] + feedback * tail[i - delay_n]
                 reverb_out[:n] += tail / n_taps
