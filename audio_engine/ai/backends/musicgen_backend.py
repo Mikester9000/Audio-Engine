@@ -87,8 +87,8 @@ class MusicGenBackend(InferenceBackend):
 
             inputs = processor(text=[text_prompt], padding=True, return_tensors="pt")
             config = getattr(model, "config", None)
-            audio_encoder = getattr(config, "audio_encoder", None)
-            frame_rate = getattr(audio_encoder, "frame_rate", 50)
+            audio_encoder = config.audio_encoder if config is not None else None
+            frame_rate = audio_encoder.frame_rate if audio_encoder is not None else 50
             max_new_tokens = max(1, int(duration * frame_rate))
 
             with torch.no_grad():
@@ -98,7 +98,9 @@ class MusicGenBackend(InferenceBackend):
             if hasattr(waveform, "detach"):
                 waveform = waveform.detach().cpu().numpy()
             audio = np.asarray(waveform[0], dtype=np.float32)
-            model_sample_rate = int(getattr(audio_encoder, "sampling_rate", self.sample_rate))
+            model_sample_rate = (
+                int(audio_encoder.sampling_rate) if audio_encoder is not None else self.sample_rate
+            )
             if model_sample_rate != self.sample_rate:
                 audio = self._resample(audio, source_rate=model_sample_rate, target_rate=self.sample_rate)
             return self._ensure_stereo(audio, duration)

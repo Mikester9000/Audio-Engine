@@ -66,7 +66,12 @@ def main() -> int:
             failed_downloads.append(spec["label"])
             print(f"ERROR: Failed downloading {spec['label']}: {exc}")
 
-    missing = [spec["label"] for spec in MODEL_SPECS if not _is_model_present(spec["target"])]
+    failed_set = set(failed_downloads)
+    missing = [
+        spec["label"]
+        for spec in MODEL_SPECS
+        if spec["label"] not in failed_set and not _is_model_present(spec["target"])
+    ]
     if failed_downloads or missing:
         if failed_downloads:
             print("ERROR: Download failures occurred for:")
