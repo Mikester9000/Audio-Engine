@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, review logs now have executable writer paths integrated with approval/export handoff and request-batch result JSON ingestion, and both the newer request-batch pipeline and the backward-compatible legacy request-file path now support explicit per-request duration control for music/SFX.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, review logs now have executable writer paths integrated with approval/export handoff and request-batch result JSON ingestion, and both the newer request-batch pipeline and the backward-compatible legacy request-file path now support explicit per-request duration control for music/SFX. Windows one-click bootstrap files now exist (`setup.bat`, `run.bat`) with an idempotent model downloader (`tools/download_models.py`) and optional local-files-only neural backend adapters under `audio_engine/ai/backends/`.
 
 ## What is implemented today
 
@@ -38,6 +38,8 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Full-game taxonomy fixture coverage | Implemented (docs fixtures) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json`, `generation_requests.music.v1.json`, `generation_requests.sfx.v1.json`, `generation_requests.voice.v1.json`, `docs/AI_FACTORY/TASKS/BACKLOG.md` |
 | Backend discoverability and selection CLI | Implemented | `audio_engine/cli.py` (`list-backends`, `--backend` on `generate-music`/`generate-sfx`/`generate-voice`) |
 | Backend evaluation and availability guidance | Implemented | `audio_engine/ai/backend.py` (`BackendRegistry.evaluate_backends`), `audio_engine/cli.py` (`list-backends`) |
+| Optional neural backend adapters (local files only) | Implemented (optional runtime) | `audio_engine/ai/backends/*`, `tests/test_ai_pipeline.py` |
+| Windows offline bootstrap workflow | Implemented | `setup.bat`, `run.bat`, `tools/download_models.py`, `WINDOWS_QUICKSTART.md`, `models/README.md` |
 | Repeated SFX variation strategy guidance | Implemented (factory-side) | `audio_engine/integration/factory_inputs.py` (variant-family validation), `audio_engine/integration/asset_pipeline.py` (variant provenance fields) |
 | Category-specific SFX loudness/readability guidance | Implemented (docs) | `docs/AI_FACTORY/SUBSYSTEMS/SFX.md`, `docs/AI_FACTORY/QA/QUALITY_BARS.md` |
 | Variant-family QA review/report templates | Implemented (docs-contract) | `docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md`, `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json` |
@@ -49,19 +51,16 @@ The repository contains a working Python audio engine with tests, a manifest val
 ### Commands verified in this session
 
 ```bash
-python -m pytest tests/test_integration.py -k "request_duration_seconds or legacy-duration-tests or execute_request_batch_prefers_request_duration_seconds"
-python -m pytest tests/test_engine_cli.py -k "request_duration_seconds or via_request_file"
+python -m pytest tests/test_ai_pipeline.py -k "OptionalNeuralBackends or optional_backends_import"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
-python -m audio_engine.cli generate-request-batch --request-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json --output-dir /tmp/session021_legacy_smoke --sfx-duration 0.1 --quiet
 ```
 
 Observed result in this session:
 
-- legacy `AssetPipeline.execute_request_batch()` now honors request-level `durationSeconds` for music/SFX while preserving CLI duration flags as fallback defaults
-- targeted integration tests passed (`2` selected tests) and targeted CLI tests passed (`3` selected tests)
-- full repo test suite passed (`419`) and asset-manifest validation passed
-- legacy CLI smoke run succeeded for the committed SFX fixture (`10` requests OK to `/tmp/session021_legacy_smoke`)
+- optional neural backends import safely and fall back to procedural behavior when dependencies/models are absent
+- targeted neural-backend fallback tests passed
+- full repo test suite passed and asset-manifest validation passed
 
 ## Current repository structure
 
@@ -90,7 +89,7 @@ Observed result in this session:
 
 ## Current limitations
 
-1. The default backend is still primarily procedural rather than modern neural generation.
+1. Neural backends are optional and gated by local dependency/model availability; procedural remains default fallback.
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
 4. Plan-driven orchestration currently requires explicit request-batch files that provide prompts/seeds/backends for all required plan targets; missing required requests are treated as execution errors.

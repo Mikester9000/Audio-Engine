@@ -36,3 +36,6 @@ Thumbs.db
 *.wav
 *.ogg
 *.mp3
+
+# Local model caches/weights (keep models/ scaffold files only)
+models/*/

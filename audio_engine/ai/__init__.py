@@ -22,6 +22,7 @@ from audio_engine.ai.sfx_gen import SFXGen
 from audio_engine.ai.voice_gen import VoiceGen
 from audio_engine.ai.prompt import PromptParser, MusicPlan, SFXPlan, VoicePlan
 from audio_engine.ai.backend import InferenceBackend, ProceduralBackend, BackendRegistry
+import audio_engine.ai.backends as _optional_backends  # noqa: F401
 
 __all__ = [
     # Legacy
