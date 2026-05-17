@@ -41,14 +41,16 @@ The repository now has a complete draft-to-approved pipeline on the newer reques
 - [x] Execute `SESSION-022` — define and queue the next executable implementation session
 - [x] Execute `SESSION-023` — add optional provenance sidecars for legacy request-file execution path
 - [x] Execute `SESSION-024` — add result-JSON sourcing path for review-log writing
-- [ ] Execute `SESSION-025` — define and queue the next executable implementation session
+- [x] Execute `SESSION-025` — define and queue the next executable implementation session
+- [x] Execute `SESSION-026` — add legacy request-file batch-manifest parity
+- [ ] Execute `SESSION-027` — define and queue the next executable implementation session
 
 ## Recommended next PRs
 
-1. **Stabilize optional neural backend quality + performance**
-   - Validate prompt presets and generation quality on real model downloads.
-2. **Define and queue the next executable implementation session (SESSION-025)**
+1. **Define and queue the next executable implementation session (SESSION-027)**
    - Refresh continuity/session-control docs and set the next concrete implementation objective.
+2. **Stabilize optional neural backend quality + performance**
+   - Validate prompt presets and generation quality on real model downloads.
 
 ## Do not deprioritize
 

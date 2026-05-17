@@ -1,12 +1,12 @@
 {
-  "version": "1.6.0",
-  "lastUpdated": "2026-05-16",
+  "version": "1.8.0",
+  "lastUpdated": "2026-05-17",
   "currentSession": {
-    "id": "SESSION-025",
+    "id": "SESSION-027",
     "title": "Define and queue the next executable implementation session",
     "status": "ready",
     "taskType": "docs_only",
-    "objective": "Refresh continuity/session-control docs to reflect SESSION-023/024 completion and define the next concrete executable implementation task.",
+    "objective": "Refresh continuity/session-control docs to reflect SESSION-026 completion and define the next concrete executable implementation task.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",

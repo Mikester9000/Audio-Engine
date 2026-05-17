@@ -1009,7 +1009,42 @@ class AssetPipeline:
                 self.progress_callback(f"  [err]  {request.request_id}: {msg}")
 
         result.total_duration_seconds = time.monotonic() - t_start
+        self._write_legacy_batch_manifest(result, output_dir)
         return result
+
+    def _write_legacy_batch_manifest(
+        self,
+        result: RequestBatchResult,
+        output_dir: Path,
+    ) -> None:
+        """Write legacy-path ``batch_manifest.json`` for parity with request-batch drafts."""
+        manifest = GenerationManifest(output_dir=str(output_dir))
+        manifest.total_duration_seconds = result.total_duration_seconds
+
+        for record in result.records:
+            if record.status == "error":
+                error_message = record.error or "unknown error"
+                manifest.errors.append(f"{record.request_id}: {error_message}")
+                continue
+            manifest_record = {
+                "request_id": record.request_id,
+                "asset_id": record.asset_id,
+                "type": record.type,
+                "seed": record.seed,
+                "file": record.output_path,
+                "status": record.status,
+            }
+            if record.type == "music":
+                manifest.music.append(manifest_record)
+            elif record.type == "sfx":
+                manifest.sfx.append(manifest_record)
+            else:
+                manifest.voice.append(manifest_record)
+
+        manifest_path = output_dir / "batch_manifest.json"
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        manifest_path.write_text(manifest.to_json(), encoding="utf-8")
+        self.progress_callback(f"manifest written → {manifest_path}")
 
     @staticmethod
     def _resolve_request_duration(*, request: "GenerationRequest", fallback_duration: float) -> float:

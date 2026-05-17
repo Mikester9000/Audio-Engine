@@ -729,6 +729,25 @@ def test_cli_generate_request_batch_writes_result_json(tmp_path, capsys):
     assert "records" in data
 
 
+def test_cli_generate_request_batch_request_file_writes_batch_manifest_json(tmp_path):
+    """Legacy request-file CLI path should write batch_manifest.json."""
+    rc = main([
+        "generate-request-batch",
+        "--request-file", str(_FIXTURE_DIR / "generation_requests.sfx.v1.json"),
+        "--output-dir", str(tmp_path),
+        "--sfx-duration", "0.1",
+        "--quiet",
+    ])
+    assert rc == 0
+
+    manifest_path = tmp_path / "batch_manifest.json"
+    assert manifest_path.exists(), "batch_manifest.json not written"
+    data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert "sfx" in data
+    assert "errors" in data
+    assert data["errors"] == []
+
+
 def test_cli_generate_request_batch_write_provenance_creates_sidecars(tmp_path):
     """--write-provenance should create .provenance.json sidecars for every generated file."""
     rc = main([

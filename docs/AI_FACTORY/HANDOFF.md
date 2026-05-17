@@ -4,29 +4,32 @@
 
 ## Last completed change
 
-Added Windows offline bootstrap support and optional neural backend scaffolding:
+Completed SESSION-026 (legacy request-file batch-manifest parity):
 
-- `setup.bat` / `run.bat` in repo root
-- `tools/download_models.py` for idempotent local model downloads into `models/`
-- `audio_engine/ai/backends/` package with MusicGen/AudioGen/Kokoro adapters and safe registration guardrails
-- `WINDOWS_QUICKSTART.md` and `models/README.md`
-- `pyproject.toml` `[project.optional-dependencies].neural`
+- Added additive legacy `batch_manifest.json` writing in `AssetPipeline.execute_request_batch`.
+- Preserved compatibility: legacy `request_batch_result.json` behavior remains unchanged and optional via `--write-result`.
+- Added focused test coverage for deterministic legacy manifest output in integration and CLI paths.
 
 ## Verified in this session
 
 ```bash
-python -m pytest tests/test_ai_pipeline.py -k "OptionalNeuralBackends or optional_backends_import"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
+python -m pytest tests/test_integration.py -k "writes_batch_manifest_json and execute_request_batch"
+python -m pytest tests/test_engine_cli.py -k "request_file_writes_batch_manifest_json"
+python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
+python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 ```
 
 Observed result:
-- targeted optional-neural fallback tests passed
-- full repo test suite passed and asset-manifest validation passed
+- full test suite passed
+- asset-manifest validation passed
+- targeted legacy manifest integration/CLI tests passed
+- updated session-control JSON files parse successfully
 
 ## Immediate next best task
 
-Validate installed-model behavior for the new optional neural adapters on a Windows machine, then execute `SESSION-025` from `docs/AI_FACTORY/SESSION_QUEUE.md` to refresh continuity/session-control docs.
+Execute `SESSION-027` from `docs/AI_FACTORY/SESSION_QUEUE.md` to refresh continuity/session-control docs after SESSION-026 and define the next concrete executable implementation task.
 
 ## Files future agents should read first
 
@@ -64,3 +67,5 @@ Validate installed-model behavior for the new optional neural adapters on a Wind
 - [x] Queue advancement and next executable session definition (SESSION-022)
 - [x] Optional provenance sidecars for legacy request-file execution path (SESSION-023)
 - [x] Result-JSON sourced review-log writing for legacy request-file workflow (SESSION-024)
+- [x] Queue advancement and next executable session definition (SESSION-025)
+- [x] Legacy request-file batch-manifest parity without result-json breakage (SESSION-026)

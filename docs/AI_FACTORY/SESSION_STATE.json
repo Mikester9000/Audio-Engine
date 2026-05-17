@@ -1,8 +1,8 @@
 {
-  "version": "1.6.0",
-  "lastUpdated": "2026-05-16",
+  "version": "1.8.0",
+  "lastUpdated": "2026-05-17",
   "currentSession": {
-    "id": "SESSION-025",
+    "id": "SESSION-027",
     "title": "Define and queue the next executable implementation session",
     "status": "ready",
     "taskType": "docs_only"
@@ -127,6 +127,16 @@
       "id": "SESSION-024",
       "status": "completed",
       "completedDate": "2026-05-16"
+    },
+    {
+      "id": "SESSION-025",
+      "status": "completed",
+      "completedDate": "2026-05-17"
+    },
+    {
+      "id": "SESSION-026",
+      "status": "completed",
+      "completedDate": "2026-05-17"
     }
   ]
 }

@@ -2,6 +2,41 @@
 
 > Append a short entry for every substantial PR. Keep entries brief and factual.
 
+## 2026-05-17 — Complete SESSION-026 (legacy request-file batch-manifest parity)
+
+- Added additive legacy `batch_manifest.json` output writing in `AssetPipeline.execute_request_batch()`.
+- Legacy manifest output now includes deterministic per-request metadata (`request_id`, `asset_id`, `type`, `seed`, `file`, `status`) and legacy-path errors in `errors`.
+- Preserved compatibility with existing legacy result contract:
+  - `request_batch_result.json` remains optional and only written via `generate-request-batch --write-result`
+  - no breaking changes to existing result record fields.
+- Added focused tests:
+  - `tests/test_integration.py::test_execute_request_batch_writes_batch_manifest_json`
+  - `tests/test_engine_cli.py::test_cli_generate_request_batch_request_file_writes_batch_manifest_json`
+- Updated continuity/session-control docs and advanced the queue to SESSION-027.
+- Verification:
+  - `python -m pytest` → PASS
+  - `python tools/validate-assets.py assets/examples/ --verbose` → PASS
+  - targeted legacy manifest tests in integration + CLI → PASS
+  - `python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json` → PASS
+  - `python -m json.tool docs/AI_FACTORY/SESSION_STATE.json` → PASS
+
+## 2026-05-17 — Complete SESSION-025 (queue/state continuity refresh + next executable session definition)
+
+- Marked SESSION-025 as completed and synchronized session-control files:
+  - `docs/AI_FACTORY/SESSION_QUEUE.md`
+  - `docs/AI_FACTORY/CURRENT_SESSION.json`
+  - `docs/AI_FACTORY/SESSION_STATE.json`
+  - `docs/AI_FACTORY/SESSION_HISTORY.md`
+- Defined SESSION-026 as the next executable implementation task: additive legacy `batch_manifest.json` parity for `generate-request-batch --request-file` while preserving existing `request_batch_result.json` compatibility.
+- Refreshed continuity docs to match current session state:
+  - `docs/AI_FACTORY/ACTIVE_WORK.md`
+  - `docs/AI_FACTORY/HANDOFF.md`
+  - `docs/AI_FACTORY/CURRENT_STATE.md`
+  - `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`
+- Verification:
+  - `python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json` → PASS
+  - `python -m json.tool docs/AI_FACTORY/SESSION_STATE.json` → PASS
+
 ## 2026-05-16 — Complete SESSION-023 + SESSION-024 (legacy provenance sidecars + result-JSON review-log sourcing)
 
 - Added optional provenance-sidecar writing for legacy `generate-request-batch --request-file` via `--write-provenance`.

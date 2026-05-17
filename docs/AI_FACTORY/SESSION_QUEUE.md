@@ -150,11 +150,25 @@
 - Added `ReviewLogWriter.append_from_result_json()` and `write-review-log --from-result` / `--include-skipped`.
 - Result-driven review-log writes now preserve request metadata from result records when sidecars are missing, resolve relative output paths against the result context, and support `--project` / `--scope` overrides.
 
+### SESSION-025 — Define and queue the next executable implementation session
+
+- **Status:** `completed`
+- **Task type:** `docs_only`
+- Refreshed continuity/session-control docs to reflect SESSION-023/024 completion.
+- Defined SESSION-026 as the next concrete executable implementation session.
+
+### SESSION-026 — Add legacy request-file batch-manifest parity
+
+- **Status:** `completed`
+- **Task type:** `provenance + cli`
+- Added additive legacy `batch_manifest.json` writing for `generate-request-batch --request-file` / `AssetPipeline.execute_request_batch` with deterministic per-request records aligned to existing request/result metadata.
+- Preserved compatibility by leaving `request_batch_result.json` behavior unchanged and added focused integration/CLI coverage for the new legacy manifest output.
+
 ## Current next session
 
-### SESSION-025 — Define and queue the next executable implementation session
+### SESSION-027 — Define and queue the next executable implementation session
 
 - **Status:** `ready`
 - **Task type:** `docs_only`
-- **Objective:** Refresh continuity/session-control docs to reflect SESSION-023/024 completion and define the next concrete executable implementation task.
+- **Objective:** Refresh continuity/session-control docs to reflect SESSION-026 completion and define the next concrete executable implementation task.
 - **Notes:** Keep queue/state/current-session/history synchronized and avoid claiming unverified implementation scope.
