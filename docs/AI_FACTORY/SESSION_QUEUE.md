@@ -179,3 +179,122 @@
 - **Task type:** `cli`
 - **Objective:** Add an additive `audio-engine verify-backends` command that runs deterministic backend availability/preflight checks, optionally executes bounded fixture smoke runs when local models are present, and emits a machine-readable report to support neural-readiness handoff decisions.
 - **Notes:** Preserve default generation behavior, keep the command additive/non-breaking, prefer committed vertical-slice fixtures, and avoid claiming model-quality guarantees when dependencies/models are absent.
+
+### SESSION-029 — Finalize dual synth profile targets (PS1/PS2-era + orchestral)
+
+- **Status:** `planned`
+- **Task type:** `docs_only`
+- **Objective:** Lock style-family profile contracts for PS1/PS2-era synth output and orchestral synth output so downstream generation requests use stable profile names and constraints.
+- **Notes:** Keep this as style-family guidance, not artist-copy guidance, and preserve existing generation defaults.
+
+### SESSION-030 — Add strict WAV sample-folder ingestion contract
+
+- **Status:** `planned`
+- **Task type:** `docs_only`
+- **Objective:** Define deterministic folder/layout, naming, metadata, and rejection rules for user-provided WAV sample folders consumed by remaster workflows.
+- **Notes:** Keep schema/path requirements explicit for low-reasoning agent execution.
+
+### SESSION-031 — Complete batch remaster pipeline wiring
+
+- **Status:** `planned`
+- **Task type:** `integration_export`
+- **Objective:** Add deterministic remaster-batch execution over ingestion-contract sample folders with machine-readable per-file outcomes.
+- **Notes:** Preserve additive behavior and avoid breaking existing generation request-batch flows.
+
+### SESSION-032 — Add license compliance CI gate
+
+- **Status:** `planned`
+- **Task type:** `cli`
+- **Objective:** Fail CI on unknown or disallowed dependency/model licenses and emit a machine-readable compliance report for auditability.
+- **Notes:** Keep policy config explicit and version-controlled.
+
+### SESSION-033 — Build dependency/model license inventory baseline
+
+- **Status:** `planned`
+- **Task type:** `docs_only`
+- **Objective:** Capture machine-readable dependency/model license inventory and map each entry to commercial-eligibility policy categories.
+- **Notes:** Keep inventory synchronized with compliance CI inputs.
+
+### SESSION-034 — Define commercial eligibility matrix by backend/model combination
+
+- **Status:** `planned`
+- **Task type:** `docs_only`
+- **Objective:** Publish explicit allow/conditional/block commercial-use matrix for backend + model combinations used by generation commands.
+- **Notes:** Do not claim commercial eligibility where license terms are unknown.
+
+### SESSION-035 — Finalize mastering profile presets (game mix / OST / vocal mix)
+
+- **Status:** `planned`
+- **Task type:** `cli`
+- **Objective:** Add stable mastering profile selection for game mix, OST, and vocal-centric workflows with deterministic parameter capture.
+- **Notes:** Keep profiles additive and default-compatible with existing rendering commands.
+
+### SESSION-036 — Expand QA gates for professional WAV release quality
+
+- **Status:** `planned`
+- **Task type:** `qa`
+- **Objective:** Add enforceable QA checks for loudness, true peak, clipping, loop integrity, spectral balance, and intelligibility expectations.
+- **Notes:** Keep failure output actionable and machine-readable.
+
+### SESSION-037 — Add deterministic export contract for commercial WAV-first delivery
+
+- **Status:** `planned`
+- **Task type:** `integration_export`
+- **Objective:** Define and enforce deterministic export naming/layout/manifests for game-import and direct commercial distribution workflows.
+- **Notes:** Preserve current export behavior unless an explicit profile is selected.
+
+### SESSION-038 — Add vocals + instrumental production path completion
+
+- **Status:** `planned`
+- **Task type:** `batch_generation`
+- **Objective:** Complete the additive workflow that outputs both instrumental and vocal-production-ready assets with traceable provenance.
+- **Notes:** Keep voice lower priority than music/SFX unless explicitly selected by request inputs.
+
+### SESSION-039 — Harden low-ambiguity autopilot command contracts
+
+- **Status:** `planned`
+- **Task type:** `docs_only`
+- **Objective:** Tighten command-contract docs so weak local LLM execution remains deterministic and no-choice for routine production flows.
+- **Notes:** Favor explicit ordered commands and strict failure handling.
+
+### SESSION-040 — Add deterministic regression harness for factory workflows
+
+- **Status:** `planned`
+- **Task type:** `qa`
+- **Objective:** Add reproducibility regression checks that validate stable outputs/manifests from fixed seeds and committed fixtures.
+- **Notes:** Focus on deterministic metadata and acceptance-gate repeatability.
+
+### SESSION-041 — Add end-to-end vertical-slice release gate automation
+
+- **Status:** `planned`
+- **Task type:** `integration_export`
+- **Objective:** Automate a full vertical-slice run from request ingestion through QA/export/compliance gate outputs with one deterministic command path.
+- **Notes:** Keep this flow bounded to committed fixtures and documented profiles.
+
+### SESSION-042 — Close remaining GameRewritten import contract gaps
+
+- **Status:** `planned`
+- **Task type:** `integration_export`
+- **Objective:** Resolve any remaining documented path/metadata mismatches between exported factory artifacts and downstream GameRewritten import expectations.
+- **Notes:** Do not invent downstream contracts without repository evidence.
+
+### SESSION-043 — Freeze final baseline reproducibility + seed policy
+
+- **Status:** `planned`
+- **Task type:** `docs_only`
+- **Objective:** Lock deterministic seed capture/regeneration rules across generation, remaster, QA, and export surfaces.
+- **Notes:** Ensure policies are machine-readable and operationally enforceable.
+
+### SESSION-044 — Final commercial readiness audit session
+
+- **Status:** `planned`
+- **Task type:** `docs_only`
+- **Objective:** Run a final evidence-driven audit that capability, quality, licensing, automation, and reproducibility gates are all satisfied.
+- **Notes:** Any unmet gate must be converted into explicit blocker sessions, not waived.
+
+### SESSION-045 — Completion-state handoff and closure lock
+
+- **Status:** `planned`
+- **Task type:** `docs_only`
+- **Objective:** Mark the baseline factory as complete only after all required gates are evidenced, then publish final handoff/maintenance instructions for future additive work.
+- **Notes:** Completion claims must remain evidence-based and reversible if a gate regresses.

@@ -50,8 +50,8 @@ The repository now has a complete draft-to-approved pipeline on the newer reques
 
 1. **Add backend preflight verification command (SESSION-028)**
    - Implement an additive `verify-backends` command with deterministic availability checks and machine-readable reporting for optional neural workflows.
-2. **Stabilize optional neural backend quality + performance**
-   - Use preflight command outputs plus local model runs to tighten prompt presets and operational guidance.
+2. **Follow ordered completion roadmap through SESSION-045**
+   - Continue through queued capability, licensing, mastering, QA, export, deterministic regression, and closure sessions (`SESSION-029` → `SESSION-045`) as defined in `SESSION_QUEUE.md`.
 
 ## Do not deprioritize
 

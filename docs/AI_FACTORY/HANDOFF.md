@@ -9,6 +9,7 @@ Completed SESSION-027 (queue/state continuity refresh + next executable implemen
 - Marked SESSION-027 complete and synchronized session-control docs.
 - Defined SESSION-028 as the next executable implementation task.
 - Refreshed continuity docs and machine-guidance status docs for truthful post-SESSION-026 state.
+- Expanded queued roadmap detail so `SESSION_QUEUE.md` now explicitly defines ordered follow-on sessions through SESSION-045 and removes dangling next-session ambiguity.
 
 ## Verified in this session
 
@@ -16,12 +17,14 @@ Completed SESSION-027 (queue/state continuity refresh + next executable implemen
 python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
 python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 python -m json.tool docs/AI_FACTORY/FACTORY_STATUS.json
+grep -n "^### SESSION-0\\(2[89]\\|[34][0-9]\\|45\\)" docs/AI_FACTORY/SESSION_QUEUE.md
 ```
 
 Observed result:
 - updated session-control JSON files parse successfully
 - updated machine-guidance status JSON parses successfully
-- continuity and queue-state docs are synchronized on SESSION-028 as the active ready session
+- continuity docs are synchronized on SESSION-028 as the active ready session
+- queue now contains explicit ordered planned sessions (`SESSION-029` → `SESSION-045`) matching the machine-readable next-session pointer
 
 ## Immediate next best task
 
