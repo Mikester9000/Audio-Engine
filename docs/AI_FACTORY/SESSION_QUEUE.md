@@ -168,7 +168,14 @@
 
 ### SESSION-027 — Define and queue the next executable implementation session
 
-- **Status:** `ready`
+- **Status:** `completed`
 - **Task type:** `docs_only`
 - **Objective:** Refresh continuity/session-control docs to reflect SESSION-026 completion and define the next concrete executable implementation task.
 - **Notes:** Keep queue/state/current-session/history synchronized and avoid claiming unverified implementation scope.
+
+### SESSION-028 — Add backend preflight verification command for optional neural workflows
+
+- **Status:** `ready`
+- **Task type:** `cli`
+- **Objective:** Add an additive `audio-engine verify-backends` command that runs deterministic backend availability/preflight checks, optionally executes bounded fixture smoke runs when local models are present, and emits a machine-readable report to support neural-readiness handoff decisions.
+- **Notes:** Preserve default generation behavior, keep the command additive/non-breaking, prefer committed vertical-slice fixtures, and avoid claiming model-quality guarantees when dependencies/models are absent.

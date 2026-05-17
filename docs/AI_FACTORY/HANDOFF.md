@@ -4,32 +4,28 @@
 
 ## Last completed change
 
-Completed SESSION-026 (legacy request-file batch-manifest parity):
+Completed SESSION-027 (queue/state continuity refresh + next executable implementation session definition):
 
-- Added additive legacy `batch_manifest.json` writing in `AssetPipeline.execute_request_batch`.
-- Preserved compatibility: legacy `request_batch_result.json` behavior remains unchanged and optional via `--write-result`.
-- Added focused test coverage for deterministic legacy manifest output in integration and CLI paths.
+- Marked SESSION-027 complete and synchronized session-control docs.
+- Defined SESSION-028 as the next executable implementation task.
+- Refreshed continuity docs and machine-guidance status docs for truthful post-SESSION-026 state.
 
 ## Verified in this session
 
 ```bash
-python -m pytest
-python tools/validate-assets.py assets/examples/ --verbose
-python -m pytest tests/test_integration.py -k "writes_batch_manifest_json and execute_request_batch"
-python -m pytest tests/test_engine_cli.py -k "request_file_writes_batch_manifest_json"
 python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
 python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
+python -m json.tool docs/AI_FACTORY/FACTORY_STATUS.json
 ```
 
 Observed result:
-- full test suite passed
-- asset-manifest validation passed
-- targeted legacy manifest integration/CLI tests passed
 - updated session-control JSON files parse successfully
+- updated machine-guidance status JSON parses successfully
+- continuity and queue-state docs are synchronized on SESSION-028 as the active ready session
 
 ## Immediate next best task
 
-Execute `SESSION-027` from `docs/AI_FACTORY/SESSION_QUEUE.md` to refresh continuity/session-control docs after SESSION-026 and define the next concrete executable implementation task.
+Execute `SESSION-028` from `docs/AI_FACTORY/SESSION_QUEUE.md` to add `audio-engine verify-backends` preflight reporting for optional neural backend readiness.
 
 ## Files future agents should read first
 
@@ -69,3 +65,4 @@ Execute `SESSION-027` from `docs/AI_FACTORY/SESSION_QUEUE.md` to refresh continu
 - [x] Result-JSON sourced review-log writing for legacy request-file workflow (SESSION-024)
 - [x] Queue advancement and next executable session definition (SESSION-025)
 - [x] Legacy request-file batch-manifest parity without result-json breakage (SESSION-026)
+- [x] Queue advancement and next executable session definition (SESSION-027)

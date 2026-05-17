@@ -34,3 +34,4 @@
 | `SESSION-024` | 2026-05-16 | completed | Added result-driven review-log writing (`write-review-log --from-result`) with optional skipped-record inclusion and metadata continuity from request-batch result JSON. | this PR |
 | `SESSION-025` | 2026-05-17 | completed | Refreshed continuity/session-control docs after SESSION-023/024 and queued SESSION-026 as the next executable implementation task. | this PR |
 | `SESSION-026` | 2026-05-17 | completed | Added additive legacy `batch_manifest.json` output parity for `generate-request-batch --request-file` while preserving `request_batch_result.json` behavior. | this PR |
+| `SESSION-027` | 2026-05-17 | completed | Refreshed continuity/session-control docs after SESSION-026, synchronized queue/state/current-session/history, and queued SESSION-028 as the next executable implementation task (`verify-backends` preflight command). | this PR |

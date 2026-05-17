@@ -1,6 +1,6 @@
 {
-  "statusVersion": "1.1.0",
-  "lastUpdated": "2026-05-14",
+  "statusVersion": "1.2.0",
+  "lastUpdated": "2026-05-17",
   "repositoryRole": "GitHub-native audio asset factory for downstream game import",
   "coverageGoal": [
     "music",
@@ -18,14 +18,15 @@
   ],
   "capabilityState": {
     "generation_core": "implemented",
-    "fixed_map_batch_pipeline": "partial",
-    "project_audio_plan_ingestion": "partial",
-    "generation_request_batch_ingestion": "partial",
-    "provenance_review_logging": "planned",
-    "batch_qa_gate": "planned",
-    "gamerewritten_import_automation": "blocked",
+    "fixed_map_batch_pipeline": "implemented",
+    "project_audio_plan_ingestion": "implemented",
+    "generation_request_batch_ingestion": "implemented",
+    "provenance_review_logging": "implemented",
+    "batch_qa_gate": "implemented",
+    "gamerewritten_import_automation": "implemented",
     "session_autopilot_layer": "implemented",
-    "execution_safety_hardening_layer": "implemented"
+    "execution_safety_hardening_layer": "implemented",
+    "optional_neural_readiness_preflight": "planned"
   },
   "sourceDocs": {
     "implementationMatrix": "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
@@ -46,10 +47,10 @@
     "sessionState": "docs/AI_FACTORY/SESSION_STATE.json"
   },
   "currentSession": {
-    "id": "SESSION-002",
+    "id": "SESSION-028",
     "status": "ready",
-    "title": "Add request-batch generation command",
+    "title": "Add backend preflight verification command for optional neural workflows",
     "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
-    "next": "SESSION-003"
+    "next": "SESSION-029"
   }
 }

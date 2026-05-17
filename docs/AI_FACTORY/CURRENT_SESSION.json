@@ -1,32 +1,33 @@
 {
-  "version": "1.8.0",
+  "version": "1.9.0",
   "lastUpdated": "2026-05-17",
   "currentSession": {
-    "id": "SESSION-027",
-    "title": "Define and queue the next executable implementation session",
+    "id": "SESSION-028",
+    "title": "Add backend preflight verification command for optional neural workflows",
     "status": "ready",
-    "taskType": "docs_only",
-    "objective": "Refresh continuity/session-control docs to reflect SESSION-026 completion and define the next concrete executable implementation task.",
+    "taskType": "cli",
+    "objective": "Add an additive `audio-engine verify-backends` command that runs deterministic backend availability/preflight checks, optionally executes bounded fixture smoke runs when local models are present, and emits a machine-readable report for neural-readiness handoff decisions.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",
       "docs/AI_FACTORY/CURRENT_STATE.md",
       "docs/AI_FACTORY/ACTIVE_WORK.md",
       "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
-      "docs/AI_FACTORY/NEXT_PR_SEQUENCE.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md",
+      "docs/AI_FACTORY/SCHEMAS/GENERATION_REQUEST_SCHEMA.md",
       "docs/AI_FACTORY/NO_DECISION_ZONES.md",
       "docs/AI_FACTORY/SESSION_STATE.json",
-      "docs/AI_FACTORY/SESSION_HISTORY.md"
+      "docs/AI_FACTORY/VERIFICATION_PROFILES.md"
     ],
     "likelyModify": [
-      "docs/AI_FACTORY/SESSION_QUEUE.md",
-      "docs/AI_FACTORY/CURRENT_SESSION.json",
-      "docs/AI_FACTORY/SESSION_STATE.json",
-      "docs/AI_FACTORY/SESSION_HISTORY.md",
-      "docs/AI_FACTORY/ACTIVE_WORK.md",
-      "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/CURRENT_STATE.md",
-      "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md"
+      "audio_engine/cli.py",
+      "audio_engine/ai/backend.py",
+      "audio_engine/integration/asset_pipeline.py",
+      "tests/test_engine_cli.py",
+      "tests/test_ai_pipeline.py",
+      "tests/test_integration.py",
+      "docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md",
+      "docs/AI_FACTORY/HANDOFF.md"
     ]
   }
 }
