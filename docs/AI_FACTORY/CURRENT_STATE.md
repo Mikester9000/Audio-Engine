@@ -38,8 +38,14 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Full-game taxonomy fixture coverage | Implemented (docs fixtures) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/audio_plan.vertical_slice.v1.json`, `generation_requests.music.v1.json`, `generation_requests.sfx.v1.json`, `generation_requests.voice.v1.json`, `docs/AI_FACTORY/TASKS/BACKLOG.md` |
 | Backend discoverability and selection CLI | Implemented | `audio_engine/cli.py` (`list-backends`, `--backend` on `generate-music`/`generate-sfx`/`generate-voice`) |
 | Backend evaluation and availability guidance | Implemented | `audio_engine/ai/backend.py` (`BackendRegistry.evaluate_backends`), `audio_engine/cli.py` (`list-backends`) |
+| MusicGen Medium backend (single AI model) | Implemented | `audio_engine/ai/backends/musicgen_backend.py` |
 | Optional neural backend adapters (local files only) | Implemented (optional runtime) | `audio_engine/ai/backends/*`, `tests/test_ai_pipeline.py` |
 | Windows offline bootstrap workflow | Implemented | `setup.bat`, `run.bat`, `tools/download_models.py`, `WINDOWS_QUICKSTART.md`, `models/README.md` |
+| Orchestral sample drop-in folder structure | Implemented (folder) | `samples/orchestral/*`, `samples/README.md` |
+| Synth chorus/reverb/stereo DSP modules | Implemented | `audio_engine/dsp/chorus.py`, `audio_engine/dsp/reverb.py`, `audio_engine/dsp/stereo.py` |
+| Mastering profile presets | Implemented | `audio_engine/render/offline_bounce.py` |
+| Crossfade loop baking | Implemented | `audio_engine/render/loop_exporter.py` |
+| Duration stitching in MusicGen backend | Implemented | `audio_engine/ai/backends/musicgen_backend.py` |
 | Repeated SFX variation strategy guidance | Implemented (factory-side) | `audio_engine/integration/factory_inputs.py` (variant-family validation), `audio_engine/integration/asset_pipeline.py` (variant provenance fields) |
 | Category-specific SFX loudness/readability guidance | Implemented (docs) | `docs/AI_FACTORY/SUBSYSTEMS/SFX.md`, `docs/AI_FACTORY/QA/QUALITY_BARS.md` |
 | Variant-family QA review/report templates | Implemented (docs-contract) | `docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md`, `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json` |
@@ -87,10 +93,13 @@ Observed result in this session:
 4. The QA gate is now wired into CI; QA failures block the PR.
 5. Music-duration policy is clearly documented: long-form up to 5 minutes for major themes, loopable 60–120 s for gameplay BGM, OST variants planned for key tracks.
 6. Request-batch generation is deterministic: each request's seed is passed explicitly per-request.
+7. Single AI model (MusicGen Medium) covers music and SFX with no model-switching overhead.
+8. Orchestral sample drop-in folder structure is ready for user-provided WAV libraries.
+9. Procedural mastering now includes a `youtube` profile for broadcast/streaming-targeted output.
 
 ## Current limitations
 
-1. Neural backends are optional and gated by local dependency/model availability; procedural remains default fallback.
+1. Neural backend use is optional and gated by local dependency/model availability; procedural remains default fallback and voice uses built-in synthesis by default.
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
 4. Plan-driven orchestration currently requires explicit request-batch files that provide prompts/seeds/backends for all required plan targets; missing required requests are treated as execution errors.

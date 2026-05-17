@@ -92,6 +92,13 @@ class TestOfflineBounce:
         with pytest.raises(ValueError, match="loop_end"):
             bounce.process_and_export(_stereo(_sine()), tmp_path / "x.wav", loop_start=0)
 
+    @pytest.mark.parametrize("profile", ["game", "ost", "youtube", "procedural_neutral"])
+    def test_profile_presets_process(self, profile):
+        bounce = OfflineBounce(SR, profile=profile)
+        out = bounce.process(_stereo(_sine(duration=0.5)))
+        assert out.shape[1] == 2
+        assert out.dtype == np.float32
+
 
 # ---------------------------------------------------------------------------
 # StemRenderer

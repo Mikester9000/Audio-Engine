@@ -13,7 +13,7 @@ class ModelRequirements(TypedDict):
 
 
 _MODEL_REQUIREMENTS: dict[str, ModelRequirements] = {
-    "musicgen-small": {
+    "musicgen-medium": {
         "required_files": ("config.json",),
         "required_any": (
             ("preprocessor_config.json", "processor_config.json", "tokenizer_config.json"),

@@ -22,7 +22,7 @@ echo.
 echo Common commands:
 echo   audio-engine list-backends
 echo   audio-engine generate-music --prompt "epic orchestral battle theme" --duration 30 --output battle.wav --backend musicgen
-echo   audio-engine generate-sfx --prompt "large explosion" --duration 1.5 --output explosion.wav --backend audiogen
-echo   audio-engine generate-voice --text "Welcome, hero." --voice narrator --output voice.wav --backend kokoro
+echo   audio-engine generate-sfx --prompt "large explosion" --duration 1.5 --output explosion.wav --backend musicgen
+echo   audio-engine generate-voice --text "Welcome, hero." --voice narrator --output voice.wav
 echo.
 audio-engine --help

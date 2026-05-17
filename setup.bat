@@ -52,7 +52,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [5/5] Downloading AI models to models\ ...
+echo [5/5] Downloading MusicGen Medium model to models\ ...
 python tools\download_models.py
 if errorlevel 1 (
     echo ERROR: Model download failed.

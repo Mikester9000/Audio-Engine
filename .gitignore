@@ -39,3 +39,13 @@ Thumbs.db
 
 # Local model caches/weights (keep models/ scaffold files only)
 models/*/
+
+# Keep user sample libraries out of git (folder scaffold remains tracked)
+samples/orchestral/**/*.wav
+samples/orchestral/**/*.WAV
+samples/orchestral/**/*.aif
+samples/orchestral/**/*.aiff
+samples/sfx/**/*.wav
+samples/sfx/**/*.WAV
+samples/voice/**/*.wav
+samples/voice/**/*.WAV

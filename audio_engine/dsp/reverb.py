@@ -17,7 +17,87 @@ from pathlib import Path
 import numpy as np
 from scipy.signal import fftconvolve, butter, sosfilt  # type: ignore[import]
 
-__all__ = ["ConvolutionReverb"]
+__all__ = ["ConvolutionReverb", "apply_reverb"]
+
+
+_REVERB_PRESETS: dict[str, dict[str, tuple[float, ...] | float]] = {
+    "small_room": {
+        "comb_ms": (22.0, 29.0, 35.0, 41.0),
+        "comb_gain": 0.70,
+        "allpass_ms": (5.0, 1.7),
+        "allpass_gain": 0.45,
+    },
+    "medium_hall": {
+        "comb_ms": (29.0, 37.0, 41.0, 53.0),
+        "comb_gain": 0.76,
+        "allpass_ms": (6.0, 2.5),
+        "allpass_gain": 0.50,
+    },
+    "large_hall": {
+        "comb_ms": (35.0, 43.0, 53.0, 61.0),
+        "comb_gain": 0.82,
+        "allpass_ms": (8.0, 3.0),
+        "allpass_gain": 0.54,
+    },
+    "cathedral": {
+        "comb_ms": (43.0, 53.0, 61.0, 73.0),
+        "comb_gain": 0.86,
+        "allpass_ms": (10.0, 4.0),
+        "allpass_gain": 0.58,
+    },
+}
+
+
+def _comb_filter(sig: np.ndarray, delay_samples: int, feedback: float) -> np.ndarray:
+    out = np.zeros_like(sig, dtype=np.float64)
+    for i in range(sig.shape[0]):
+        delayed = out[i - delay_samples] if i >= delay_samples else 0.0
+        out[i] = sig[i] + feedback * delayed
+    return out
+
+
+def _allpass_filter(sig: np.ndarray, delay_samples: int, gain: float) -> np.ndarray:
+    out = np.zeros_like(sig, dtype=np.float64)
+    for i in range(sig.shape[0]):
+        delayed_in = sig[i - delay_samples] if i >= delay_samples else 0.0
+        delayed_out = out[i - delay_samples] if i >= delay_samples else 0.0
+        out[i] = -gain * sig[i] + delayed_in + gain * delayed_out
+    return out
+
+
+def apply_reverb(
+    audio: np.ndarray,
+    sample_rate: int,
+    preset: str = "medium_hall",
+    mix: float = 0.25,
+) -> np.ndarray:
+    """Apply a Schroeder reverb using 4 comb + 2 all-pass filters."""
+    mix = float(np.clip(mix, 0.0, 1.0))
+    if mix <= 0.0:
+        return np.asarray(audio, dtype=np.float32)
+
+    settings = _REVERB_PRESETS.get(preset, _REVERB_PRESETS["medium_hall"])
+    arr = np.asarray(audio, dtype=np.float32)
+    if arr.ndim == 2:
+        left = apply_reverb(arr[:, 0], sample_rate, preset=preset, mix=mix)
+        right = apply_reverb(arr[:, 1], sample_rate, preset=preset, mix=mix)
+        return np.stack([left, right], axis=1).astype(np.float32)
+
+    dry = arr.astype(np.float64)
+
+    comb_out = np.zeros_like(dry)
+    for delay_ms in settings["comb_ms"]:
+        delay = max(1, int(float(delay_ms) * sample_rate / 1000.0))
+        comb_out += _comb_filter(dry, delay, float(settings["comb_gain"]))
+    comb_out /= 4.0
+
+    wet = comb_out
+    for delay_ms in settings["allpass_ms"]:
+        delay = max(1, int(float(delay_ms) * sample_rate / 1000.0))
+        wet = _allpass_filter(wet, delay, float(settings["allpass_gain"]))
+
+    out = ((1.0 - mix) * dry + mix * wet).astype(np.float32)
+    return out
 
 
 def _build_synthetic_ir(

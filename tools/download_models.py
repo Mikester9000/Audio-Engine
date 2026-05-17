@@ -13,22 +13,10 @@ MODELS_DIR = ROOT_DIR / "models"
 
 MODEL_SPECS = (
     {
-        "repo_id": "facebook/musicgen-small",
-        "target": MODELS_DIR / "musicgen-small",
-        "label": "MusicGen Small",
-        "size": "~300MB",
-    },
-    {
-        "repo_id": "facebook/audiogen-medium",
-        "target": MODELS_DIR / "audiogen-medium",
-        "label": "AudioGen Medium",
+        "repo_id": "facebook/musicgen-medium",
+        "target": MODELS_DIR / "musicgen-medium",
+        "label": "MusicGen Medium",
         "size": "~1.5GB",
-    },
-    {
-        "repo_id": "hexgrad/Kokoro-82M",
-        "target": MODELS_DIR / "kokoro",
-        "label": "Kokoro 82M",
-        "size": "~330MB",
     },
 )
 

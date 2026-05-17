@@ -24,6 +24,7 @@ import numpy as np
 from audio_engine.ai.backend import InferenceBackend, BackendRegistry
 from audio_engine.ai.prompt import PromptParser, MusicPlan
 from audio_engine.export.audio_exporter import AudioExporter
+from audio_engine.render.loop_exporter import bake_crossfade_loop
 
 __all__ = ["MusicGen"]
 
@@ -140,6 +141,8 @@ class MusicGen:
             Written file path.
         """
         audio = self.generate(prompt, duration=duration, loopable=loopable)
+        if loopable:
+            audio = bake_crossfade_loop(audio, self.sample_rate, crossfade_ms=500)
         path = self._exporter.export(audio, output_path, fmt=fmt)
 
         if loopable and fmt == "wav":
