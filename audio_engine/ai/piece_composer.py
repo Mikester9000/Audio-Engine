@@ -140,11 +140,13 @@ class PieceComposer:
         seed: int | None = None,
         backend: str = "synth_orchestral",
         vocal_preset: str = "soprano",
+        backend_kwargs: dict[str, object] | None = None,
     ) -> None:
         self.sample_rate = sample_rate
         self._seed = seed
         self._backend_name = backend
         self._vocal_preset = vocal_preset
+        self._backend_kwargs = dict(backend_kwargs or {})
         self._rng = np.random.default_rng(seed)
 
     # ------------------------------------------------------------------
@@ -306,7 +308,12 @@ class PieceComposer:
             elif backend_name == "synth_orchestral":
                 backend = SynthOrchestralBackend(sample_rate=self.sample_rate, seed=self._seed)
             else:
-                backend = BackendRegistry.get(backend_name, sample_rate=self.sample_rate, seed=self._seed)
+                backend = BackendRegistry.get(
+                    backend_name,
+                    sample_rate=self.sample_rate,
+                    seed=self._seed,
+                    **self._backend_kwargs,
+                )
             audio = backend.generate_music_audio(style=style, duration=duration)
         except Exception:
             # Fallback to procedural

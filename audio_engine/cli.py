@@ -708,11 +708,14 @@ def _cmd_generate_radio_playlist(args: argparse.Namespace) -> None:
     else:
         backend = "synth_orchestral"
 
+    backend_kwargs = {"samples_dir": args.samples_dir} if getattr(args, "samples_dir", None) else None
+
     gen = RadioPlaylistGenerator(
         sample_rate=args.sample_rate,
         seed=args.seed,
         backend=backend,
         vocal_preset=args.vocal_preset,
+        backend_kwargs=backend_kwargs,
     )
 
     if args.styles:
@@ -743,11 +746,14 @@ def _cmd_generate_album(args: argparse.Namespace) -> None:
     else:
         backend = "synth_orchestral"
 
+    backend_kwargs = {"samples_dir": args.samples_dir} if getattr(args, "samples_dir", None) else None
+
     gen = RadioPlaylistGenerator(
         sample_rate=args.sample_rate,
         seed=args.seed,
         backend=backend,
         vocal_preset=args.vocal_preset,
+        backend_kwargs=backend_kwargs,
     )
 
     gen.generate_album(

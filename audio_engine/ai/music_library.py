@@ -271,9 +271,9 @@ _ALIAS_MAP: dict[str, str] = {
     "jazz ballad":             "jazz_ballad",
     "jazz swing":              "jazz_swing",
     "swing jazz":              "jazz_swing",
+    "blues ballad":            "blues_ballad",
     "blues":                   "blues_epic",
     "blues epic":              "blues_epic",
-    "blues ballad":            "blues_ballad",
     "pop epic":                "pop_epic",
     "epic pop":                "pop_epic",
     "pop ballad":              "pop_ballad_epic",
@@ -462,7 +462,7 @@ def style_for_request(request: str) -> str:
     r = request.lower().strip()
 
     # 1. Direct alias match (exact song title)
-    for alias, style_key in _ALIAS_MAP.items():
+    for alias, style_key in sorted(_ALIAS_MAP.items(), key=lambda item: len(item[0]), reverse=True):
         if alias in r:
             return style_key
 

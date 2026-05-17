@@ -664,10 +664,12 @@ class TestGenerateAlbum:
         gen = self._make_gen()
         gen.generate_album("rock", output_dir=tmp_path, track_duration=3.0, quiet=True)
         data = json.loads((tmp_path / "album.json").read_text())
+        playlist_data = json.loads((tmp_path / "playlist.json").read_text())
         assert "title" in data
         assert "genre" in data
         assert "tracks" in data
         assert data["genre"] == "rock"
+        assert playlist_data["preset"] == "rock_album"
 
     def test_generate_album_custom_title(self, tmp_path):
         gen = self._make_gen()
@@ -782,6 +784,31 @@ class TestCLIGenerateAlbum:
         assert rc == 0
         assert (tmp_path / "album.json").exists()
 
+    def test_generate_album_samples_dir_is_forwarded(self, tmp_path, monkeypatch):
+        from audio_engine import cli as cli_module
+        import audio_engine.ai.radio_playlist as radio_playlist_module
+
+        captured: dict[str, object] = {}
+
+        class _StubRadioPlaylistGenerator:
+            def __init__(self, **kwargs):
+                captured.update(kwargs)
+
+            def generate_album(self, **_kwargs):
+                return {}
+
+        monkeypatch.setattr(radio_playlist_module, "RadioPlaylistGenerator", _StubRadioPlaylistGenerator)
+
+        rc = cli_module.main([
+            "generate-album",
+            "--genre", "jazz",
+            "--samples-dir", str(tmp_path / "my_samples"),
+            "--quiet",
+        ])
+        assert rc == 0
+        assert captured["backend"] == "sample"
+        assert captured["backend_kwargs"] == {"samples_dir": str(tmp_path / "my_samples")}
+
 
 # ---------------------------------------------------------------------------
 # style_for_request — multi-genre natural language resolver
@@ -798,7 +825,7 @@ class TestStyleForRequestGenres:
 
     def test_blues_request(self):
         style = self._resolve("blues ballad slow")
-        assert style in ["blues_epic", "blues_ballad", "rock_battle", "piano_ballad"]
+        assert style == "blues_ballad"
 
     def test_pop_ballad_request(self):
         style = self._resolve("pop ballad")
@@ -823,4 +850,3 @@ class TestStyleForRequestGenres:
     def test_world_music_request(self):
         style = self._resolve("world music ethnic")
         assert style in ["world_epic", "celtic_adventure"]
-

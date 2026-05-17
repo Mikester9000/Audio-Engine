@@ -15,7 +15,7 @@ Workflow
 
 Presets — Final Fantasy radio / era mixes
 -----------------------------------------
-``"ff_radio"``       — One track from every FF game (FF1–FF16), radio mix.
+``"ff_radio"``       — Cross-era FF radio mix (FF1/4/6–10/12–16 + Prelude/Victory).
 ``"ff7_album"``      — All FF7 styles in album order.
 ``"ff8_album"``      — All FF8 styles including Eyes on Me vocal.
 ``"battle_mix"``     — All battle themes across the series.
@@ -309,11 +309,13 @@ class RadioPlaylistGenerator:
         seed: int | None = None,
         backend: str = "synth_orchestral",
         vocal_preset: str = "soprano",
+        backend_kwargs: dict[str, object] | None = None,
     ) -> None:
         self.sample_rate = sample_rate
         self._seed = seed
         self._backend = backend
         self._vocal_preset = vocal_preset
+        self._backend_kwargs = dict(backend_kwargs or {})
         self._lib = MusicLibrary()
 
     # ------------------------------------------------------------------
@@ -545,7 +547,7 @@ class RadioPlaylistGenerator:
 
         # Generate using the underlying playlist logic
         playlist_manifest = self.generate_playlist(
-            preset_or_styles=style_keys,
+            preset_or_styles=preset_name,
             output_dir=output_dir,
             track_duration=track_duration,
             fmt=fmt,
@@ -609,6 +611,7 @@ class RadioPlaylistGenerator:
             seed=self._seed,
             backend=self._backend,
             vocal_preset=self._vocal_preset,
+            backend_kwargs=self._backend_kwargs,
         )
 
         return composer.compose(
