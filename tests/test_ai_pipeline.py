@@ -175,7 +175,7 @@ class TestBackendRegistry:
         assert "procedural" in BackendRegistry.available_backends()
 
 
-def _install_fake_transformer_modules(monkeypatch, model_attr: str) -> dict[str, int]:
+def _install_fake_transformers_modules(monkeypatch, model_attr: str) -> dict[str, int]:
     call_counts = {"model": 0, "processor": 0, "seed": 0}
 
     class _NoGrad:
@@ -186,7 +186,11 @@ def _install_fake_transformer_modules(monkeypatch, model_attr: str) -> dict[str,
             return False
 
     torch_module = types.ModuleType("torch")
-    torch_module.manual_seed = lambda seed: call_counts.__setitem__("seed", call_counts["seed"] + 1)
+
+    def _manual_seed(seed):
+        call_counts["seed"] += 1
+
+    torch_module.manual_seed = _manual_seed
     torch_module.no_grad = lambda: _NoGrad()
 
     class _FakeProcessor:
@@ -296,7 +300,7 @@ class TestOptionalNeuralBackends:
         (model_dir / "model.safetensors").write_text("weights")
 
         monkeypatch.setattr(musicgen_backend, "can_import_module", lambda _: True)
-        call_counts = _install_fake_transformer_modules(monkeypatch, "MusicgenForConditionalGeneration")
+        call_counts = _install_fake_transformers_modules(monkeypatch, "MusicgenForConditionalGeneration")
 
         backend = MusicGenBackend(model_path=model_dir, sample_rate=SR, seed=7)
         first = backend.generate_music_audio("battle", duration=0.1)
@@ -315,7 +319,7 @@ class TestOptionalNeuralBackends:
         (model_dir / "model.safetensors").write_text("weights")
 
         monkeypatch.setattr(audiogen_backend, "can_import_module", lambda _: True)
-        call_counts = _install_fake_transformer_modules(monkeypatch, "AutoModelForTextToWaveform")
+        call_counts = _install_fake_transformers_modules(monkeypatch, "AutoModelForTextToWaveform")
 
         backend = AudioGenBackend(model_path=model_dir, sample_rate=SR, seed=7)
         first = backend.generate_sfx_audio("explosion", duration=0.1)
