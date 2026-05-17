@@ -49,8 +49,7 @@ class AudioGenBackend(InferenceBackend):
         self.model_path = Path(model_path) if model_path is not None else default_path
         self.seed = seed
         self._fallback = ProceduralBackend(sample_rate=sample_rate, seed=seed)
-        self._model = None
-        self._processor = None
+        self._model_bundle = None
 
     @property
     def name(self) -> str:
@@ -119,7 +118,7 @@ class AudioGenBackend(InferenceBackend):
             return self._fallback.generate_sfx_audio(sfx_type=sfx_type, duration=duration, pitch_hz=pitch_hz, **kwargs)
 
     def _load_model_bundle(self):
-        if self._model is None or self._processor is None:
+        if self._model_bundle is None:
             from transformers import AutoModelForTextToWaveform, AutoProcessor
 
             model = AutoModelForTextToWaveform.from_pretrained(
@@ -130,9 +129,8 @@ class AudioGenBackend(InferenceBackend):
                 str(self.model_path),
                 local_files_only=True,
             )
-            self._model = model
-            self._processor = processor
-        return self._model, self._processor
+            self._model_bundle = (model, processor)
+        return self._model_bundle
 
     def generate_voice_audio(
         self,

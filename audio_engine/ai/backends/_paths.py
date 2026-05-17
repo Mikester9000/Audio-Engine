@@ -4,9 +4,15 @@ from __future__ import annotations
 
 from importlib import import_module
 from pathlib import Path
+from typing import TypedDict
 
 
-_MODEL_REQUIREMENTS: dict[str, dict[str, tuple[tuple[str, ...], ...] | tuple[str, ...]]] = {
+class ModelRequirements(TypedDict):
+    required_files: tuple[str, ...]
+    required_any: tuple[tuple[str, ...], ...]
+
+
+_MODEL_REQUIREMENTS: dict[str, ModelRequirements] = {
     "musicgen-small": {
         "required_files": ("config.json",),
         "required_any": (
