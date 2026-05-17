@@ -22,8 +22,10 @@ Example usage
 
 from audio_engine.dsp.eq import EQ
 from audio_engine.dsp.compressor import Compressor
+from audio_engine.dsp.chorus import apply_chorus
 from audio_engine.dsp.limiter import Limiter
-from audio_engine.dsp.reverb import ConvolutionReverb
+from audio_engine.dsp.reverb import ConvolutionReverb, apply_reverb
+from audio_engine.dsp.stereo import apply_haas, apply_mid_side_width
 from audio_engine.dsp.resample import resample
 from audio_engine.dsp.dither import dither
 
@@ -32,6 +34,10 @@ __all__ = [
     "Compressor",
     "Limiter",
     "ConvolutionReverb",
+    "apply_chorus",
+    "apply_reverb",
+    "apply_haas",
+    "apply_mid_side_width",
     "resample",
     "dither",
 ]

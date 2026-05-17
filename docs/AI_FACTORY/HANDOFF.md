@@ -4,27 +4,26 @@
 
 ## Last completed change
 
-Completed SESSION-027 (queue/state continuity refresh + next executable implementation session definition):
+Completed MusicGen-medium consolidation + synth-quality/doc roadmap update PR scope:
 
-- Marked SESSION-027 complete and synchronized session-control docs.
-- Defined SESSION-028 as the next executable implementation task.
-- Refreshed continuity docs and machine-guidance status docs for truthful post-SESSION-026 state.
-- Expanded queued roadmap detail so `SESSION_QUEUE.md` now explicitly defines ordered follow-on sessions through SESSION-045 and removes dangling next-session ambiguity.
+- Consolidated default offline neural path to MusicGen Medium only (`download_models.py`, backend registration, MusicGen backend model path).
+- Added sample drop-in scaffold under `samples/` with committed `.gitkeep` structure and documentation.
+- Added additive DSP quality modules (`chorus`, Schroeder `reverb` helper, stereo imaging), loop crossfade baking, and mastering profile presets.
+- Upgraded core procedural instrument voicing for strings/brass/piano/choir/flute/bass/synth-pad/percussion.
+- Refreshed roadmap/state docs (`NEXT_PR_SEQUENCE.md`, `CURRENT_STATE.md`, `ACTIVE_WORK.md`, `SESSION_QUEUE.md`).
 
 ## Verified in this session
 
 ```bash
-python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
-python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
-python -m json.tool docs/AI_FACTORY/FACTORY_STATUS.json
-grep -n "^### SESSION-0\\(2[89]\\|[34][0-9]\\|45\\)" docs/AI_FACTORY/SESSION_QUEUE.md
+python -m pytest
+python tools/validate-assets.py assets/examples/ --verbose
+python -m pytest tests/test_musicgen_backend.py tests/test_dsp_chorus.py tests/test_dsp_reverb.py tests/test_dsp_stereo.py tests/test_loop_exporter.py
 ```
 
 Observed result:
-- updated session-control JSON files parse successfully
-- updated machine-guidance status JSON parses successfully
-- continuity docs are synchronized on SESSION-028 as the active ready session
-- queue now contains explicit ordered planned sessions (`SESSION-029` → `SESSION-045`) matching the machine-readable next-session pointer
+- baseline tests and asset-manifest validation passed before changes
+- focused tests for new MusicGen backend + DSP/loop modules pass
+- docs/roadmap updates reflect MusicGen-medium single-model direction and inserted SESSION-028b/028c planning
 
 ## Immediate next best task
 

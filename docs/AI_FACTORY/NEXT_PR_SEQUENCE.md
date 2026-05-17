@@ -1,120 +1,138 @@
 # Next PR Sequence
 
-> Mechanical build order for future agents. Goal: evolve this repository into a GitHub-native factory that can generate all audio files needed by a game (music, fanfares/stingers, UI/combat/spell SFX, ambience, optional low-priority voice).
->
-> `SESSION_QUEUE.md` is the canonical file for **the single next session**. This file remains the longer-range ordered sequence behind that queue.
+> Mechanical build order for future agents. `SESSION_QUEUE.md` remains canonical for the single next executable session.
 
-## PR-1 — Implement audio plan + request loading primitives
+## PR-7 — Consolidate to MusicGen Medium + sample folder structure
 
-- **Suggested title:** `Implement plan/request loaders for factory inputs`
-- **Objective:** Add code-side dataclasses/loaders for project audio plans and generation requests.
-- **Why it matters:** Converts docs-only contracts into executable inputs.
-- **Likely files to change:**
-  - `audio_engine/integration/*` (new loader module)
-  - `audio_engine/cli.py` (new validation/listing command if needed)
-  - `tests/test_integration.py`
-- **Files that should probably not change:**
-  - `audio_engine/dsp/*`, `audio_engine/synthesizer/*`
-- **Verification commands:**
-  - `pytest`
-  - `python tools/validate-assets.py assets/examples/ --verbose`
-- **Docs to update:**
-  - `docs/AI_FACTORY/CURRENT_STATE.md`
-  - `docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md`
-  - `docs/AI_FACTORY/HANDOFF.md`
-- **Definition of done:** Loader code can parse committed example plan/request artifacts and expose them as typed objects.
+- **Suggested title:** `Consolidate neural model baseline to MusicGen Medium and add sample drop-in scaffold`
+- **Objective:** Keep one optional neural model path (`musicgen-medium`) and add committed sample folder scaffolding for orchestral drop-ins.
+- **Why it matters:** Reduces setup complexity while preparing deterministic sample-remaster workflows.
+- **Likely files to change:** `tools/download_models.py`, `audio_engine/ai/backends/__init__.py`, `audio_engine/ai/backends/musicgen_backend.py`, `WINDOWS_QUICKSTART.md`, `models/README.md`, `.gitignore`, `samples/*`
+- **Verification commands:** `python -m pytest tests/test_ai_pipeline.py tests/test_musicgen_backend.py`
+- **Definition of done:** Only MusicGen Medium is downloaded/registered by default, and sample scaffold + docs are committed.
 
-## PR-2 — Add request-batch generation command
+## PR-8 — Synth quality upgrade (chorus/reverb/stereo/mastering profiles)
 
-- **Suggested title:** `Add request-batch generation CLI for music and SFX`
-- **Objective:** Add a CLI/API path that executes a batch of generation requests.
-- **Why it matters:** Enables low-prompt, deterministic, mechanical generation from committed inputs.
-- **Likely files to change:**
-  - `audio_engine/cli.py`
-  - `audio_engine/integration/asset_pipeline.py`
-  - `tests/test_engine_cli.py`, `tests/test_integration.py`
-- **Files that should probably not change:**
-  - `audio_engine/composer/*` unless bugfix required
-- **Verification commands:**
-  - `pytest`
-  - One CLI smoke run against example requests to `/tmp`
-- **Docs to update:**
-  - `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`
-  - `docs/AI_FACTORY/CURRENT_STATE.md`
-  - `docs/AI_FACTORY/HANDOFF.md`
-- **Definition of done:** Batch command produces expected output files for at least music + SFX example requests.
+- **Suggested title:** `Upgrade procedural synth and mastering quality for standalone listening`
+- **Objective:** Improve instrument voicing, add optional DSP modules, add mastering profiles, and loop crossfade baking.
+- **Why it matters:** Raises procedural output quality toward OST/YouTube usability.
+- **Likely files to change:** `audio_engine/synthesizer/instrument.py`, `audio_engine/dsp/chorus.py`, `audio_engine/dsp/reverb.py`, `audio_engine/dsp/stereo.py`, `audio_engine/render/offline_bounce.py`, `audio_engine/render/loop_exporter.py`, `audio_engine/ai/music_gen.py`, tests
+- **Verification commands:** `python -m pytest tests/test_instrument.py tests/test_dsp.py tests/test_dsp_chorus.py tests/test_dsp_reverb.py tests/test_dsp_stereo.py tests/test_render.py tests/test_loop_exporter.py`
+- **Definition of done:** New DSP/profile code paths are additive, tested, and default behavior remains backward compatible.
 
-## PR-3 — Write provenance + review logs per request
+## PR-9 — Sample library scanner + pitch-shift engine
 
-- **Suggested title:** `Capture provenance and review status for generated assets`
-- **Objective:** Persist request ID, seed, output path, and review status in machine-readable logs.
-- **Why it matters:** Supports repeatability and handoff continuity.
-- **Likely files to change:**
-  - `audio_engine/integration/*` (manifest/provenance writer)
-  - `tests/test_integration.py`
-- **Files that should probably not change:**
-  - `audio_engine/dsp/*`
-- **Verification commands:**
-  - `pytest`
-- **Docs to update:**
-  - `docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md`
-  - `docs/AI_FACTORY/CURRENT_STATE.md`
-  - `docs/AI_FACTORY/HANDOFF.md`
-- **Definition of done:** Each generated asset has machine-readable provenance linked to its request.
+- **Suggested title:** `Add sample library scanning and deterministic pitch shifting`
+- **Objective:** Implement `audio_engine/integration/sample_library.py` and `audio_engine/dsp/pitch_shift.py`.
+- **Why it matters:** Enables note-aligned sample substitution for orchestral remastering.
+- **Likely files to change:** `audio_engine/integration/sample_library.py`, `audio_engine/dsp/pitch_shift.py`, tests
+- **Verification commands:** `python -m pytest tests/test_sample_library.py tests/test_pitch_shift.py`
+- **Definition of done:** Engine can index sample folders and pitch-shift source notes to requested targets reproducibly.
 
-## PR-4 — Add batch QA gate command for generated outputs
+## PR-10 — Remaster pipeline + CLI command
 
-- **Suggested title:** `Add batch QA gate command for generated asset sets`
-- **Objective:** Wrap existing QA checks into a command that validates many generated outputs at once.
-- **Why it matters:** Reduces manual review load and catches weak outputs early.
-- **Likely files to change:**
-  - `audio_engine/cli.py`
-  - `audio_engine/qa/*` (if helper needed)
-  - `tests/test_qa.py`, `tests/test_engine_cli.py`
-- **Files that should probably not change:**
-  - `audio_engine/ai/*` generation logic
-- **Verification commands:**
-  - `pytest`
-- **Docs to update:**
-  - `docs/AI_FACTORY/QA/QUALITY_BARS.md`
-  - `docs/AI_FACTORY/KNOWN_ISSUES.md`
-  - `docs/AI_FACTORY/HANDOFF.md`
-- **Definition of done:** Command returns pass/fail status and per-file reasons for music and SFX outputs.
+- **Suggested title:** `Add remaster pipeline and additive remaster CLI`
+- **Objective:** Implement `audio_engine/render/remaster.py` and `audio-engine remaster` command.
+- **Why it matters:** Turns synth-first outputs into higher-fidelity sample-based renders from provenance events.
+- **Likely files to change:** `audio_engine/render/remaster.py`, `audio_engine/cli.py`, integration tests
+- **Verification commands:** `python -m pytest tests/test_remaster.py tests/test_engine_cli.py -k remaster`
+- **Definition of done:** CLI remaster path works with sample substitution and synth fallback per instrument.
 
-## PR-5 — Implement `GameRewritten` export profile and mapping outputs
+## PR-11 — Backend preflight verify command (SESSION-028)
 
-- **Suggested title:** `Add GameRewritten export profile with stable target paths`
-- **Objective:** Emit outputs and mapping metadata aligned with `Content/Audio/*` expectations.
-- **Why it matters:** Directly supports import into the consuming game repository.
-- **Likely files to change:**
-  - `audio_engine/integration/game_state_map.py`
-  - `audio_engine/integration/asset_pipeline.py`
-  - `tests/test_integration.py`
-- **Files that should probably not change:**
-  - `audio_engine/synthesizer/*`
-- **Verification commands:**
-  - `pytest`
-  - generation smoke test to `/tmp` + verify expected paths exist
-- **Docs to update:**
-  - `docs/AI_FACTORY/INTEGRATION/GAMEREWRITTEN.md`
-  - `docs/AI_FACTORY/CURRENT_STATE.md`
-  - `docs/AI_FACTORY/HANDOFF.md`
-- **Definition of done:** Generated outputs include a stable mapping for downstream import with clear overwrite behavior.
+- **Suggested title:** `Add verify-backends readiness command`
+- **Objective:** Add `audio-engine verify-backends` with deterministic report output.
+- **Why it matters:** Improves local/offline neural readiness checks before long generation runs.
+- **Likely files to change:** `audio_engine/cli.py`, `audio_engine/ai/backend.py`, tests
+- **Verification commands:** `python -m pytest tests/test_engine_cli.py tests/test_ai_pipeline.py`
+- **Definition of done:** Command reports availability/dependency status and optional smoke outcomes.
 
-## PR-6 — Expand taxonomy toward full game coverage
+## PR-12 — PS1/PS2 and orchestral synth profile contracts (SESSION-029)
 
-- **Suggested title:** `Expand factory taxonomy for full game-audio coverage`
-- **Objective:** Add committed taxonomy/backlog coverage for all needed audio families (music states, fanfares/stingers, UI, combat/spell SFX, ambience, optional voice).
-- **Why it matters:** Prevents hidden gaps as scope scales from vertical slice to full game.
-- **Likely files to change:**
-  - `docs/AI_FACTORY/TASKS/BACKLOG.md`
-  - `docs/AI_FACTORY/EXAMPLES/*`
-  - `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`
-- **Files that should probably not change:**
-  - production code, unless tied to taxonomy implementation
-- **Verification commands:**
-  - Manual review + any schema validation added by prior PRs
-- **Docs to update:**
-  - `docs/AI_FACTORY/ACTIVE_WORK.md`
-  - `docs/AI_FACTORY/HANDOFF.md`
-- **Definition of done:** No major asset family required for a game is missing from tracked plan/taxonomy docs.
+- **Suggested title:** `Define stable synth profile contracts`
+- **Objective:** Finalize profile names/constraints for PS1/PS2 and orchestral output modes.
+- **Why it matters:** Prevents profile naming drift across requests and remaster workflows.
+- **Likely files to change:** `docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md`, profile/schema docs
+- **Verification commands:** manual doc consistency + JSON parse checks where applicable
+- **Definition of done:** Stable documented profile contracts exist and match runtime terminology.
+
+## PR-13 — WAV sample folder ingestion contract (SESSION-030)
+
+- **Suggested title:** `Define strict WAV ingestion contract for sample folders`
+- **Objective:** Publish deterministic layout/naming/metadata/rejection rules.
+- **Why it matters:** Keeps sample ingestion deterministic for weak local agents.
+- **Likely files to change:** `docs/AI_FACTORY/*` schema and subsystem pages
+- **Verification commands:** manual doc review + JSON parse checks
+- **Definition of done:** Ingestion contract is explicit enough for no-ambiguity automation.
+
+## PR-14 — Batch remaster pipeline wiring (SESSION-031)
+
+- **Suggested title:** `Wire deterministic batch remaster execution`
+- **Objective:** Add batch remaster execution and machine-readable outcomes.
+- **Why it matters:** Scales remastering beyond one-off CLI usage.
+- **Likely files to change:** `audio_engine/integration/asset_pipeline.py`, `audio_engine/cli.py`, tests
+- **Verification commands:** `python -m pytest tests/test_integration.py tests/test_engine_cli.py -k remaster`
+- **Definition of done:** Batch remaster pipeline runs deterministically with result manifests.
+
+## PR-15 — License compliance CI gate (SESSION-032/033/034)
+
+- **Suggested title:** `Add license compliance gate and policy matrix`
+- **Objective:** Implement CI/license checks plus inventory and allow/conditional/block matrix.
+- **Why it matters:** Required for commercial-readiness claims.
+- **Likely files to change:** compliance tooling, workflow files, docs matrix/inventory pages
+- **Verification commands:** targeted compliance tests + workflow dry-run checks
+- **Definition of done:** CI fails on unknown/disallowed licenses with machine-readable reports.
+
+## PR-16 — Mastering profile presets: game mix / OST / YouTube (SESSION-035)
+
+- **Suggested title:** `Finalize mastering profile selection contracts`
+- **Objective:** Stabilize profile selection and parameter capture across generation/export paths.
+- **Why it matters:** Ensures repeatable delivery for game vs OST vs streaming output.
+- **Likely files to change:** `audio_engine/render/offline_bounce.py`, CLI/profile docs, tests
+- **Verification commands:** `python -m pytest tests/test_render.py tests/test_engine_cli.py -k profile`
+- **Definition of done:** Profiles are selectable, deterministic, documented, and backward compatible.
+
+## PR-17 — Professional QA gates (SESSION-036)
+
+- **Suggested title:** `Expand professional release QA gates`
+- **Objective:** Add true-peak, spectral balance, and loop-integrity checks.
+- **Why it matters:** Turns subjective quality goals into enforceable release gates.
+- **Likely files to change:** `audio_engine/qa/*`, CLI QA commands, tests
+- **Verification commands:** `python -m pytest tests/test_qa.py tests/test_engine_cli.py -k qa`
+- **Definition of done:** New QA checks are actionable, machine-readable, and integrated into existing gates.
+
+## PR-18 — Commercial WAV export contract (SESSION-037)
+
+- **Suggested title:** `Add commercial WAV-first export contract`
+- **Objective:** Define deterministic naming/layout/manifests for commercial delivery.
+- **Why it matters:** Prevents export drift between game import and distribution workflows.
+- **Likely files to change:** export pipeline code/docs/tests
+- **Verification commands:** `python -m pytest tests/test_exporter.py tests/test_integration.py -k export`
+- **Definition of done:** Export outputs follow stable contracts with manifest evidence.
+
+## PR-19 — Vocals + instrumental production path (SESSION-038)
+
+- **Suggested title:** `Complete dual-path vocal and instrumental workflow`
+- **Objective:** Support generation/export of instrumental and vocal-production-ready variants.
+- **Why it matters:** Expands utility for general music production workflows.
+- **Likely files to change:** generation pipeline, voice integration docs, tests
+- **Verification commands:** `python -m pytest tests/test_ai_pipeline.py tests/test_integration.py -k voice`
+- **Definition of done:** Deterministic dual-path outputs with clear provenance.
+
+## PR-20 — End-to-end vertical slice release gate automation (SESSION-041)
+
+- **Suggested title:** `Automate full vertical-slice release gate`
+- **Objective:** One deterministic command from requests → QA/compliance/export outputs.
+- **Why it matters:** Lowers operational burden for full factory runs.
+- **Likely files to change:** orchestration CLI/pipeline and docs
+- **Verification commands:** deterministic `/tmp` end-to-end smoke run + targeted tests
+- **Definition of done:** Full vertical-slice automation runs with machine-readable gate artifacts.
+
+## PR-21 — Final commercial readiness audit + closure (SESSION-044/045)
+
+- **Suggested title:** `Run final readiness audit and publish closure handoff`
+- **Objective:** Audit all capability/quality/licensing/automation gates and close baseline factory scope.
+- **Why it matters:** Ensures completion claims are evidence-based and reversible.
+- **Likely files to change:** `docs/AI_FACTORY/HANDOFF.md`, `CURRENT_STATE.md`, `SESSION_HISTORY.md`, session-control docs
+- **Verification commands:** required JSON parse checks + referenced verification command replay summaries
+- **Definition of done:** Final audit evidence is documented and session-control files reflect closure state.

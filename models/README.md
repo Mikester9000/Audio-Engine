@@ -4,13 +4,15 @@ This folder stores local AI model weights used by the Audio Engine.
 
 ## Model layout
 
-- `models/musicgen-small/` → `facebook/musicgen-small`
-- `models/audiogen-medium/` → `facebook/audiogen-medium`
-- `models/kokoro/` → `hexgrad/Kokoro-82M`
+- `models/musicgen-medium/` → `facebook/musicgen-medium`
+
+## Why one model
+
+MusicGen Medium is the chosen single-model baseline because it delivers much higher musical quality than small variants while still being practical for local/offline CPU workflows. It also provides acceptable sound-effect generation with strong prompting, which avoids maintaining separate AudioGen/Kokoro model downloads by default.
 
 ## How models get here
 
-`setup.bat` automatically downloads these models into this folder by running:
+`setup.bat` automatically downloads this model into this folder by running:
 
 - `python tools/download_models.py`
 
@@ -23,8 +25,6 @@ The folder itself is tracked so the expected path exists.
 
 ## Manual model placement
 
-If you already downloaded the models separately, place each model in the folder above using the exact names:
+If you already downloaded the model separately, place it in the folder above using the exact name:
 
-- `models/musicgen-small/`
-- `models/audiogen-medium/`
-- `models/kokoro/`
+- `models/musicgen-medium/`

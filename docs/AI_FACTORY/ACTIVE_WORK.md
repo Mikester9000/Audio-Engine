@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline on the newer request-driven (`generate-request-batch --batch-file`) and plan-driven execution paths, plus Windows one-click setup/run scaffolding for optional offline neural generation (`setup.bat`, `run.bat`, `tools/download_models.py`, and local-files-only backend adapters).
+The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-only offline neural path, sample drop-in folder scaffolding, and upgraded synth/mastering/DSP quality surfaces for higher-quality procedural output.
 
 ## Now
 
@@ -45,13 +45,20 @@ The repository now has a complete draft-to-approved pipeline on the newer reques
 - [x] Execute `SESSION-026` — add legacy request-file batch-manifest parity
 - [x] Execute `SESSION-027` — define and queue the next executable implementation session
 - [ ] Execute `SESSION-028` — add backend preflight verification command for optional neural workflows
+- [x] Consolidate optional model download/registration to MusicGen Medium only
+- [x] Add committed sample folder scaffold for orchestral remaster drop-ins
+- [x] Add additive chorus/reverb/stereo DSP modules and loop crossfade baking
+- [x] Add additive mastering profile presets (`game`, `ost`, `youtube`, `procedural_neutral`)
+- [x] Upgrade procedural instrument voicing toward higher-quality standalone listening output
 
 ## Recommended next PRs
 
-1. **Add backend preflight verification command (SESSION-028)**
-   - Implement an additive `verify-backends` command with deterministic availability checks and machine-readable reporting for optional neural workflows.
-2. **Follow ordered completion roadmap through SESSION-045**
-   - Continue through queued capability, licensing, mastering, QA, export, deterministic regression, and closure sessions (`SESSION-029` → `SESSION-045`) as defined in `SESSION_QUEUE.md`.
+1. **Execute SESSION-028 (`verify-backends`)**
+   - Add additive preflight verification/reporting before optional neural runs.
+2. **Execute SESSION-028b and SESSION-028c**
+   - Implement sample-library scanner/pitch-shift primitives and remaster CLI pipeline.
+3. **Follow ordered completion roadmap through SESSION-045**
+   - Continue through queued capability, licensing, QA, export, regression, and closure sessions.
 
 ## Do not deprioritize
 

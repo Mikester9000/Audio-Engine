@@ -180,6 +180,20 @@
 - **Objective:** Add an additive `audio-engine verify-backends` command that runs deterministic backend availability/preflight checks, optionally executes bounded fixture smoke runs when local models are present, and emits a machine-readable report to support neural-readiness handoff decisions.
 - **Notes:** Preserve default generation behavior, keep the command additive/non-breaking, prefer committed vertical-slice fixtures, and avoid claiming model-quality guarantees when dependencies/models are absent.
 
+### SESSION-028b — Sample library scanner and pitch-shift engine
+
+- **Status:** `planned`
+- **Task type:** `integration_export`
+- **Objective:** Add executable sample-library scanning and note pitch-shift primitives for orchestral remaster workflows.
+- **Notes:** Implement `audio_engine/integration/sample_library.py` instrument→note→filepath scanning over `samples/orchestral/`, add `audio_engine/dsp/pitch_shift.py` scipy-based pitch shifting, and include focused tests.
+
+### SESSION-028c — Remaster pipeline and CLI command
+
+- **Status:** `planned`
+- **Task type:** `integration_export`
+- **Objective:** Add a deterministic remaster pipeline that replays provenance note events and substitutes available orchestral samples with synth fallback.
+- **Notes:** Implement `audio_engine/render/remaster.py`, add additive `audio-engine remaster --input <wav> --samples samples/orchestral/ --output <wav>` CLI surface, and cover fallback + substitution behavior with tests.
+
 ### SESSION-029 — Finalize dual synth profile targets (PS1/PS2-era + orchestral)
 
 - **Status:** `planned`

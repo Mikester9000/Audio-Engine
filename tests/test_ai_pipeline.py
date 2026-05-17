@@ -15,10 +15,13 @@ from audio_engine.ai import (
     PromptParser, MusicPlan, SFXPlan, VoicePlan,
     BackendRegistry, ProceduralBackend,
 )
-from audio_engine.ai.backends import _paths, audiogen_backend, kokoro_backend, musicgen_backend
+from audio_engine.ai.backends import _paths, musicgen_backend
+from audio_engine.ai.backends import audiogen_backend, kokoro_backend
 from audio_engine.ai.sfx_synth import synthesise_sfx, available_sfx_types
 from audio_engine.ai.voice_synth import synthesise_voice, VOICE_PRESETS
-from audio_engine.ai.backends import AudioGenBackend, KokoroBackend, MusicGenBackend
+from audio_engine.ai.backends.audiogen_backend import AudioGenBackend
+from audio_engine.ai.backends.kokoro_backend import KokoroBackend
+from audio_engine.ai.backends.musicgen_backend import MusicGenBackend
 
 
 SR = 22050
@@ -227,7 +230,7 @@ def _install_fake_transformers_modules(monkeypatch, model_attr: str) -> dict[str
 
 class TestOptionalNeuralBackends:
     def test_complete_model_snapshot_requires_key_files(self, tmp_path):
-        model_dir = tmp_path / "musicgen-small"
+        model_dir = tmp_path / "musicgen-medium"
         model_dir.mkdir()
         assert _paths.has_complete_model_snapshot(model_dir) is False
 
@@ -247,7 +250,7 @@ class TestOptionalNeuralBackends:
         assert audio.shape[1] == 2
 
     def test_musicgen_backend_requires_complete_model_snapshot(self, monkeypatch, tmp_path):
-        model_dir = tmp_path / "musicgen-small"
+        model_dir = tmp_path / "musicgen-medium"
         model_dir.mkdir()
         (model_dir / "config.json").write_text("{}")
 
@@ -293,7 +296,7 @@ class TestOptionalNeuralBackends:
         assert backend.is_available() is False
 
     def test_musicgen_backend_caches_loaded_model_and_processor(self, monkeypatch, tmp_path):
-        model_dir = tmp_path / "musicgen-small"
+        model_dir = tmp_path / "musicgen-medium"
         model_dir.mkdir()
         (model_dir / "config.json").write_text("{}")
         (model_dir / "preprocessor_config.json").write_text("{}")

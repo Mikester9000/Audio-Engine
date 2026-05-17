@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 import numpy as np
+from scipy.signal import sawtooth as scipy_sawtooth  # type: ignore[import]
 
 from audio_engine.synthesizer.oscillator import Oscillator
 from audio_engine.synthesizer.envelope import Envelope
@@ -19,6 +20,24 @@ from audio_engine.synthesizer.filter import Filter
 from audio_engine.synthesizer.effects import Effects
 
 __all__ = ["Instrument", "InstrumentLibrary"]
+
+_STRINGS_BOW_NOISE_SEED = 11
+_BASS_PICK_NOISE_SEED = 21
+_PERCUSSION_NOISE_SEED = 5
+_FLUTE_BREATH_SEED = 7
+_CHOIR_FORMANTS = (700.0, 1220.0, 2600.0)
+
+
+def _cents_to_ratio(cents: float) -> float:
+    return float(2.0 ** (cents / 1200.0))
+
+
+def _vibrato_phase(freq: float, dur: float, sr: int, rate_hz: float, depth_semitones: float) -> np.ndarray:
+    n = max(1, int(dur * sr))
+    t = np.arange(n, dtype=np.float64) / sr
+    semitone_mod = depth_semitones * np.sin(2.0 * np.pi * rate_hz * t)
+    freq_mod = freq * (2.0 ** (semitone_mod / 12.0))
+    return 2.0 * np.pi * np.cumsum(freq_mod / sr)
 
 
 @dataclass
@@ -118,23 +137,28 @@ class InstrumentLibrary:
 @InstrumentLibrary.register("strings")
 def _strings(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        return (
-            0.5 * osc.sawtooth(freq, dur)
-            + 0.3 * osc.sawtooth(freq * 1.005, dur)   # slight detune → richness
-            + 0.2 * osc.sawtooth(freq * 0.995, dur)
+        phase_c = _vibrato_phase(freq, dur, sr, rate_hz=5.0, depth_semitones=0.5)
+        phase_u = _vibrato_phase(freq * _cents_to_ratio(3.0), dur, sr, rate_hz=5.1, depth_semitones=0.45)
+        phase_l = _vibrato_phase(freq * _cents_to_ratio(-3.0), dur, sr, rate_hz=4.9, depth_semitones=0.45)
+        body = (
+            0.46 * scipy_sawtooth(phase_c)
+            + 0.30 * scipy_sawtooth(phase_u)
+            + 0.24 * scipy_sawtooth(phase_l)
         )
+        noise = np.random.default_rng(_STRINGS_BOW_NOISE_SEED).standard_normal(len(body)).astype(np.float32)
+        noise = Filter(sr).band_pass(noise, 200.0, 2000.0)
+        return body.astype(np.float32) + 0.1 * noise  # -20 dB bow layer
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
-        sig = flt.low_pass(sig, 4000.0)
-        sig = fx.reverb(sig, room_size=0.6, wet=0.25)
-        return fx.chorus(sig, rate=0.8, depth=0.004, wet=0.3)
+        sig = flt.low_pass(sig, 6000.0)
+        sig = fx.reverb(sig, room_size=0.72, wet=0.25)
+        return fx.chorus(sig, rate=0.8, depth=0.004, wet=0.28)
 
     return Instrument(
         name="strings",
         oscillator_fn=osc_fn,
-        envelope=Envelope.pad(sr),
+        envelope=Envelope(attack=0.2, decay=0.25, sustain=0.82, release=0.8, sample_rate=sr),
         post_process=post,
         volume=0.75,
         sample_rate=sr,
@@ -144,21 +168,22 @@ def _strings(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("brass")
 def _brass(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        return osc.additive(
+        base = osc.additive(
             freq, dur,
-            [(1, 1.0), (2, 0.6), (3, 0.3), (4, 0.15), (5, 0.07)],
+            [(1, 1.0), (2, 0.85), (3, 0.7), (4, 0.2), (5, 0.1)],
         )
+        drive = np.where(np.abs(base) > 0.7, 1.02, 1.0)  # slight growl on loud notes
+        return np.tanh(base * drive).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
-        sig = flt.low_pass(sig, 3500.0)
-        return fx.reverb(sig, room_size=0.4, wet=0.2)
+        sig = flt.low_pass(sig, 5000.0)
+        return fx.reverb(sig, room_size=0.45, wet=0.18)
 
     return Instrument(
         name="brass",
         oscillator_fn=osc_fn,
-        envelope=Envelope.brass(sr),
+        envelope=Envelope(attack=0.02, decay=0.14, sustain=0.72, release=0.24, sample_rate=sr),
         post_process=post,
         volume=0.8,
         sample_rate=sr,
@@ -168,21 +193,27 @@ def _brass(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("piano")
 def _piano(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        return osc.additive(
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float32) / sr
+        harmonic_decay = np.exp(-5.5 * t)
+        body = osc.additive(
             freq, dur,
-            [(1, 1.0), (2, 0.4), (3, 0.2), (4, 0.1), (5, 0.05), (7, 0.03)],
+            [(1, 1.0), (2, 0.55), (3, 0.3), (4.03, 0.16), (5.07, 0.08), (7.12, 0.04)],
         )
+        click_len = max(1, int(0.005 * sr))
+        click = np.zeros(n, dtype=np.float32)
+        click[:click_len] = np.exp(-np.linspace(0.0, 6.0, click_len)).astype(np.float32)
+        return (body * harmonic_decay + 0.25 * click).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
         sig = flt.low_pass(sig, 6000.0)
-        return fx.reverb(sig, room_size=0.35, wet=0.15)
+        return fx.reverb(sig, room_size=0.28, wet=0.12)
 
     return Instrument(
         name="piano",
         oscillator_fn=osc_fn,
-        envelope=Envelope.pluck(sr),
+        envelope=Envelope(attack=0.001, decay=0.28, sustain=0.0, release=0.22, sample_rate=sr),
         post_process=post,
         volume=0.8,
         sample_rate=sr,
@@ -192,22 +223,24 @@ def _piano(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("choir")
 def _choir(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        sig = 0.6 * osc.sine(freq, dur)
-        sig += 0.2 * osc.sine(freq * 1.003, dur)
-        sig += 0.2 * osc.sine(freq * 0.997, dur)
+        sig = 0.5 * osc.sine(freq * _cents_to_ratio(0.0), dur)
+        sig += 0.25 * osc.sine(freq * _cents_to_ratio(8.0), dur)
+        sig += 0.25 * osc.sine(freq * _cents_to_ratio(-8.0), dur)
         return sig
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
-        sig = flt.band_pass(sig, 300.0, 3500.0)
-        sig = fx.chorus(sig, rate=1.2, depth=0.005, wet=0.5)
-        return fx.reverb(sig, room_size=0.8, wet=0.4)
+        formants = np.zeros_like(sig)
+        for center, bw in zip(_CHOIR_FORMANTS, (120.0, 160.0, 260.0)):
+            formants += flt.band_pass(sig, max(80.0, center - bw), center + bw)
+        formants = formants / max(1, len(_CHOIR_FORMANTS))
+        formants = fx.chorus(formants, rate=0.8, depth=0.006, wet=0.48)
+        return fx.reverb(formants, room_size=0.85, wet=0.38)
 
     return Instrument(
         name="choir",
         oscillator_fn=osc_fn,
-        envelope=Envelope.pad(sr),
+        envelope=Envelope(attack=0.3, decay=0.25, sustain=0.78, release=0.9, sample_rate=sr),
         post_process=post,
         volume=0.7,
         sample_rate=sr,
@@ -218,22 +251,27 @@ def _choir(sr: int = 44100) -> Instrument:
 def _synth_pad(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         return (
-            0.4 * osc.triangle(freq, dur)
-            + 0.4 * osc.sine(freq * 1.5, dur)   # fifth
-            + 0.2 * osc.sawtooth(freq * 2.0, dur)  # octave
+            0.34 * osc.sawtooth(freq * _cents_to_ratio(-6.0), dur)
+            + 0.34 * osc.sawtooth(freq * _cents_to_ratio(0.0), dur)
+            + 0.32 * osc.sawtooth(freq * _cents_to_ratio(6.0), dur)
         )
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
-        sig = flt.low_pass(sig, 2000.0)
-        sig = fx.chorus(sig, rate=0.5, depth=0.006, wet=0.4)
-        return fx.reverb(sig, room_size=0.7, wet=0.35)
+        low_start = flt.low_pass(sig, 200.0)
+        low_end = flt.low_pass(sig, 8000.0)
+        n = len(sig)
+        sweep_len = min(n, int(2.0 * sr))
+        alpha = np.ones(n, dtype=np.float32)
+        alpha[:sweep_len] = np.linspace(0.0, 1.0, sweep_len, dtype=np.float32)
+        sig = low_start * (1.0 - alpha) + low_end * alpha
+        sig = fx.chorus(sig, rate=0.45, depth=0.008, wet=0.55)
+        return fx.reverb(sig, room_size=0.82, wet=0.42)
 
     return Instrument(
         name="synth_pad",
         oscillator_fn=osc_fn,
-        envelope=Envelope.pad(sr),
+        envelope=Envelope(attack=0.35, decay=0.4, sustain=0.85, release=1.2, sample_rate=sr),
         post_process=post,
         volume=0.65,
         sample_rate=sr,
@@ -265,20 +303,24 @@ def _electric_guitar(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("bass")
 def _bass(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        return (
-            0.6 * osc.sawtooth(freq, dur)
-            + 0.4 * osc.square(freq, dur)
-        )
+        n = max(1, int(dur * sr))
+        fundamental = osc.sine(freq, dur, amplitude=0.75)
+        second = osc.sine(freq * 2.0, dur, amplitude=0.375)  # -6 dB
+        pick = np.zeros(n, dtype=np.float32)
+        pick_len = max(1, int(0.01 * sr))
+        pick_noise = np.random.default_rng(_BASS_PICK_NOISE_SEED).standard_normal(pick_len).astype(np.float32)
+        pick[:pick_len] = pick_noise * np.exp(-np.linspace(0.0, 6.0, pick_len))
+        return fundamental + second + 0.1 * pick
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
-        return flt.low_pass(sig, 600.0)
+        sig = flt.low_pass(sig, 900.0)
+        return fx.compress(sig, threshold=0.45, ratio=3.0, makeup_gain=1.05)
 
     return Instrument(
         name="bass",
         oscillator_fn=osc_fn,
-        envelope=Envelope(attack=0.01, decay=0.1, sustain=0.6, release=0.1, sample_rate=sr),
+        envelope=Envelope(attack=0.008, decay=0.12, sustain=0.7, release=0.2, sample_rate=sr),
         post_process=post,
         volume=0.85,
         sample_rate=sr,
@@ -288,13 +330,21 @@ def _bass(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("percussion")
 def _percussion(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        # Layered: pitched noise body + sine transient
-        body = osc.noise(dur, amplitude=0.7, seed=1)
-        tone = osc.sine(freq, dur, amplitude=0.3)
-        return body + tone
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float32) / sr
+        noise = np.random.default_rng(_PERCUSSION_NOISE_SEED).standard_normal(n).astype(np.float32)
+        if freq < 180.0:
+            sweep = np.clip(t / 0.05, 0.0, 1.0)
+            inst_freq = 200.0 + (60.0 - 200.0) * sweep
+            phase = 2.0 * np.pi * np.cumsum(inst_freq / sr)
+            kick = np.sin(phase).astype(np.float32) * np.exp(-8.0 * t)
+            transient = noise * np.exp(-120.0 * t) * 0.2
+            return kick + transient
+        snare_tone = np.sin(2.0 * np.pi * 180.0 * t).astype(np.float32) * np.exp(-18.0 * t)
+        snare_noise = Filter(sr).band_pass(noise, 1200.0, 7000.0) * np.exp(-25.0 * t)
+        return 0.5 * snare_tone + 0.7 * snare_noise
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
         sig = flt.high_pass(sig, 60.0)
         return fx.compress(sig, threshold=0.4, ratio=6.0)
@@ -312,20 +362,23 @@ def _percussion(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("flute")
 def _flute(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        pure = osc.sine(freq, dur, amplitude=0.8)
-        breath = osc.noise(dur, amplitude=0.05, seed=7)
-        return pure + breath
+        n = max(1, int(dur * sr))
+        phase = _vibrato_phase(freq, dur, sr, rate_hz=4.0, depth_semitones=0.3)
+        fundamental = np.sin(phase).astype(np.float32) * 0.85
+        second = np.sin(2.0 * phase).astype(np.float32) * 0.21  # -12 dB
+        breath = np.random.default_rng(_FLUTE_BREATH_SEED).standard_normal(n).astype(np.float32)
+        breath = Filter(sr).band_pass(breath, 2000.0, 8000.0) * 0.063  # -24 dB
+        return fundamental + second + breath
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
         sig = flt.band_pass(sig, 400.0, 8000.0)
-        return fx.reverb(sig, room_size=0.4, wet=0.2)
+        return fx.reverb(sig, room_size=0.38, wet=0.18)
 
     return Instrument(
         name="flute",
         oscillator_fn=osc_fn,
-        envelope=Envelope(attack=0.08, decay=0.05, sustain=0.85, release=0.2, sample_rate=sr),
+        envelope=Envelope(attack=0.1, decay=0.08, sustain=0.85, release=0.28, sample_rate=sr),
         post_process=post,
         volume=0.7,
         sample_rate=sr,

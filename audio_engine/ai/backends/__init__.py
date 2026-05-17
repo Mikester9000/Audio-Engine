@@ -7,8 +7,6 @@ required local model folders are present.
 from __future__ import annotations
 
 from audio_engine.ai.backend import BackendRegistry
-from audio_engine.ai.backends.audiogen_backend import AudioGenBackend
-from audio_engine.ai.backends.kokoro_backend import KokoroBackend
 from audio_engine.ai.backends.musicgen_backend import MusicGenBackend
 
 
@@ -22,8 +20,8 @@ def _try_register(backend_cls: type) -> None:
         pass
 
 
-for _backend_cls in (MusicGenBackend, AudioGenBackend, KokoroBackend):
+for _backend_cls in (MusicGenBackend,):
     _try_register(_backend_cls)
 
 
-__all__ = ["MusicGenBackend", "AudioGenBackend", "KokoroBackend"]
+__all__ = ["MusicGenBackend"]

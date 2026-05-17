@@ -20,9 +20,9 @@ Choose one:
 1. Check Python version
 2. Create `.venv/`
 3. Install `pip install -e ".[neural]"`
-4. Download AI models into `models/`
+4. Download AI model files into `models/`
 
-The model download is about **~2GB total** and may take a few minutes the first time.
+The model download is about **~1.5GB total** and may take a few minutes the first time.
 
 ## Step 3: Double-click `run.bat`
 
@@ -30,11 +30,11 @@ The model download is about **~2GB total** and may take a few minutes the first 
 
 After setup has finished once, generation runs fully offline from local files.
 
-## What the AI models do
+## What the AI model does
 
-- **MusicGen (`models/musicgen-small/`)**: prompt-driven background music
-- **AudioGen (`models/audiogen-medium/`)**: prompt-driven sound effects
-- **Kokoro (`models/kokoro/`)**: local voice synthesis (TTS)
+- **MusicGen Medium (`models/musicgen-medium/`)**: prompt-driven background music and sound effects
+
+MusicGen Medium handles both music and sound effect generation. Voice synthesis uses the built-in procedural synthesiser.
 
 ## Generating audio
 
@@ -42,17 +42,23 @@ Examples (run from a terminal in the repo after `run.bat`):
 
 ```bat
 audio-engine generate-music --prompt "epic orchestral battle theme" --duration 30 --output battle.wav --backend musicgen
-audio-engine generate-sfx --prompt "large explosion with rumble" --duration 1.5 --output explosion.wav --backend audiogen
-audio-engine generate-voice --text "Welcome, hero." --voice narrator --output voice.wav --backend kokoro
+audio-engine generate-sfx --prompt "large explosion with deep rumble" --duration 1.5 --output explosion.wav --backend musicgen
+audio-engine generate-voice --text "Welcome, hero." --voice narrator --output voice.wav
 ```
 
-## If you already have the models
+## Generating general music for YouTube/streaming
 
-Place pre-downloaded model folders in `models/` using these exact names:
+```bat
+audio-engine generate-music --prompt "cinematic orchestral music, emotional arc, suitable for YouTube" --duration 90 --output youtube_cinematic.wav --backend musicgen
+audio-engine generate-music --prompt "solo piano composition, expressive, professional" --duration 120 --output youtube_piano.wav --backend musicgen
+audio-engine generate-music --prompt "ambient atmospheric music, relaxing layered pads" --duration 120 --output youtube_ambient.wav --backend musicgen
+```
 
-- `models/musicgen-small/`
-- `models/audiogen-medium/`
-- `models/kokoro/`
+## If you already have the model
+
+Place the pre-downloaded model folder in `models/` using this exact name:
+
+- `models/musicgen-medium/`
 
 Then run `setup.bat` anyway to install Python dependencies.
 
@@ -81,4 +87,4 @@ Run:
 audio-engine list-backends
 ```
 
-If neural backends show unavailable, verify model folders exist under `models/` and that `setup.bat` finished successfully.
+If `musicgen` shows unavailable, verify `models/musicgen-medium/` exists and that `setup.bat` finished successfully.

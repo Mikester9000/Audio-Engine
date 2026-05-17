@@ -20,12 +20,27 @@ _STYLE_PROMPTS: dict[str, str] = {
     "boss": "intense boss battle theme, heavy brass and strings, Phrygian mode, climactic, Final Fantasy style",
     "exploration": "peaceful field exploration theme, piano and flute, JRPG, warm and adventurous",
     "field": "peaceful field exploration theme, piano and flute, JRPG, warm and adventurous",
-    "town": "cheerful town theme, light orchestra, JRPG, welcoming",
-    "dungeon": "dark dungeon ambience, low strings and drones, mysterious and tense",
+    "title": "grand orchestral title screen theme, sweeping strings and choir, cinematic JRPG opening",
+    "town": "warm and cheerful town theme, acoustic guitar and light orchestra, JRPG village, welcoming",
+    "shop": "upbeat shop theme, pizzicato strings and flute, JRPG, lighthearted",
+    "inn": "peaceful inn theme, soft piano and acoustic guitar, restful, warm, JRPG",
+    "overworld": "epic overworld theme, full orchestra, adventurous, sweeping, Final Fantasy style",
+    "dungeon": "dark dungeon theme, low strings and ominous brass, tense, atmospheric, minor key",
+    "tension": "tense stealth music, sparse strings, quiet percussion, uneasy, JRPG",
+    "sadness": "emotional piano melody, melancholic strings, bittersweet, JRPG emotional scene",
+    "ending": "grand orchestral ending theme, full choir and orchestra, emotional resolution, epic",
+    "credits": "gentle credits theme, piano and strings, reflective, warm, JRPG",
+    "general_orchestral": "professional orchestral composition, full symphony orchestra, cinematic, broadcast quality",
+    "general_piano": "solo piano composition, expressive, professional, suitable for streaming and YouTube",
+    "general_ambient": "ambient atmospheric music, layered pads and gentle melody, relaxing, suitable for YouTube",
+    "general_cinematic": "cinematic orchestral music, epic build, emotional arc, suitable for film and YouTube",
     "ambient": "atmospheric ambient music, slow, ethereal pads, mysterious",
     "menu": "calm main menu theme, piano and strings, JRPG, introspective",
     "victory": "triumphant victory fanfare, brass and strings, major key, celebratory",
 }
+_MAX_CHUNK_DURATION_SECONDS = 30.0
+_MIN_CHUNK_DURATION_SECONDS = 0.1
+_STITCH_CROSSFADE_SECONDS = 1.0
 
 
 class MusicGenBackend(InferenceBackend):
@@ -36,7 +51,7 @@ class MusicGenBackend(InferenceBackend):
         seed: int | None = None,
     ) -> None:
         super().__init__(sample_rate=sample_rate)
-        default_path = default_model_dir("musicgen-small")
+        default_path = default_model_dir("musicgen-medium")
         self.model_path = Path(model_path) if model_path is not None else default_path
         self.seed = seed
         self._fallback = ProceduralBackend(sample_rate=sample_rate, seed=seed)
@@ -56,7 +71,7 @@ class MusicGenBackend(InferenceBackend):
     def dependency_summary(self) -> str:
         return (
             "Requires torch + transformers and local model files at "
-            f"{self.model_path}. Install with: pip install -e '.[neural]'"
+            f"{self.model_path} (musicgen-medium). Install with: pip install -e '.[neural]'"
         )
 
     def generate_music_audio(
@@ -71,34 +86,50 @@ class MusicGenBackend(InferenceBackend):
 
         try:
             import torch
-            model, processor = self._load_model_bundle()
 
-            if self.seed is not None:
-                torch.manual_seed(self.seed)
+            model, processor = self._load_model_bundle()
+            config = getattr(model, "config", None)
+            audio_encoder = config.audio_encoder if config is not None else None
+            frame_rate = audio_encoder.frame_rate if audio_encoder is not None else DEFAULT_AUDIO_FRAME_RATE
+            model_sample_rate = int(audio_encoder.sampling_rate) if audio_encoder is not None else self.sample_rate
 
             text_prompt = _STYLE_PROMPTS.get(style.lower(), f"JRPG game music, {style}")
             if bpm:
                 text_prompt = f"{text_prompt}, {int(bpm)} BPM"
 
-            inputs = processor(text=[text_prompt], padding=True, return_tensors="pt")
-            config = getattr(model, "config", None)
-            audio_encoder = config.audio_encoder if config is not None else None
-            frame_rate = audio_encoder.frame_rate if audio_encoder is not None else DEFAULT_AUDIO_FRAME_RATE
-            max_new_tokens = max(1, int(duration * frame_rate))
-
-            with torch.no_grad():
-                generated = model.generate(**inputs, max_new_tokens=max_new_tokens)
-
-            waveform = getattr(generated, "audio_values", generated)
-            if hasattr(waveform, "detach"):
-                waveform = waveform.detach().cpu().numpy()
-            audio = np.asarray(waveform[0], dtype=np.float32)
-            model_sample_rate = (
-                int(audio_encoder.sampling_rate) if audio_encoder is not None else self.sample_rate
+            chunk_duration = _MAX_CHUNK_DURATION_SECONDS
+            chunk_count = max(1, int(np.ceil(duration / chunk_duration)))
+            chunk_lengths = [chunk_duration] * chunk_count
+            chunk_lengths[-1] = max(
+                _MIN_CHUNK_DURATION_SECONDS,
+                duration - (chunk_duration * (chunk_count - 1)),
             )
-            if model_sample_rate != self.sample_rate:
-                audio = self._resample(audio, source_rate=model_sample_rate, target_rate=self.sample_rate)
-            return self._ensure_stereo(audio, duration)
+            chunk_generation_lengths = chunk_lengths.copy()
+            if chunk_count > 1:
+                for idx in range(1, chunk_count):
+                    chunk_generation_lengths[idx] += _STITCH_CROSSFADE_SECONDS
+
+            chunks: list[np.ndarray] = []
+            for idx, chunk_len in enumerate(chunk_generation_lengths):
+                if self.seed is not None:
+                    # Keep deterministic per-chunk output while avoiding identical chunks.
+                    torch.manual_seed(self.seed + idx)
+
+                inputs = processor(text=[text_prompt], padding=True, return_tensors="pt")
+                max_new_tokens = max(1, int(chunk_len * frame_rate))
+                with torch.no_grad():
+                    generated = model.generate(**inputs, max_new_tokens=max_new_tokens)
+
+                waveform = getattr(generated, "audio_values", generated)
+                if hasattr(waveform, "detach"):
+                    waveform = waveform.detach().cpu().numpy()
+                audio = np.asarray(waveform[0], dtype=np.float32)
+                if model_sample_rate != self.sample_rate:
+                    audio = self._resample(audio, source_rate=model_sample_rate, target_rate=self.sample_rate)
+                chunks.append(self._ensure_stereo(audio, chunk_len))
+
+            stitched = chunks[0] if len(chunks) == 1 else self._crossfade_stitch(chunks, int(self.sample_rate))
+            return self._ensure_stereo(stitched, duration)
         except Exception:
             return self._fallback.generate_music_audio(style=style, duration=duration, bpm=bpm, **kwargs)
 
@@ -124,7 +155,14 @@ class MusicGenBackend(InferenceBackend):
         pitch_hz: float | None = None,
         **kwargs,
     ) -> np.ndarray:
-        return self._fallback.generate_sfx_audio(sfx_type=sfx_type, duration=duration, pitch_hz=pitch_hz, **kwargs)
+        fallback_kwargs = dict(kwargs)
+        fallback_kwargs.setdefault("prompt", sfx_type)
+        return self._fallback.generate_sfx_audio(
+            sfx_type=sfx_type,
+            duration=duration,
+            pitch_hz=pitch_hz,
+            **fallback_kwargs,
+        )
 
     def generate_voice_audio(
         self,
@@ -162,3 +200,24 @@ class MusicGenBackend(InferenceBackend):
 
         target_len = max(1, int(round(audio.shape[0] * target_rate / source_rate)))
         return resample(audio, target_len).astype(np.float32)
+
+    def _crossfade_stitch(self, chunks: list[np.ndarray], crossfade_samples: int) -> np.ndarray:
+        stitched = chunks[0].astype(np.float32, copy=True)
+        for chunk in chunks[1:]:
+            if stitched.size == 0:
+                stitched = chunk.astype(np.float32, copy=True)
+                continue
+            if chunk.size == 0:
+                continue
+
+            fade_len = min(crossfade_samples, stitched.shape[0], chunk.shape[0])
+            if fade_len <= 0:
+                stitched = np.vstack([stitched, chunk])
+                continue
+
+            fade_out = np.linspace(1.0, 0.0, fade_len, dtype=np.float32)[:, None]
+            fade_in = np.linspace(0.0, 1.0, fade_len, dtype=np.float32)[:, None]
+            cross = stitched[-fade_len:] * fade_out + chunk[:fade_len] * fade_in
+            stitched = np.vstack([stitched[:-fade_len], cross, chunk[fade_len:]])
+
+        return stitched.astype(np.float32, copy=False)

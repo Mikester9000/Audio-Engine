@@ -24,9 +24,12 @@ from audio_engine.dsp.eq import EQ, EQBand
 from audio_engine.dsp.compressor import Compressor
 from audio_engine.dsp.limiter import Limiter
 from audio_engine.dsp.dither import dither
+from audio_engine.dsp.reverb import apply_reverb
+from audio_engine.dsp.stereo import apply_mid_side_width
 from audio_engine.export.audio_exporter import AudioExporter
 
 __all__ = ["OfflineBounce"]
+_VALID_PROFILES = {"game", "ost", "youtube", "procedural_neutral"}
 
 
 def _lufs_loudness(signal: np.ndarray, sample_rate: int) -> float:
@@ -94,18 +97,38 @@ class OfflineBounce:
         self,
         sample_rate: int = 44100,
         bit_depth: Literal[16, 32] = 16,
-        target_lufs: float | None = -16.0,
-        ceiling_db: float = -0.3,
+        target_lufs: float | None = None,
+        ceiling_db: float | None = None,
         apply_master_eq: bool = True,
         apply_compression: bool = True,
+        profile: Literal["game", "ost", "youtube", "procedural_neutral"] = "game",
     ) -> None:
+        if profile not in _VALID_PROFILES:
+            valid = ", ".join(sorted(_VALID_PROFILES))
+            raise ValueError(f"profile must be one of: {valid}")
+
+        self.profile = profile
+        profile_defaults = {
+            "game": {"target_lufs": -16.0, "ceiling_db": -0.3, "width": 1.0, "reverb_mix": 0.0},
+            "ost": {"target_lufs": -14.0, "ceiling_db": -0.8, "width": 1.2, "reverb_mix": 0.18},
+            "youtube": {"target_lufs": -14.0, "ceiling_db": -1.0, "width": 1.15, "reverb_mix": 0.08},
+            "procedural_neutral": {"target_lufs": -16.0, "ceiling_db": -0.8, "width": 1.0, "reverb_mix": 0.03},
+        }[profile]
+
+        if target_lufs is None:
+            target_lufs = profile_defaults["target_lufs"]
+        if ceiling_db is None:
+            ceiling_db = profile_defaults["ceiling_db"]
+
         self.sample_rate = sample_rate
         self.target_lufs = target_lufs
         self._exporter = AudioExporter(sample_rate=sample_rate, bit_depth=bit_depth)
         self._bit_depth = bit_depth
+        self._profile_width = profile_defaults["width"]
+        self._profile_reverb_mix = profile_defaults["reverb_mix"]
 
         # Build the mastering chain
-        self._eq = self._build_master_eq() if apply_master_eq else None
+        self._eq = self._build_master_eq(profile) if apply_master_eq else None
         self._compressor = (
             Compressor(
                 sample_rate=sample_rate,
@@ -121,15 +144,22 @@ class OfflineBounce:
         )
         self._limiter = Limiter(sample_rate=sample_rate, ceiling_db=ceiling_db)
 
-    def _build_master_eq(self) -> EQ:
+    def _build_master_eq(self, profile: str) -> EQ:
         """Return a gentle mastering EQ suitable for most game audio."""
         eq = EQ(self.sample_rate)
         # High-pass filter to remove sub-bass rumble below 30 Hz
         eq.add_band(EQBand(30.0, gain_db=0.0, q=0.707, band_type="high_pass"))
-        # Low-shelf: gently tighten the low end
-        eq.add_band(EQBand(120.0, gain_db=-1.5, q=0.707, band_type="low_shelf"))
-        # Presence/air boost for clarity
-        eq.add_band(EQBand(10000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
+        if profile == "procedural_neutral":
+            eq.add_band(EQBand(120.0, gain_db=-0.5, q=0.707, band_type="low_shelf"))
+            eq.add_band(EQBand(9000.0, gain_db=+0.5, q=0.707, band_type="high_shelf"))
+        elif profile == "youtube":
+            eq.add_band(EQBand(120.0, gain_db=-1.0, q=0.707, band_type="low_shelf"))
+            eq.add_band(EQBand(8000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
+        else:
+            # Low-shelf: gently tighten the low end
+            eq.add_band(EQBand(120.0, gain_db=-1.5, q=0.707, band_type="low_shelf"))
+            # Presence/air boost for clarity
+            eq.add_band(EQBand(10000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
         return eq
 
     def process(self, audio: np.ndarray) -> np.ndarray:
@@ -165,6 +195,17 @@ class OfflineBounce:
             sig = (sig.astype(np.float64) * gain_linear).astype(np.float32)
 
         # 4. True-peak limiting
+        sig = self._limiter.process(sig)
+
+        if sig.ndim == 2 and self._profile_width != 1.0:
+            sig = apply_mid_side_width(sig, width=self._profile_width)
+
+        if self._profile_reverb_mix > 0.0:
+            preset = "large_hall" if self.profile == "ost" else "small_room"
+            sig = apply_reverb(sig, self.sample_rate, preset=preset, mix=self._profile_reverb_mix)
+
+        # Re-apply limiting after profile-dependent spatial/tonal stages so
+        # output still honors the configured ceiling.
         sig = self._limiter.process(sig)
 
         # 5. Dithering (only meaningful when exporting to 16-bit)
