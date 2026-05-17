@@ -4,6 +4,9 @@ Tests for the AI pipeline: prompt parser, backends, and high-level generators.
 
 from __future__ import annotations
 
+import sys
+import types
+
 import numpy as np
 import pytest
 
@@ -12,6 +15,7 @@ from audio_engine.ai import (
     PromptParser, MusicPlan, SFXPlan, VoicePlan,
     BackendRegistry, ProceduralBackend,
 )
+from audio_engine.ai.backends import _paths, audiogen_backend, kokoro_backend, musicgen_backend
 from audio_engine.ai.sfx_synth import synthesise_sfx, available_sfx_types
 from audio_engine.ai.voice_synth import synthesise_voice, VOICE_PRESETS
 from audio_engine.ai.backends import AudioGenBackend, KokoroBackend, MusicGenBackend
@@ -171,7 +175,65 @@ class TestBackendRegistry:
         assert "procedural" in BackendRegistry.available_backends()
 
 
+def _install_fake_transformer_modules(monkeypatch, model_attr: str) -> dict[str, int]:
+    call_counts = {"model": 0, "processor": 0, "seed": 0}
+
+    class _NoGrad:
+        def __enter__(self):
+            return None
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    torch_module = types.ModuleType("torch")
+    torch_module.manual_seed = lambda seed: call_counts.__setitem__("seed", call_counts["seed"] + 1)
+    torch_module.no_grad = lambda: _NoGrad()
+
+    class _FakeProcessor:
+        @classmethod
+        def from_pretrained(cls, path, local_files_only=True):
+            call_counts["processor"] += 1
+            return cls()
+
+        def __call__(self, text, padding, return_tensors):
+            return {"prompt": text[0]}
+
+    class _FakeModel:
+        config = types.SimpleNamespace(
+            audio_encoder=types.SimpleNamespace(frame_rate=50, sampling_rate=SR)
+        )
+
+        @classmethod
+        def from_pretrained(cls, path, local_files_only=True):
+            call_counts["model"] += 1
+            return cls()
+
+        def generate(self, **kwargs):
+            max_new_tokens = kwargs["max_new_tokens"]
+            return np.ones((1, max_new_tokens), dtype=np.float32)
+
+    transformers_module = types.ModuleType("transformers")
+    transformers_module.AutoProcessor = _FakeProcessor
+    setattr(transformers_module, model_attr, _FakeModel)
+
+    monkeypatch.setitem(sys.modules, "torch", torch_module)
+    monkeypatch.setitem(sys.modules, "transformers", transformers_module)
+    return call_counts
+
+
 class TestOptionalNeuralBackends:
+    def test_complete_model_snapshot_requires_key_files(self, tmp_path):
+        model_dir = tmp_path / "musicgen-small"
+        model_dir.mkdir()
+        assert _paths.has_complete_model_snapshot(model_dir) is False
+
+        (model_dir / "config.json").write_text("{}")
+        assert _paths.has_complete_model_snapshot(model_dir) is False
+
+        (model_dir / "preprocessor_config.json").write_text("{}")
+        (model_dir / "model.safetensors").write_text("weights")
+        assert _paths.has_complete_model_snapshot(model_dir) is True
+
     def test_musicgen_backend_falls_back_without_model(self, tmp_path):
         backend = MusicGenBackend(model_path=tmp_path / "missing", sample_rate=SR, seed=7)
         assert backend.name == "musicgen"
@@ -179,6 +241,16 @@ class TestOptionalNeuralBackends:
         audio = backend.generate_music_audio("battle", duration=1.0)
         assert audio.ndim == 2
         assert audio.shape[1] == 2
+
+    def test_musicgen_backend_requires_complete_model_snapshot(self, monkeypatch, tmp_path):
+        model_dir = tmp_path / "musicgen-small"
+        model_dir.mkdir()
+        (model_dir / "config.json").write_text("{}")
+
+        monkeypatch.setattr(musicgen_backend, "can_import_module", lambda _: True)
+
+        backend = MusicGenBackend(model_path=model_dir, sample_rate=SR, seed=7)
+        assert backend.is_available() is False
 
     def test_audiogen_backend_falls_back_without_model(self, tmp_path):
         backend = AudioGenBackend(model_path=tmp_path / "missing", sample_rate=SR, seed=7)
@@ -188,6 +260,16 @@ class TestOptionalNeuralBackends:
         assert audio.ndim == 1
         assert len(audio) > 0
 
+    def test_audiogen_backend_requires_complete_model_snapshot(self, monkeypatch, tmp_path):
+        model_dir = tmp_path / "audiogen-medium"
+        model_dir.mkdir()
+        (model_dir / "config.json").write_text("{}")
+
+        monkeypatch.setattr(audiogen_backend, "can_import_module", lambda _: True)
+
+        backend = AudioGenBackend(model_path=model_dir, sample_rate=SR, seed=7)
+        assert backend.is_available() is False
+
     def test_kokoro_backend_falls_back_without_model(self, tmp_path):
         backend = KokoroBackend(model_path=tmp_path / "missing", sample_rate=SR, seed=7)
         assert backend.name == "kokoro"
@@ -195,6 +277,54 @@ class TestOptionalNeuralBackends:
         audio = backend.generate_voice_audio("Welcome, hero.", voice_preset="narrator")
         assert audio.ndim == 1
         assert len(audio) > 0
+
+    def test_kokoro_backend_requires_complete_model_snapshot(self, monkeypatch, tmp_path):
+        model_dir = tmp_path / "kokoro"
+        model_dir.mkdir()
+        (model_dir / "config.json").write_text("{}")
+
+        monkeypatch.setattr(kokoro_backend, "can_import_module", lambda _: True)
+
+        backend = KokoroBackend(model_path=model_dir, sample_rate=SR, seed=7)
+        assert backend.is_available() is False
+
+    def test_musicgen_backend_caches_loaded_model_and_processor(self, monkeypatch, tmp_path):
+        model_dir = tmp_path / "musicgen-small"
+        model_dir.mkdir()
+        (model_dir / "config.json").write_text("{}")
+        (model_dir / "preprocessor_config.json").write_text("{}")
+        (model_dir / "model.safetensors").write_text("weights")
+
+        monkeypatch.setattr(musicgen_backend, "can_import_module", lambda _: True)
+        call_counts = _install_fake_transformer_modules(monkeypatch, "MusicgenForConditionalGeneration")
+
+        backend = MusicGenBackend(model_path=model_dir, sample_rate=SR, seed=7)
+        first = backend.generate_music_audio("battle", duration=0.1)
+        second = backend.generate_music_audio("battle", duration=0.1)
+
+        assert first.shape == second.shape
+        assert call_counts["model"] == 1
+        assert call_counts["processor"] == 1
+        assert call_counts["seed"] == 2
+
+    def test_audiogen_backend_caches_loaded_model_and_processor(self, monkeypatch, tmp_path):
+        model_dir = tmp_path / "audiogen-medium"
+        model_dir.mkdir()
+        (model_dir / "config.json").write_text("{}")
+        (model_dir / "preprocessor_config.json").write_text("{}")
+        (model_dir / "model.safetensors").write_text("weights")
+
+        monkeypatch.setattr(audiogen_backend, "can_import_module", lambda _: True)
+        call_counts = _install_fake_transformer_modules(monkeypatch, "AutoModelForTextToWaveform")
+
+        backend = AudioGenBackend(model_path=model_dir, sample_rate=SR, seed=7)
+        first = backend.generate_sfx_audio("explosion", duration=0.1)
+        second = backend.generate_sfx_audio("explosion", duration=0.1)
+
+        assert first.shape == second.shape
+        assert call_counts["model"] == 1
+        assert call_counts["processor"] == 1
+        assert call_counts["seed"] == 2
 
 
 # ---------------------------------------------------------------------------

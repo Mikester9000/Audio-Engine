@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import os
-from importlib import util as importlib_util
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from audio_engine.ai.backend import InferenceBackend, ProceduralBackend
-from audio_engine.ai.backends._paths import default_model_dir
+from audio_engine.ai.backends._paths import can_import_module, default_model_dir, has_complete_model_snapshot
 
 
 class KokoroBackend(InferenceBackend):
@@ -32,9 +31,8 @@ class KokoroBackend(InferenceBackend):
 
     def is_available(self) -> bool:
         return (
-            importlib_util.find_spec("kokoro") is not None
-            and self.model_path.exists()
-            and self.model_path.is_dir()
+            can_import_module("kokoro")
+            and has_complete_model_snapshot(self.model_path)
         )
 
     def dependency_summary(self) -> str:

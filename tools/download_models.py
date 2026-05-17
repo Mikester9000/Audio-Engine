@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from huggingface_hub import snapshot_download
+from audio_engine.ai.backends._paths import has_complete_model_snapshot
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -33,9 +34,7 @@ MODEL_SPECS = (
 
 
 def _is_model_present(path: Path) -> bool:
-    if not path.is_dir():
-        return False
-    return any(path.iterdir())
+    return has_complete_model_snapshot(path)
 
 
 def _download_model(repo_id: str, target: Path) -> None:

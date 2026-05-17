@@ -72,7 +72,7 @@ https://www.python.org/downloads/windows/
 Run `setup.bat` again. If needed, delete `.venv/` and rerun setup.
 
 ### Model download interrupted
-Run `setup.bat` again. `tools/download_models.py` is idempotent and resumes/skips existing folders.
+Run `setup.bat` again. `tools/download_models.py` resumes incomplete downloads and skips only model folders that already contain the required local files.
 
 ### Backend not available
 Run:

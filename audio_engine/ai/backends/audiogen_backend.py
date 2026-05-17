@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from importlib import util as importlib_util
 from pathlib import Path
 
 import numpy as np
 
 from audio_engine.ai.backend import InferenceBackend, ProceduralBackend
-from audio_engine.ai.backends._paths import DEFAULT_AUDIO_FRAME_RATE, default_model_dir
+from audio_engine.ai.backends._paths import (
+    DEFAULT_AUDIO_FRAME_RATE,
+    can_import_module,
+    default_model_dir,
+    has_complete_model_snapshot,
+)
 
 
 _SFX_PROMPTS: dict[str, str] = {
@@ -45,6 +49,8 @@ class AudioGenBackend(InferenceBackend):
         self.model_path = Path(model_path) if model_path is not None else default_path
         self.seed = seed
         self._fallback = ProceduralBackend(sample_rate=sample_rate, seed=seed)
+        self._model = None
+        self._processor = None
 
     @property
     def name(self) -> str:
@@ -52,10 +58,9 @@ class AudioGenBackend(InferenceBackend):
 
     def is_available(self) -> bool:
         return (
-            importlib_util.find_spec("torch") is not None
-            and importlib_util.find_spec("transformers") is not None
-            and self.model_path.exists()
-            and self.model_path.is_dir()
+            can_import_module("torch")
+            and can_import_module("transformers")
+            and has_complete_model_snapshot(self.model_path)
         )
 
     def dependency_summary(self) -> str:
@@ -85,16 +90,7 @@ class AudioGenBackend(InferenceBackend):
 
         try:
             import torch
-            from transformers import AutoModelForTextToWaveform, AutoProcessor
-
-            model = AutoModelForTextToWaveform.from_pretrained(
-                str(self.model_path),
-                local_files_only=True,
-            )
-            processor = AutoProcessor.from_pretrained(
-                str(self.model_path),
-                local_files_only=True,
-            )
+            model, processor = self._load_model_bundle()
 
             if self.seed is not None:
                 torch.manual_seed(self.seed)
@@ -121,6 +117,22 @@ class AudioGenBackend(InferenceBackend):
             return self._ensure_mono(audio, duration)
         except Exception:
             return self._fallback.generate_sfx_audio(sfx_type=sfx_type, duration=duration, pitch_hz=pitch_hz, **kwargs)
+
+    def _load_model_bundle(self):
+        if self._model is None or self._processor is None:
+            from transformers import AutoModelForTextToWaveform, AutoProcessor
+
+            model = AutoModelForTextToWaveform.from_pretrained(
+                str(self.model_path),
+                local_files_only=True,
+            )
+            processor = AutoProcessor.from_pretrained(
+                str(self.model_path),
+                local_files_only=True,
+            )
+            self._model = model
+            self._processor = processor
+        return self._model, self._processor
 
     def generate_voice_audio(
         self,
