@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from audio_engine.ai.backend import InferenceBackend, ProceduralBackend
+from audio_engine.ai.backends._paths import default_model_dir
 
 
 _SFX_PROMPTS: dict[str, str] = {
@@ -40,7 +41,7 @@ class AudioGenBackend(InferenceBackend):
         seed: int | None = None,
     ) -> None:
         super().__init__(sample_rate=sample_rate)
-        default_path = Path(__file__).resolve().parents[3] / "models" / "audiogen-medium"
+        default_path = default_model_dir("audiogen-medium")
         self.model_path = Path(model_path) if model_path is not None else default_path
         self.seed = seed
         self._fallback = ProceduralBackend(sample_rate=sample_rate, seed=seed)

@@ -72,9 +72,10 @@ def main() -> int:
             print("ERROR: Download failures occurred for:")
             for name in failed_downloads:
                 print(f"  - {name}")
-        print("ERROR: Some model folders are missing after download:")
-        for name in missing:
-            print(f"  - {name}")
+        if missing:
+            print("ERROR: Some model folders are missing after download:")
+            for name in missing:
+                print(f"  - {name}")
         return 1
 
     print("All required models are present in models/.")
