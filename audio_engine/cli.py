@@ -85,12 +85,62 @@ def _cmd_sfx(args: argparse.Namespace) -> None:
     print(f"Done.  {len(audio)} samples written.")
 
 
+def _resolve_backend(args: argparse.Namespace) -> str:
+    """Resolve the effective backend name from CLI flags.
+
+    Priority order (highest first):
+    1. ``--backend`` explicit flag
+    2. ``--samples-dir`` → ``sample`` backend
+    3. ``--orchestral`` flag → ``synth_orchestral`` backend
+    4. ``--ps1`` flag → ``ps1`` backend
+    5. Default ``"procedural"``
+    """
+    if args.backend and args.backend != "procedural":
+        return args.backend
+    if getattr(args, "samples_dir", None):
+        return "sample"
+    if getattr(args, "orchestral", False):
+        return "synth_orchestral"
+    if getattr(args, "ps1", False):
+        return "ps1"
+    return args.backend or "procedural"
+
+
+def _make_backend(args: argparse.Namespace):
+    """Instantiate the backend, wiring sample_dir for SampleBackend."""
+    from audio_engine.ai.backend import BackendRegistry
+
+    backend_name = _resolve_backend(args)
+    samples_dir = getattr(args, "samples_dir", None)
+
+    if backend_name == "sample":
+        from audio_engine.ai.sample_backend import SampleBackend
+        base = "ps1" if getattr(args, "ps1", False) else "synth_orchestral"
+        return SampleBackend(
+            samples_dir=samples_dir or "samples/",
+            sample_rate=args.sample_rate,
+            seed=args.seed,
+            base_backend=base,
+        )
+    if backend_name == "ps1":
+        from audio_engine.ai.ps1_backend import PS1Backend
+        reverb = getattr(args, "ps1_reverb", "room")
+        return PS1Backend(sample_rate=args.sample_rate, seed=args.seed, reverb_mode=reverb)
+    if backend_name == "synth_orchestral":
+        from audio_engine.ai.synth_orchestral_backend import SynthOrchestralBackend
+        return SynthOrchestralBackend(sample_rate=args.sample_rate, seed=args.seed)
+
+    return BackendRegistry.get(backend_name, sample_rate=args.sample_rate, seed=args.seed)
+
+
 def _cmd_generate_music(args: argparse.Namespace) -> None:
     """Generate music from a text prompt using the AI pipeline."""
     from audio_engine.ai import MusicGen
 
-    gen = MusicGen(sample_rate=args.sample_rate, backend=args.backend, seed=args.seed)
-    print(f"Generating music: '{args.prompt}' → {args.output} …")
+    backend = _make_backend(args)
+    gen = MusicGen(sample_rate=args.sample_rate, backend=backend, seed=args.seed)
+    mode_label = _resolve_backend(args)
+    print(f"Generating music [{mode_label}]: '{args.prompt}' → {args.output} …")
     path = gen.generate_to_file(
         prompt=args.prompt,
         output_path=args.output,
@@ -105,8 +155,10 @@ def _cmd_generate_sfx(args: argparse.Namespace) -> None:
     """Generate a sound effect from a text prompt."""
     from audio_engine.ai import SFXGen
 
-    gen = SFXGen(sample_rate=args.sample_rate, backend=args.backend, seed=args.seed)
-    print(f"Generating SFX: '{args.prompt}' → {args.output} …")
+    backend = _make_backend(args)
+    gen = SFXGen(sample_rate=args.sample_rate, backend=backend, seed=args.seed)
+    mode_label = _resolve_backend(args)
+    print(f"Generating SFX [{mode_label}]: '{args.prompt}' → {args.output} …")
     pitch = float(args.pitch) if args.pitch is not None else None
     path = gen.generate_to_file(
         prompt=args.prompt,
@@ -121,8 +173,10 @@ def _cmd_generate_voice(args: argparse.Namespace) -> None:
     """Generate voice/TTS audio from text."""
     from audio_engine.ai import VoiceGen
 
-    gen = VoiceGen(sample_rate=args.sample_rate, backend=args.backend, seed=args.seed)
-    print(f"Synthesising voice: '{args.text}' (voice={args.voice}) → {args.output} …")
+    backend = _make_backend(args)
+    gen = VoiceGen(sample_rate=args.sample_rate, backend=backend, seed=args.seed)
+    mode_label = _resolve_backend(args)
+    print(f"Synthesising voice [{mode_label}]: '{args.text}' (voice={args.voice}) → {args.output} …")
     path = gen.generate_to_file(
         text=args.text,
         output_path=args.output,
@@ -130,6 +184,51 @@ def _cmd_generate_voice(args: argparse.Namespace) -> None:
         speed=args.speed,
     )
     print(f"Done. Saved to: {path}")
+
+
+def _cmd_remaster(args: argparse.Namespace) -> None:
+    """Remaster an existing WAV file by blending in orchestral samples."""
+    import wave
+    import numpy as np
+
+    from audio_engine.ai.sample_backend import SampleBackend
+    from audio_engine.export.audio_exporter import AudioExporter
+
+    input_path = Path(args.input)
+    if not input_path.exists():
+        print(f"Error: file not found: {input_path}", file=sys.stderr)
+        raise FileNotFoundError(f"file not found: {input_path}")
+
+    audio, sr, n_channels = _load_wav_array(input_path)
+
+    samples_dir = args.samples_dir or "samples/"
+    base_backend = "ps1" if args.ps1 else "synth_orchestral"
+    backend = SampleBackend(
+        samples_dir=samples_dir,
+        sample_rate=sr,
+        seed=args.seed,
+        base_backend=base_backend,
+    )
+
+    cats = backend.available_sample_categories()
+    if not cats:
+        print(
+            f"Warning: no .wav samples found in '{samples_dir}'. "
+            "Output will be identical to input.",
+            file=sys.stderr,
+        )
+
+    print(
+        f"Remastering: {input_path.name}  "
+        f"(samples: {cats or ['none']}, style: {args.style}) → {args.output} …"
+    )
+
+    duration = audio.shape[0] / sr if audio.ndim == 2 else len(audio) / sr
+    remastered = backend.remaster_audio(audio, style=args.style, duration=duration)
+
+    exporter = AudioExporter(sample_rate=sr)
+    out_path = exporter.export(remastered, args.output, fmt=args.format)
+    print(f"Done. Saved to: {out_path}")
 
 
 def _load_wav_array(input_path: Path) -> "tuple[np.ndarray, int, int]":
@@ -475,6 +574,163 @@ def _cmd_write_review_log(args: argparse.Namespace) -> None:
     )
 
 
+def _cmd_compose_piece(args: argparse.Namespace) -> None:
+    """Compose a full structured musical piece with optional vocal overlay."""
+    from audio_engine.ai.piece_composer import PieceComposer
+    from audio_engine.export.audio_exporter import AudioExporter
+
+    # Resolve backend
+    if args.samples_dir:
+        backend = "sample"
+    elif args.orchestral:
+        backend = "synth_orchestral"
+    elif args.ps1:
+        backend = "ps1"
+    else:
+        backend = "synth_orchestral"
+
+    sections = [s.strip() for s in args.sections.split(",") if s.strip()]
+    print(
+        f"Composing piece: style={args.style}, sections={sections}, "
+        f"vocals={'yes' if args.with_vocals else 'no'}, "
+        f"backend={backend}, duration={args.duration}s"
+    )
+
+    composer = PieceComposer(
+        sample_rate=args.sample_rate,
+        seed=args.seed,
+        backend=backend,
+        vocal_preset=args.vocal_preset,
+    )
+
+    audio = composer.compose(
+        style=args.style,
+        sections=sections,
+        with_vocals=args.with_vocals,
+        duration=args.duration,
+        quiet=args.quiet,
+    )
+
+    exporter = AudioExporter(sample_rate=args.sample_rate)
+    out_path = exporter.export(audio, args.output, fmt=args.format)
+    print(f"\nDone. Saved to: {out_path}")
+
+
+def _cmd_list_music_library(args: argparse.Namespace) -> None:
+    """Browse and filter the full music style catalog."""
+    from audio_engine.ai.music_library import MusicLibrary
+    lib = MusicLibrary()
+
+    entries = lib.all_entries()
+    if getattr(args, "game", None):
+        entries = lib.by_game(args.game)
+    elif getattr(args, "track_type", None):
+        entries = lib.by_type(args.track_type)
+    elif getattr(args, "search", None):
+        entries = lib.search(args.search)
+    if getattr(args, "vocals", False):
+        entries = [e for e in entries if e.with_vocals]
+
+    if getattr(args, "as_json", False):
+        import json
+        data = [
+            {
+                "style_key": e.style_key,
+                "display_name": e.display_name,
+                "game": e.game,
+                "track_type": e.track_type,
+                "bpm": e.bpm_approx,
+                "mood": e.key_mood,
+                "composer": e.composer,
+                "with_vocals": e.with_vocals,
+                "tags": e.tags,
+            }
+            for e in entries
+        ]
+        print(json.dumps(data, indent=2))
+        return
+
+    print(f"{'Style Key':<25} {'Display Name':<35} {'Game':<6} {'Type':<12} {'BPM':<5} {'Mood'}")
+    print("-" * 100)
+    for e in entries:
+        v = " ♪" if e.with_vocals else ""
+        print(f"{e.style_key:<25} {e.display_name + v:<35} {e.game:<6} {e.track_type:<12} {e.bpm_approx:<5} {e.key_mood}")
+    print(f"\n{len(entries)} track(s) found.")
+
+
+def _cmd_generate_track(args: argparse.Namespace) -> None:
+    """Generate a single full-piece track from a style key or request."""
+    from audio_engine.ai.music_library import MusicLibrary, style_for_request
+    from audio_engine.ai.radio_playlist import RadioPlaylistGenerator
+
+    lib = MusicLibrary()
+    # Resolve style — may be a key or natural language
+    all_keys = lib.all_style_keys()
+    style_key = args.style if args.style in all_keys else style_for_request(args.style)
+
+    entry = lib.get(style_key)
+    display = entry.display_name if entry else style_key
+    print(f"Generating full piece: '{display}' (style={style_key}) → {args.output} …")
+
+    # Backend
+    if getattr(args, "samples_dir", None):
+        backend = "sample"
+    elif getattr(args, "ps1", False):
+        backend = "ps1"
+    else:
+        backend = "synth_orchestral"
+
+    gen = RadioPlaylistGenerator(
+        sample_rate=args.sample_rate,
+        seed=args.seed,
+        backend=backend,
+        vocal_preset=args.vocal_preset,
+    )
+    out_path = gen.generate_track(
+        style_key=style_key,
+        output_path=args.output,
+        duration=args.duration,
+        fmt=args.format,
+        with_vocals=args.with_vocals,
+    )
+    print(f"Done. Saved to: {out_path}")
+
+
+def _cmd_generate_radio_playlist(args: argparse.Namespace) -> None:
+    """Generate a full FF-radio style playlist of complete pieces."""
+    from audio_engine.ai.radio_playlist import RadioPlaylistGenerator
+
+    # Backend
+    if getattr(args, "samples_dir", None):
+        backend = "sample"
+    elif getattr(args, "ps1", False):
+        backend = "ps1"
+    else:
+        backend = "synth_orchestral"
+
+    gen = RadioPlaylistGenerator(
+        sample_rate=args.sample_rate,
+        seed=args.seed,
+        backend=backend,
+        vocal_preset=args.vocal_preset,
+    )
+
+    if args.styles:
+        playlist_input: "str | list[str]" = [s.strip() for s in args.styles.split(",") if s.strip()]
+    else:
+        playlist_input = args.preset
+
+    gen.generate_playlist(
+        preset_or_styles=playlist_input,
+        output_dir=args.output_dir,
+        track_duration=args.track_duration,
+        fmt=args.format,
+        with_vocals=args.with_vocals,
+        force=args.force,
+        quiet=args.quiet,
+    )
+
+
 def _cmd_list_styles(_args: argparse.Namespace) -> None:
     from audio_engine import AudioEngine
 
@@ -557,6 +813,32 @@ def build_parser() -> argparse.ArgumentParser:
         default="procedural",
         help="Generation backend name (default: procedural).",
     )
+    gm.add_argument(
+        "--ps1",
+        action="store_true",
+        help="Apply PS1/FF7-era SPU character (bit-crush + SPU reverb). Overrides --backend.",
+    )
+    gm.add_argument(
+        "--orchestral",
+        action="store_true",
+        help="Use synth-orchestral backend (clean PS2-quality mock-up). Overrides --backend.",
+    )
+    gm.add_argument(
+        "--samples-dir",
+        default=None,
+        metavar="DIR",
+        help=(
+            "Path to a samples directory containing .wav files organised by category "
+            "(strings/, brass/, choir/, etc.). Enables sample-based remastering on top "
+            "of synth_orchestral (or ps1 if --ps1 is also set). Overrides --backend."
+        ),
+    )
+    gm.add_argument(
+        "--ps1-reverb",
+        default="room",
+        choices=["room", "hall", "space", "echo", "pipe", "off"],
+        help="SPU reverb mode used with --ps1 (default: room).",
+    )
 
     # --- generate-sfx ---
     gs = sub.add_parser(
@@ -576,6 +858,28 @@ def build_parser() -> argparse.ArgumentParser:
         "--backend",
         default="procedural",
         help="Generation backend name (default: procedural).",
+    )
+    gs.add_argument(
+        "--ps1",
+        action="store_true",
+        help="Apply PS1/FF7-era SPU character. Overrides --backend.",
+    )
+    gs.add_argument(
+        "--orchestral",
+        action="store_true",
+        help="Use synth-orchestral backend. Overrides --backend.",
+    )
+    gs.add_argument(
+        "--samples-dir",
+        default=None,
+        metavar="DIR",
+        help="Path to samples directory for sample-augmented SFX. Overrides --backend.",
+    )
+    gs.add_argument(
+        "--ps1-reverb",
+        default="room",
+        choices=["room", "hall", "space", "echo", "pipe", "off"],
+        help="SPU reverb mode when --ps1 is set (default: room).",
     )
 
     # --- generate-voice ---
@@ -598,6 +902,31 @@ def build_parser() -> argparse.ArgumentParser:
         "--backend",
         default="procedural",
         help="Generation backend name (default: procedural).",
+    )
+    gv.add_argument(
+        "--ps1",
+        action="store_true",
+        help="Apply PS1/FF7-era SPU character to voice. Overrides --backend.",
+    )
+    gv.add_argument(
+        "--orchestral",
+        action="store_true",
+        help="Use synth-orchestral backend for voice. Overrides --backend.",
+    )
+    gv.add_argument(
+        "--samples-dir",
+        default=None,
+        metavar="DIR",
+        help=(
+            "Path to samples directory (no effect on voice audio — voice samples are not "
+            "blended; the base backend is still selected by --ps1/--orchestral)."
+        ),
+    )
+    gv.add_argument(
+        "--ps1-reverb",
+        default="room",
+        choices=["room", "hall", "space", "echo", "pipe", "off"],
+        help="SPU reverb mode when --ps1 is set (default: room).",
     )
 
     # --- qa ---
@@ -815,6 +1144,122 @@ def build_parser() -> argparse.ArgumentParser:
     sfx.add_argument("--output", "-o", default="sfx.wav", help="Output WAV file.")
     sfx.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
 
+    # --- remaster ---
+    rm = sub.add_parser(
+        "remaster",
+        help=(
+            "Remaster an existing WAV file by blending in real orchestral samples from a "
+            "samples/ directory.  Drop .wav files into category sub-dirs (strings/, brass/, "
+            "choir/, piano/, etc.) then run this command."
+        ),
+    )
+    rm.add_argument("--input", "-i", required=True, help="Path to the WAV file to remaster.")
+    rm.add_argument("--output", "-o", default="remastered.wav", help="Output file path.")
+    rm.add_argument(
+        "--samples-dir",
+        default="samples/",
+        metavar="DIR",
+        help="Root samples directory (default: samples/).",
+    )
+    rm.add_argument(
+        "--style",
+        default="ff7_overworld",
+        help=(
+            "Style hint used to select which sample categories to blend "
+            "(default: ff7_overworld).  Any music style name is accepted."
+        ),
+    )
+    rm.add_argument(
+        "--ps1",
+        action="store_true",
+        help="Use the PS1 bit-crushed base when blending rather than synth_orchestral.",
+    )
+    rm.add_argument(
+        "--format",
+        choices=["wav", "ogg"],
+        default="wav",
+        help="Output format (default: wav).",
+    )
+    rm.add_argument("--seed", type=int, default=None, help="Random seed.")
+
+    # --- compose-piece ---
+    cp = sub.add_parser(
+        "compose-piece",
+        help=(
+            "Compose a full structured musical piece (intro, verse, chorus, bridge, outro) "
+            "with optional sung vocal overlay.  Produces a complete listening experience "
+            "similar to 'Eyes on Me' from FF8."
+        ),
+    )
+    cp.add_argument(
+        "--style",
+        default="ff8_ballad",
+        help=(
+            "Music style for the piece.  ``ff8_ballad`` is pre-configured for "
+            "an 'Eyes on Me'-like result (default: ff8_ballad)."
+        ),
+    )
+    cp.add_argument(
+        "--sections",
+        default="intro,verse,pre_chorus,chorus,bridge,chorus,outro",
+        help=(
+            "Comma-separated section names.  Available: "
+            "intro, verse, pre_chorus, chorus, bridge, outro "
+            "(default: intro,verse,pre_chorus,chorus,bridge,chorus,outro)."
+        ),
+    )
+    cp.add_argument(
+        "--with-vocals",
+        action="store_true",
+        default=True,
+        help="Overlay a sung vocal melody line (default: enabled).",
+    )
+    cp.add_argument(
+        "--no-vocals",
+        dest="with_vocals",
+        action="store_false",
+        help="Disable vocal overlay (instrumental only).",
+    )
+    cp.add_argument(
+        "--vocal-preset",
+        default="soprano",
+        choices=["soprano", "alto", "tenor", "choir_ah"],
+        help="Vocal timbre preset (default: soprano).",
+    )
+    cp.add_argument(
+        "--duration", type=float, default=90.0,
+        help="Total piece duration in seconds (default: 90).",
+    )
+    cp.add_argument("--output", "-o", default="piece.wav", help="Output file path.")
+    cp.add_argument(
+        "--format",
+        choices=["wav", "ogg"],
+        default="wav",
+        help="Output format (default: wav).",
+    )
+    cp.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
+    cp.add_argument("--seed", type=int, default=None, help="Random seed.")
+    cp.add_argument(
+        "--ps1",
+        action="store_true",
+        help="Use PS1 SPU backend for the piece instead of synth_orchestral.",
+    )
+    cp.add_argument(
+        "--orchestral",
+        action="store_true",
+        help="Use synth_orchestral backend (default when no flag given).",
+    )
+    cp.add_argument(
+        "--samples-dir",
+        default=None,
+        metavar="DIR",
+        help="Path to samples directory for sample-augmented generation.",
+    )
+    cp.add_argument(
+        "--quiet", action="store_true",
+        help="Suppress per-section progress messages.",
+    )
+
     # --- list-styles ---
     sub.add_parser("list-styles", help="List available music generation styles.")
 
@@ -823,6 +1268,158 @@ def build_parser() -> argparse.ArgumentParser:
 
     # --- list-backends ---
     sub.add_parser("list-backends", help="List available generation backends.")
+
+    # --- list-music-library ---
+    lml = sub.add_parser(
+        "list-music-library",
+        help="Browse the full Final Fantasy + generic music style catalog.",
+    )
+    lml.add_argument(
+        "--game", default=None,
+        help="Filter by game (e.g. ff7, ff8, ff10, ff16, generic).",
+    )
+    lml.add_argument(
+        "--type", default=None, dest="track_type",
+        help="Filter by track type (battle, overworld, theme, ballad, ambient, boss, fanfare).",
+    )
+    lml.add_argument(
+        "--search", default=None,
+        help="Free-text search query.",
+    )
+    lml.add_argument(
+        "--vocals", action="store_true",
+        help="Show only tracks with vocal performance.",
+    )
+    lml.add_argument(
+        "--json", action="store_true", dest="as_json",
+        help="Output as JSON instead of human-readable table.",
+    )
+
+    # --- generate-track ---
+    gt = sub.add_parser(
+        "generate-track",
+        help=(
+            "Generate a single full musical piece from a style key or natural-language "
+            "request and export it (intro → verse → chorus → bridge → outro)."
+        ),
+    )
+    gt.add_argument(
+        "--style", "-s",
+        help=(
+            "Style key (e.g. ff7_sad, ff8_ballad, ff10_zanarkand) OR a natural-language "
+            "request like 'something sad from FF7' or 'Eyes on Me'."
+        ),
+        required=True,
+    )
+    gt.add_argument("--output", "-o", default="track.wav", help="Output file path.")
+    gt.add_argument(
+        "--duration", type=float, default=60.0,
+        help="Target track duration in seconds (default: 60).",
+    )
+    gt.add_argument(
+        "--with-vocals", action="store_true", default=None,
+        help="Force vocal overlay (default: auto-detect from catalog).",
+    )
+    gt.add_argument(
+        "--no-vocals", dest="with_vocals", action="store_false",
+        help="Disable vocal overlay.",
+    )
+    gt.add_argument(
+        "--vocal-preset", default="soprano",
+        choices=["soprano", "alto", "tenor", "choir_ah"],
+        help="Vocal timbre preset (default: soprano).",
+    )
+    gt.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
+    gt.add_argument("--seed", type=int, default=None, help="Random seed.")
+    gt.add_argument(
+        "--ps1", action="store_true",
+        help="Use PS1 SPU backend.",
+    )
+    gt.add_argument(
+        "--orchestral", action="store_true",
+        help="Use synth_orchestral backend (default).",
+    )
+    gt.add_argument(
+        "--samples-dir", default=None, metavar="DIR",
+        help="Path to samples directory for sample-augmented generation.",
+    )
+    gt.add_argument(
+        "--format", choices=["wav", "ogg"], default="wav",
+        help="Output format (default: wav).",
+    )
+
+    # --- generate-radio-playlist ---
+    grpl = sub.add_parser(
+        "generate-radio-playlist",
+        help=(
+            "Generate a full playlist of complete musical pieces — like FF15's in-game "
+            "radio.  Each track is a fully structured piece exported as a WAV/OGG file."
+        ),
+    )
+    grpl.add_argument(
+        "--preset", "-p", default="ff_radio",
+        choices=list(__import__("audio_engine.ai.radio_playlist",
+                                fromlist=["PLAYLIST_PRESETS"]).PLAYLIST_PRESETS.keys()),
+        help=(
+            "Playlist preset name (default: ff_radio).  "
+            "Presets: ff_radio, ff7_album, ff8_album, battle_mix, emotional_mix, "
+            "boss_mix, overworld_mix, vocal_album, modern_ff, classic_ff."
+        ),
+    )
+    grpl.add_argument(
+        "--styles", default=None,
+        help=(
+            "Comma-separated list of style keys to use instead of a preset "
+            "(e.g. ff7_sad,ff8_ballad,ff10_zanarkand)."
+        ),
+    )
+    grpl.add_argument(
+        "--output-dir", "-o", default="output/radio",
+        help="Output directory for track files and playlist.json (default: output/radio).",
+    )
+    grpl.add_argument(
+        "--track-duration", type=float, default=60.0,
+        help="Target duration per track in seconds (default: 60).",
+    )
+    grpl.add_argument(
+        "--format", choices=["wav", "ogg"], default="wav",
+        help="Output format for each track (default: wav).",
+    )
+    grpl.add_argument(
+        "--with-vocals", action="store_true", default=None,
+        help="Force vocal overlay on all tracks.",
+    )
+    grpl.add_argument(
+        "--no-vocals", dest="with_vocals", action="store_false",
+        help="Disable vocals on all tracks (instrumental only).",
+    )
+    grpl.add_argument(
+        "--vocal-preset", default="soprano",
+        choices=["soprano", "alto", "tenor", "choir_ah"],
+        help="Vocal timbre preset (default: soprano).",
+    )
+    grpl.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
+    grpl.add_argument("--seed", type=int, default=None, help="Random seed.")
+    grpl.add_argument(
+        "--ps1", action="store_true",
+        help="Use PS1 SPU backend for all tracks.",
+    )
+    grpl.add_argument(
+        "--orchestral", action="store_true",
+        help="Use synth_orchestral backend (default).",
+    )
+    grpl.add_argument(
+        "--samples-dir", default=None, metavar="DIR",
+        help="Path to samples directory for sample-augmented generation.",
+    )
+    grpl.add_argument(
+        "--force", action="store_true",
+        help="Re-generate tracks even if the output files already exist.",
+    )
+    grpl.add_argument(
+        "--quiet", action="store_true",
+        help="Suppress progress messages.",
+    )
 
     # --- generate-request-batch ---
     grb = sub.add_parser(
@@ -1100,6 +1697,11 @@ def main(argv: list[str] | None = None) -> int:
         "generate-music": _cmd_generate_music,
         "generate-sfx": _cmd_generate_sfx,
         "generate-voice": _cmd_generate_voice,
+        "remaster": _cmd_remaster,
+        "compose-piece": _cmd_compose_piece,
+        "list-music-library": _cmd_list_music_library,
+        "generate-track": _cmd_generate_track,
+        "generate-radio-playlist": _cmd_generate_radio_playlist,
         "qa": _cmd_qa,
         "qa-batch": _cmd_qa_batch,
         "approve-draft": _cmd_approve_draft,

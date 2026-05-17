@@ -128,12 +128,25 @@ class VoicePlan(GenerationPlan):
 # ---------------------------------------------------------------------------
 
 _STYLE_KEYWORDS: dict[str, list[str]] = {
-    "battle":      ["battle", "combat", "fight", "war", "action", "aggressive", "intense"],
-    "boss":        ["boss", "epic", "climax", "final", "dramatic", "dark"],
-    "exploration": ["explore", "exploration", "adventure", "journey", "travel", "world"],
-    "ambient":     ["ambient", "calm", "atmosphere", "background", "atmospheric", "dungeon", "menu"],
-    "victory":     ["victory", "triumph", "fanfare", "win", "success", "celebrate"],
-    "menu":        ["menu", "title", "screen", "calm", "peaceful", "introspective"],
+    "battle":         ["battle", "combat", "fight", "war", "action", "aggressive", "intense"],
+    "boss":           ["boss", "epic", "climax", "final", "dramatic", "dark"],
+    "exploration":    ["explore", "exploration", "adventure", "journey", "travel", "world"],
+    "ambient":        ["ambient", "calm", "atmosphere", "background", "atmospheric"],
+    "victory":        ["victory", "triumph", "fanfare", "win", "success", "celebrate"],
+    "menu":           ["menu", "title", "screen", "peaceful", "introspective"],
+    # FF7 / FF8 styles
+    "ff7_battle":     ["ff7 battle", "let the battles begin", "those who fight", "ff7_battle"],
+    "ff7_overworld":  ["ff7 overworld", "main theme", "ff7 field", "ff7_overworld"],
+    "ff7_boss":       ["one winged angel", "ff7 boss", "ff7_boss", "sephiroth"],
+    "ff7_sad":        ["aerith", "aeris", "ff7 sad", "ff7_sad", "who are you"],
+    "ff7_town":       ["ff7 town", "midgar town", "ff7_town", "ahead on our way"],
+    "ff8_battle":     ["ff8 battle", "machine gun", "don't be afraid", "ff8_battle"],
+    # Shared retro-RPG styles
+    "prelude":        ["prelude", "arpeggio", "crystal", "opening", "title prelude"],
+    "world_map":      ["world map", "overworld", "world_map", "sweeping", "majestic"],
+    "dungeon":        ["dungeon", "cave", "underground", "dark corridor"],
+    "healing":        ["healing", "inn", "rest", "recovery", "save"],
+    "tension":        ["tension", "suspense", "pre-battle", "buildup", "ominous"],
 }
 
 _SFX_KEYWORDS: list[str] = [

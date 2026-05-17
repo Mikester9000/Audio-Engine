@@ -351,3 +351,221 @@ def _crystal_synth(sr: int = 44100) -> Instrument:
         volume=0.6,
         sample_rate=sr,
     )
+
+
+# ---------------------------------------------------------------------------
+# FF7 / FF8-era PS1 SPU instrument timbres
+# Designed to approximate the Nobuo Uematsu / PS1 ADPCM sample character.
+# ---------------------------------------------------------------------------
+
+@InstrumentLibrary.register("ff7_lead")
+def _ff7_lead(sr: int = 44100) -> Instrument:
+    """Bright crystal lead — the iconic FF7 melody instrument.
+
+    Approximates the crystalline sine-wave lead heard in tracks such as
+    Aerith's Theme and Main Theme of FFVII.  Uses sine + triangle mix for a
+    clean but slightly warm tone, with light FM for subtle harmonic movement.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        # Slightly detuned sines for natural ensemble width
+        primary  = osc.sine(freq, dur, amplitude=0.70)
+        upper    = osc.sine(freq * 2.0, dur, amplitude=0.18)   # octave
+        tri      = osc.triangle(freq, dur, amplitude=0.12)
+        return primary + upper + tri
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        from audio_engine.synthesizer.filter import Filter
+        flt = Filter(sr)
+        sig = flt.low_pass(sig, 7000.0)
+        sig = fx.chorus(sig, rate=0.6, depth=0.002, wet=0.15)
+        return fx.reverb(sig, room_size=0.45, wet=0.22)
+
+    return Instrument(
+        name="ff7_lead",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.01, decay=0.08, sustain=0.85, release=0.25, sample_rate=sr),
+        post_process=post,
+        volume=0.78,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("ff7_strings")
+def _ff7_strings(sr: int = 44100) -> Instrument:
+    """Warm-but-synthetic string ensemble — FF7/FF8 SPU string character.
+
+    The PS1 ADPCM strings had a compressed, slightly nasal quality.
+    Modelled here with a sawtooth ensemble + gentle low-pass + chorus.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        s1 = osc.sawtooth(freq, dur, amplitude=0.55)
+        s2 = osc.sawtooth(freq * 1.007, dur, amplitude=0.28)   # detune
+        s3 = osc.sawtooth(freq * 0.994, dur, amplitude=0.17)   # detune low
+        return s1 + s2 + s3
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        from audio_engine.synthesizer.filter import Filter
+        flt = Filter(sr)
+        sig = flt.low_pass(sig, 3800.0)       # compressed bandwidth of ADPCM
+        sig = fx.chorus(sig, rate=0.9, depth=0.005, wet=0.35)
+        return fx.reverb(sig, room_size=0.55, wet=0.30)
+
+    return Instrument(
+        name="ff7_strings",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.18, decay=0.15, sustain=0.80, release=0.55, sample_rate=sr),
+        post_process=post,
+        volume=0.72,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("ff7_bass")
+def _ff7_bass(sr: int = 44100) -> Instrument:
+    """Punchy melodic bass — Uematsu's bass lines are rhythmically active.
+
+    Uses a sawtooth + square blend for the mid-punch character of the PS1
+    bass samples.  Filter sweeps to 600 Hz to stay out of the way of melody.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        saw = osc.sawtooth(freq, dur, amplitude=0.65)
+        sq  = osc.square(freq, dur, amplitude=0.35, duty_cycle=0.45)
+        return saw + sq
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        from audio_engine.synthesizer.filter import Filter
+        flt = Filter(sr)
+        sig = flt.low_pass(sig, 650.0)
+        return fx.compress(sig, threshold=0.5, ratio=3.0, makeup_gain=1.1)
+
+    return Instrument(
+        name="ff7_bass",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.008, decay=0.12, sustain=0.60, release=0.12, sample_rate=sr),
+        post_process=post,
+        volume=0.88,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("ff7_electric_guitar")
+def _ff7_electric_guitar(sr: int = 44100) -> Instrument:
+    """Driven electric guitar — as heard in FF7 boss battle tracks.
+
+    The FF7 electric guitar sample had a middy crunch character — not as
+    saturated as metal, but clearly distorted.  FM + soft-clip models this.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        return osc.fm(freq, freq * 1.5, dur, modulation_index=2.8)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        from audio_engine.synthesizer.filter import Filter
+        flt = Filter(sr)
+        sig = fx.distortion(sig, drive=4.0, tone=0.55)
+        sig = flt.band_pass(sig, 120.0, 4500.0)
+        sig = fx.reverb(sig, room_size=0.28, wet=0.12)
+        return sig
+
+    return Instrument(
+        name="ff7_electric_guitar",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.005, decay=0.2, sustain=0.55, release=0.18, sample_rate=sr),
+        post_process=post,
+        volume=0.72,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("ff8_electric_guitar")
+def _ff8_electric_guitar(sr: int = 44100) -> Instrument:
+    """Aggressive rock guitar — FF8 battle / "The Man with the Machine Gun" style.
+
+    FF8 pushed the electric guitar much harder than FF7 — more saturation,
+    higher presence.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        fm  = osc.fm(freq, freq * 2.0, dur, modulation_index=3.8)
+        sq  = osc.square(freq, dur, amplitude=0.3, duty_cycle=0.48)
+        return fm + sq
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        from audio_engine.synthesizer.filter import Filter
+        flt = Filter(sr)
+        sig = fx.distortion(sig, drive=6.0, tone=0.65)
+        sig = flt.band_pass(sig, 100.0, 5500.0)
+        sig = fx.compress(sig, threshold=0.45, ratio=5.0, makeup_gain=1.15)
+        return fx.reverb(sig, room_size=0.22, wet=0.10)
+
+    return Instrument(
+        name="ff8_electric_guitar",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.004, decay=0.15, sustain=0.65, release=0.15, sample_rate=sr),
+        post_process=post,
+        volume=0.80,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("harpsichord")
+def _harpsichord(sr: int = 44100) -> Instrument:
+    """Harpsichord / clavier — for prelude-style arpeggios and baroque textures.
+
+    Sharp pluck with rich harmonics, fast decay.  Characteristic of the
+    ancient keyboard sounds sampled into many PS1 RPG soundtracks.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        return osc.additive(
+            freq, dur,
+            [(1, 1.0), (2, 0.8), (3, 0.5), (4, 0.3), (5, 0.15), (6, 0.07)],
+        )
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        from audio_engine.synthesizer.filter import Filter
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 80.0)
+        return fx.reverb(sig, room_size=0.25, wet=0.12)
+
+    return Instrument(
+        name="harpsichord",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.001, decay=0.18, sustain=0.0, release=0.12, sample_rate=sr),
+        post_process=post,
+        volume=0.75,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("orchestral_hit")
+def _orchestral_hit(sr: int = 44100) -> Instrument:
+    """Orchestral stab — short dramatic chord hit used in climactic moments.
+
+    Combines brass, strings, and a transient noise burst for the classic
+    "orchestral hit" one-shot found throughout PS1/PS2 RPG soundtracks.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        brass  = osc.additive(freq, dur, [(1, 1.0), (2, 0.5), (3, 0.25)])
+        noise  = osc.noise(dur, amplitude=0.15, seed=99)
+        return brass + noise
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        from audio_engine.synthesizer.filter import Filter
+        flt = Filter(sr)
+        sig = flt.low_pass(sig, 6000.0)
+        sig = fx.compress(sig, threshold=0.4, ratio=4.0, makeup_gain=1.2)
+        return fx.reverb(sig, room_size=0.7, wet=0.35)
+
+    return Instrument(
+        name="orchestral_hit",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.002, decay=0.25, sustain=0.0, release=0.30, sample_rate=sr),
+        post_process=post,
+        volume=0.85,
+        sample_rate=sr,
+    )
