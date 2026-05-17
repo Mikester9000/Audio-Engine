@@ -1847,6 +1847,33 @@ class TestRequestBatchExecution:
         assert "GameRewritten" in summary
         assert "OK" in summary
 
+    def test_execute_request_batch_writes_batch_manifest_json(self, tmp_path):
+        """Legacy request-file execution should write batch_manifest.json with deterministic records."""
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.sfx.v1.json"
+        )
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            batch,
+            tmp_path,
+            default_sfx_duration=0.1,
+        )
+
+        manifest_path = tmp_path / "batch_manifest.json"
+        assert manifest_path.exists(), "batch_manifest.json was not written"
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+        assert data["output_dir"] == str(tmp_path)
+        assert data["errors"] == []
+        assert data["total_duration_seconds"] == result.total_duration_seconds
+
+        expected_request_ids = [request.request_id for request in batch.requests]
+        actual_request_ids = [record["request_id"] for record in data["sfx"]]
+        assert actual_request_ids == expected_request_ids
+        assert {"request_id", "asset_id", "type", "seed", "file", "status"} <= set(
+            data["sfx"][0].keys()
+        )
+
     def test_result_to_json_roundtrip(self):
         """RequestBatchResult.to_json() should produce valid JSON."""
         result = RequestBatchResult(
