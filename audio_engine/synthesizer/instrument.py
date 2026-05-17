@@ -18,9 +18,14 @@ from audio_engine.synthesizer.oscillator import Oscillator
 from audio_engine.synthesizer.envelope import Envelope
 from audio_engine.synthesizer.filter import Filter
 from audio_engine.synthesizer.effects import Effects
-from audio_engine.ai.voice_synth import _BASE_FORMANTS
 
 __all__ = ["Instrument", "InstrumentLibrary"]
+
+_STRINGS_BOW_NOISE_SEED = 11
+_BASS_PICK_NOISE_SEED = 21
+_PERCUSSION_NOISE_SEED = 5
+_FLUTE_BREATH_SEED = 7
+_CHOIR_FORMANTS = (700.0, 1220.0, 2600.0)
 
 
 def _cents_to_ratio(cents: float) -> float:
@@ -140,7 +145,7 @@ def _strings(sr: int = 44100) -> Instrument:
             + 0.30 * scipy_sawtooth(phase_u)
             + 0.24 * scipy_sawtooth(phase_l)
         )
-        noise = np.random.default_rng(11).standard_normal(len(body)).astype(np.float32)
+        noise = np.random.default_rng(_STRINGS_BOW_NOISE_SEED).standard_normal(len(body)).astype(np.float32)
         noise = Filter(sr).band_pass(noise, 200.0, 2000.0)
         return body.astype(np.float32) + 0.1 * noise  # -20 dB bow layer
 
@@ -226,9 +231,9 @@ def _choir(sr: int = 44100) -> Instrument:
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
         formants = np.zeros_like(sig)
-        for center, bw in zip(_BASE_FORMANTS, (120.0, 160.0, 260.0)):
+        for center, bw in zip(_CHOIR_FORMANTS, (120.0, 160.0, 260.0)):
             formants += flt.band_pass(sig, max(80.0, center - bw), center + bw)
-        formants = formants / max(1, len(_BASE_FORMANTS))
+        formants = formants / max(1, len(_CHOIR_FORMANTS))
         formants = fx.chorus(formants, rate=0.8, depth=0.006, wet=0.48)
         return fx.reverb(formants, room_size=0.85, wet=0.38)
 
@@ -303,7 +308,7 @@ def _bass(sr: int = 44100) -> Instrument:
         second = osc.sine(freq * 2.0, dur, amplitude=0.375)  # -6 dB
         pick = np.zeros(n, dtype=np.float32)
         pick_len = max(1, int(0.01 * sr))
-        pick_noise = np.random.default_rng(21).standard_normal(pick_len).astype(np.float32)
+        pick_noise = np.random.default_rng(_BASS_PICK_NOISE_SEED).standard_normal(pick_len).astype(np.float32)
         pick[:pick_len] = pick_noise * np.exp(-np.linspace(0.0, 6.0, pick_len))
         return fundamental + second + 0.1 * pick
 
@@ -327,7 +332,7 @@ def _percussion(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
         t = np.arange(n, dtype=np.float32) / sr
-        noise = np.random.default_rng(5).standard_normal(n).astype(np.float32)
+        noise = np.random.default_rng(_PERCUSSION_NOISE_SEED).standard_normal(n).astype(np.float32)
         if freq < 180.0:
             sweep = np.clip(t / 0.05, 0.0, 1.0)
             inst_freq = 200.0 + (60.0 - 200.0) * sweep
@@ -361,7 +366,7 @@ def _flute(sr: int = 44100) -> Instrument:
         phase = _vibrato_phase(freq, dur, sr, rate_hz=4.0, depth_semitones=0.3)
         fundamental = np.sin(phase).astype(np.float32) * 0.85
         second = np.sin(2.0 * phase).astype(np.float32) * 0.21  # -12 dB
-        breath = np.random.default_rng(7).standard_normal(n).astype(np.float32)
+        breath = np.random.default_rng(_FLUTE_BREATH_SEED).standard_normal(n).astype(np.float32)
         breath = Filter(sr).band_pass(breath, 2000.0, 8000.0) * 0.063  # -24 dB
         return fundamental + second + breath
 

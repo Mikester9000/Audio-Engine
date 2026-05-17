@@ -29,6 +29,7 @@ from audio_engine.dsp.stereo import apply_mid_side_width
 from audio_engine.export.audio_exporter import AudioExporter
 
 __all__ = ["OfflineBounce"]
+_VALID_PROFILES = {"game", "ost", "youtube", "procedural_neutral"}
 
 
 def _lufs_loudness(signal: np.ndarray, sample_rate: int) -> float:
@@ -96,14 +97,15 @@ class OfflineBounce:
         self,
         sample_rate: int = 44100,
         bit_depth: Literal[16, 32] = 16,
-        target_lufs: float | None = -16.0,
-        ceiling_db: float = -0.3,
+        target_lufs: float | None = None,
+        ceiling_db: float | None = None,
         apply_master_eq: bool = True,
         apply_compression: bool = True,
         profile: Literal["game", "ost", "youtube", "procedural_neutral"] = "game",
     ) -> None:
-        if profile not in {"game", "ost", "youtube", "procedural_neutral"}:
-            raise ValueError("profile must be one of: game, ost, youtube, procedural_neutral")
+        if profile not in _VALID_PROFILES:
+            valid = ", ".join(sorted(_VALID_PROFILES))
+            raise ValueError(f"profile must be one of: {valid}")
 
         self.profile = profile
         profile_defaults = {
@@ -113,8 +115,10 @@ class OfflineBounce:
             "procedural_neutral": {"target_lufs": -16.0, "ceiling_db": -0.8, "width": 1.0, "reverb_mix": 0.03},
         }[profile]
 
-        target_lufs = profile_defaults["target_lufs"] if target_lufs == -16.0 else target_lufs
-        ceiling_db = profile_defaults["ceiling_db"] if ceiling_db == -0.3 else ceiling_db
+        if target_lufs is None:
+            target_lufs = profile_defaults["target_lufs"]
+        if ceiling_db is None:
+            ceiling_db = profile_defaults["ceiling_db"]
 
         self.sample_rate = sample_rate
         self.target_lufs = target_lufs

@@ -38,6 +38,8 @@ _STYLE_PROMPTS: dict[str, str] = {
     "menu": "calm main menu theme, piano and strings, JRPG, introspective",
     "victory": "triumphant victory fanfare, brass and strings, major key, celebratory",
 }
+_MAX_CHUNK_DURATION_SECONDS = 30.0
+_MIN_CHUNK_DURATION_SECONDS = 0.1
 
 
 class MusicGenBackend(InferenceBackend):
@@ -94,14 +96,18 @@ class MusicGenBackend(InferenceBackend):
             if bpm:
                 text_prompt = f"{text_prompt}, {int(bpm)} BPM"
 
-            chunk_duration = 30.0
+            chunk_duration = _MAX_CHUNK_DURATION_SECONDS
             chunk_count = max(1, int(np.ceil(duration / chunk_duration)))
             chunk_lengths = [chunk_duration] * chunk_count
-            chunk_lengths[-1] = max(0.1, duration - (chunk_duration * (chunk_count - 1)))
+            chunk_lengths[-1] = max(
+                _MIN_CHUNK_DURATION_SECONDS,
+                duration - (chunk_duration * (chunk_count - 1)),
+            )
 
             chunks: list[np.ndarray] = []
             for idx, chunk_len in enumerate(chunk_lengths):
                 if self.seed is not None:
+                    # Keep deterministic per-chunk output while avoiding identical chunks.
                     torch.manual_seed(self.seed + idx)
 
                 inputs = processor(text=[text_prompt], padding=True, return_tensors="pt")
