@@ -53,7 +53,14 @@ from audio_engine.synthesizer.instrument import InstrumentLibrary
 
 __all__ = ["TrackStyle", "MusicGenerator"]
 
-TrackStyle = Literal["battle", "exploration", "ambient", "boss", "victory", "menu"]
+TrackStyle = Literal[
+    "battle", "exploration", "ambient", "boss", "victory", "menu",
+    # FF7 / FF8 era styles
+    "ff7_battle", "ff7_overworld", "ff7_boss", "ff7_sad", "ff7_town",
+    "ff8_battle",
+    # Shared retro-RPG styles
+    "prelude", "world_map", "dungeon", "healing", "tension",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +162,221 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         percussion_instrument=None,
         melody_pattern="eighth_notes",
         chord_pattern="half_notes",
+    ),
+
+    # -----------------------------------------------------------------------
+    # FF7 / FF8 Nobuo Uematsu inspired presets
+    # Instrument names refer to the FF7-era timbres in InstrumentLibrary.
+    # -----------------------------------------------------------------------
+
+    "ff7_battle": _StyleDef(
+        # "Let the Battles Begin!" / "Those Who Fight" energy.
+        # Syncopated, urgent, in A harmonic minor at 132 BPM.
+        bpm=132,
+        scale_name="harmonic_minor",
+        root="A",
+        octave=4,
+        progression_name="i_bVII_bVI_V",
+        instruments=["ff7_lead", "brass"],
+        accompaniment=["ff7_strings", "brass"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="syncopated",
+        bars=8,
+    ),
+
+    "ff7_overworld": _StyleDef(
+        # "Main Theme of FFVII" sweeping overworld feel.
+        # Flowing major melody, strings-led, 84 BPM.
+        bpm=84,
+        scale_name="major",
+        root="E",
+        octave=4,
+        progression_name="I_V_vi_IV",
+        instruments=["ff7_lead", "flute"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="eighth_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "ff7_boss": _StyleDef(
+        # "One-Winged Angel" intensity — Phrygian dominant, E, 148 BPM.
+        # Full orchestra + choir + electric guitar.
+        bpm=148,
+        scale_name="phrygian",
+        root="E",
+        octave=3,
+        progression_name="i_bII_i_bVII",
+        instruments=["brass", "ff7_electric_guitar"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "ff7_sad": _StyleDef(
+        # "Aerith's Theme" / "Who Are You?" emotional weight.
+        # Slow, in E major, piano + strings + choir, no percussion.
+        bpm=65,
+        scale_name="major",
+        root="E",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano", "ff7_strings"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "ff7_town": _StyleDef(
+        # "Ahead on Our Way" / "Under the Rotting Pizza" town warmth.
+        # Light, major, piano + flute + strings, 90 BPM.
+        bpm=90,
+        scale_name="major",
+        root="G",
+        octave=4,
+        progression_name="I_V_vi_IV",
+        instruments=["piano", "flute"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="eighth_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "ff8_battle": _StyleDef(
+        # "The Man with the Machine Gun" aggressive rock-orchestral hybrid.
+        # Dorian B, 144 BPM, electric guitar prominent.
+        bpm=144,
+        scale_name="dorian",
+        root="B",
+        octave=3,
+        progression_name="i_bVII_bVI_V",
+        instruments=["ff8_electric_guitar", "brass"],
+        accompaniment=["ff7_strings", "brass"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="syncopated",
+        bars=8,
+    ),
+
+    # -----------------------------------------------------------------------
+    # Shared retro-RPG styles
+    # -----------------------------------------------------------------------
+
+    "prelude": _StyleDef(
+        # Nobuo Uematsu's iconic arpeggio prelude — sparse, crystalline.
+        # Uses harpsichord + crystal_synth; slow BPM but eighth-note arpeggios
+        # create a flowing 16th-note feel at the actual tempo.
+        bpm=72,
+        scale_name="major",
+        root="C",
+        octave=4,
+        progression_name="I_V_vi_IV",
+        instruments=["harpsichord", "crystal_synth"],
+        accompaniment=["crystal_synth"],
+        bass_instrument="synth_pad",
+        percussion_instrument=None,
+        melody_pattern="eighth_notes",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "world_map": _StyleDef(
+        # Sweeping overworld map — broad and majestic.
+        # Strings + brass + choir, major key, 84 BPM.
+        bpm=84,
+        scale_name="major",
+        root="G",
+        octave=3,
+        progression_name="I_IV_V_I",
+        instruments=["ff7_strings", "brass"],
+        accompaniment=["choir", "ff7_strings"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "dungeon": _StyleDef(
+        # Dark dungeon / cave — tense and atmospheric.
+        # Natural minor, slow, synth pads + choir, no melody beat.
+        bpm=70,
+        scale_name="natural_minor",
+        root="D",
+        octave=3,
+        progression_name="i_iv_bVII_bIII",
+        instruments=["synth_pad", "choir"],
+        accompaniment=["synth_pad"],
+        bass_instrument="synth_pad",
+        percussion_instrument=None,
+        melody_pattern="ambient",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "healing": _StyleDef(
+        # Inn / rest / recovery theme — warm and reassuring.
+        # Major, gentle piano + flute + strings, 90 BPM.
+        bpm=90,
+        scale_name="major",
+        root="F",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano", "flute"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="eighth_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "tension": _StyleDef(
+        # Pre-battle tension / suspense — restless and unresolved.
+        # Harmonic minor, mid-tempo, strings + brass stabs.
+        bpm=100,
+        scale_name="harmonic_minor",
+        root="A",
+        octave=3,
+        progression_name="i_bVI_bVII_i",
+        instruments=["ff7_strings", "brass"],
+        accompaniment=["ff7_strings", "synth_pad"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="battle",
+        chord_pattern="syncopated",
+        bars=8,
+    ),
+
+    "ff8_ballad": _StyleDef(
+        # "Eyes on Me" — slow romantic ballad, the signature FF8 vocal piece.
+        # F major, 74 BPM, piano-led with strings + choir.  Designed for
+        # use with VocalMelodySynth overlay to create a full vocal arrangement.
+        bpm=74,
+        scale_name="major",
+        root="F",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano", "flute"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
     ),
 }
 

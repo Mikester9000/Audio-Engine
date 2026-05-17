@@ -236,6 +236,19 @@ class BackendRegistry:
 
     Allows dynamic registration and selection of backends by name.
 
+    Built-in backends
+    -----------------
+    ``"procedural"``
+        Pure NumPy/SciPy synthesis — zero external dependencies.
+    ``"ps1"``
+        PS1 SPU character: bit-crush + SPU reverb, FF7/FF8 era sound.
+    ``"synth_orchestral"``
+        Clean synthesised orchestra — PS2-quality mock-up without
+        hardware degradation.  Natural remaster target for sample blending.
+    ``"sample"``
+        Sample-augmented backend: blends real `.wav` files from a
+        ``samples/`` directory over synth_orchestral synthesis.
+
     Example
     -------
     >>> BackendRegistry.register("my_model", MyModelBackend)
@@ -245,6 +258,30 @@ class BackendRegistry:
     _registry: dict[str, type[InferenceBackend]] = {
         "procedural": ProceduralBackend,
     }
+
+    @classmethod
+    def _ensure_extended(cls) -> None:
+        """Lazily register the extended backends on first use."""
+        if "ps1" not in cls._registry:
+            try:
+                from audio_engine.ai.ps1_backend import PS1Backend
+                cls._registry["ps1"] = PS1Backend
+            except ImportError:
+                pass
+
+        if "synth_orchestral" not in cls._registry:
+            try:
+                from audio_engine.ai.synth_orchestral_backend import SynthOrchestralBackend
+                cls._registry["synth_orchestral"] = SynthOrchestralBackend
+            except ImportError:
+                pass
+
+        if "sample" not in cls._registry:
+            try:
+                from audio_engine.ai.sample_backend import SampleBackend
+                cls._registry["sample"] = SampleBackend
+            except ImportError:
+                pass
 
     @classmethod
     def register(cls, name: str, backend_class: type[InferenceBackend]) -> None:
@@ -274,6 +311,7 @@ class BackendRegistry:
         -------
         :class:`InferenceBackend`
         """
+        cls._ensure_extended()
         if name not in cls._registry:
             available = ", ".join(sorted(cls._registry))
             raise ValueError(f"Unknown backend '{name}'. Available: {available}")
@@ -282,11 +320,13 @@ class BackendRegistry:
     @classmethod
     def available_backends(cls) -> list[str]:
         """Return sorted list of registered backend names."""
+        cls._ensure_extended()
         return sorted(cls._registry)
 
     @classmethod
     def evaluate_backends(cls, **kwargs) -> list[dict[str, object]]:
         """Return backend evaluation metadata for CLI/reporting surfaces."""
+        cls._ensure_extended()
         evaluations: list[dict[str, object]] = []
         for name in cls.available_backends():
             backend = cls.get(name, **kwargs)

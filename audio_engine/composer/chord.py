@@ -40,6 +40,15 @@ _PROGRESSIONS: dict[str, list[tuple[int, str]]] = {
     # Epic / battle
     "i_bII_i_bVII":    [(1, "minor"), (2, "major"), (1, "minor"), (7, "major")],
     "i_v_bVI_bVII":    [(1, "minor"), (5, "minor"), (6, "major"), (7, "major")],
+    # FF7 / FF8 specific progressions
+    # i → bVII → bVI → V  — the dramatic "resolution upward" cadence in FF7 battle themes
+    "i_bVII_bVI_V":    [(1, "minor"), (7, "major"), (6, "major"), (5, "minor")],
+    # I → vi → IV → V  — emotional major progression (think Aerith/sad themes)
+    "I_vi_IV_V":       [(1, "major"), (6, "minor"), (4, "major"), (5, "major")],
+    # i → iv → bVII → bIII  — dark minor RPG feel common in dungeons/towns
+    "i_iv_bVII_bIII":  [(1, "minor"), (4, "minor"), (7, "major"), (3, "major")],
+    # i → bVI → bVII → i  — Aeolian loop (very common in PS1 RPG music)
+    "i_bVI_bVII_i":    [(1, "minor"), (6, "major"), (7, "major"), (1, "minor")],
 }
 
 
