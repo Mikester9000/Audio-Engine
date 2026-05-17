@@ -64,7 +64,8 @@ def main() -> int:
             print(f"Finished {spec['label']}.")
         except Exception as exc:
             failed_downloads.append(spec["label"])
-            print(f"ERROR: Failed downloading {spec['label']}: {exc}")
+            detail = str(exc).strip() or exc.__class__.__name__
+            print(f"ERROR: Failed downloading {spec['label']}: {detail}")
 
     failed_set = set(failed_downloads)
     missing = [

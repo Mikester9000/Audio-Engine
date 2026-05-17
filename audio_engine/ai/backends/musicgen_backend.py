@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 
 from audio_engine.ai.backend import InferenceBackend, ProceduralBackend
-from audio_engine.ai.backends._paths import default_model_dir
+from audio_engine.ai.backends._paths import DEFAULT_AUDIO_FRAME_RATE, default_model_dir
 
 
 _STYLE_PROMPTS: dict[str, str] = {
@@ -88,7 +88,7 @@ class MusicGenBackend(InferenceBackend):
             inputs = processor(text=[text_prompt], padding=True, return_tensors="pt")
             config = getattr(model, "config", None)
             audio_encoder = config.audio_encoder if config is not None else None
-            frame_rate = audio_encoder.frame_rate if audio_encoder is not None else 50
+            frame_rate = audio_encoder.frame_rate if audio_encoder is not None else DEFAULT_AUDIO_FRAME_RATE
             max_new_tokens = max(1, int(duration * frame_rate))
 
             with torch.no_grad():
