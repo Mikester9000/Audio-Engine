@@ -56,6 +56,33 @@ ALL_LIBRARY_STYLES = [
     "orchestral_epic", "choral_fantasy", "celtic_adventure",
     "jazz_lounge", "electronic_ambient", "rock_battle",
     "piano_ballad", "folk_tavern", "horror_ambient", "triumph_fanfare",
+    # Multi-genre with Final Fantasy epicness
+    "jazz_epic", "jazz_ballad", "jazz_swing",
+    "blues_epic", "blues_ballad",
+    "pop_epic", "pop_ballad_epic",
+    "rock_epic", "rock_ballad_epic",
+    "electronic_epic", "synthwave_epic",
+    "metal_epic",
+    "world_epic", "latin_epic",
+    "acoustic_epic", "country_epic",
+    "rnb_ballad",
+    "ambient_nature", "ambient_space",
+    "cinematic_orchestral",
+]
+
+# Genre styles only — used in genre-specific tests
+GENRE_STYLES = [
+    "jazz_epic", "jazz_ballad", "jazz_swing",
+    "blues_epic", "blues_ballad",
+    "pop_epic", "pop_ballad_epic",
+    "rock_epic", "rock_ballad_epic",
+    "electronic_epic", "synthwave_epic",
+    "metal_epic",
+    "world_epic", "latin_epic",
+    "acoustic_epic", "country_epic",
+    "rnb_ballad",
+    "ambient_nature", "ambient_space",
+    "cinematic_orchestral",
 ]
 
 
@@ -206,7 +233,7 @@ class TestStyleForRequest:
 
     def test_orchestral(self):
         style = self._resolve("dramatic cinematic orchestral")
-        assert style in ["orchestral_epic", "ff7_overworld", "ff7_battle"]
+        assert style in ["orchestral_epic", "ff7_overworld", "ff7_battle", "cinematic_orchestral"]
 
     def test_unknown_returns_something(self):
         style = self._resolve("some completely unknown request xyz123")
@@ -510,3 +537,290 @@ class TestCLIMusicLibrary:
         assert track["display_name"] == "To Zanarkand"
         assert track["game"] == "ff10"
         assert track["composer"] == "Nobuo Uematsu"
+
+
+# ---------------------------------------------------------------------------
+# Genre styles — every new multi-genre style generates audio correctly
+# ---------------------------------------------------------------------------
+
+class TestGenreStylesGenerate:
+    """Every new multi-genre style should generate non-empty audio."""
+
+    def _generate(self, style: str) -> np.ndarray:
+        from audio_engine.ai.backend import ProceduralBackend
+        backend = ProceduralBackend(sample_rate=SR, seed=0)
+        return backend.generate_music_audio(style=style, duration=SHORT_DURATION)
+
+    @pytest.mark.parametrize("style", GENRE_STYLES)
+    def test_genre_style_produces_audio(self, style):
+        audio = self._generate(style)
+        assert audio is not None
+        assert len(audio) > 0
+        assert np.max(np.abs(audio)) > 0.0, f"Genre style '{style}' produced silent audio"
+
+    @pytest.mark.parametrize("style", GENRE_STYLES)
+    def test_genre_style_correct_dtype(self, style):
+        assert self._generate(style).dtype == np.float32
+
+    def test_all_genre_styles_in_style_defs(self):
+        from audio_engine.ai.generator import _STYLE_DEFS
+        missing = [s for s in GENRE_STYLES if s not in _STYLE_DEFS]
+        assert missing == [], f"Genre styles missing from _STYLE_DEFS: {missing}"
+
+    def test_all_genre_styles_in_catalog(self):
+        from audio_engine.ai.music_library import MusicLibrary
+        lib = MusicLibrary()
+        keys = lib.all_style_keys()
+        missing = [s for s in GENRE_STYLES if s not in keys]
+        assert missing == [], f"Genre styles missing from MusicLibrary catalog: {missing}"
+
+
+# ---------------------------------------------------------------------------
+# Multi-genre album presets
+# ---------------------------------------------------------------------------
+
+class TestGenreAlbumPresets:
+    """New genre album presets should exist with appropriate tracks."""
+
+    ALL_GENRE_PRESETS = [
+        "jazz_album", "blues_album", "pop_album", "rock_album",
+        "electronic_album", "metal_album", "world_music_album",
+        "ambient_album", "acoustic_album", "cinematic_album",
+    ]
+
+    def test_all_genre_presets_exist(self):
+        from audio_engine.ai.radio_playlist import PLAYLIST_PRESETS
+        for preset in self.ALL_GENRE_PRESETS:
+            assert preset in PLAYLIST_PRESETS, f"'{preset}' not in PLAYLIST_PRESETS"
+
+    def test_genre_presets_non_empty(self):
+        from audio_engine.ai.radio_playlist import PLAYLIST_PRESETS
+        for preset in self.ALL_GENRE_PRESETS:
+            assert len(PLAYLIST_PRESETS[preset]) >= 4, \
+                f"'{preset}' has fewer than 4 tracks"
+
+    def test_genre_preset_style_keys_valid(self):
+        from audio_engine.ai.radio_playlist import PLAYLIST_PRESETS
+        from audio_engine.ai.generator import _STYLE_DEFS
+        for preset in self.ALL_GENRE_PRESETS:
+            for key in PLAYLIST_PRESETS[preset]:
+                assert key in _STYLE_DEFS, \
+                    f"Style '{key}' in preset '{preset}' not in _STYLE_DEFS"
+
+    def test_jazz_album_contains_jazz_styles(self):
+        from audio_engine.ai.radio_playlist import PLAYLIST_PRESETS
+        tracks = PLAYLIST_PRESETS["jazz_album"]
+        jazz_styles = [t for t in tracks if "jazz" in t]
+        assert len(jazz_styles) >= 2, "jazz_album should have at least 2 jazz styles"
+
+    def test_rock_album_contains_rock_styles(self):
+        from audio_engine.ai.radio_playlist import PLAYLIST_PRESETS
+        tracks = PLAYLIST_PRESETS["rock_album"]
+        rock_styles = [t for t in tracks if "rock" in t]
+        assert len(rock_styles) >= 2, "rock_album should have at least 2 rock styles"
+
+    def test_ambient_album_contains_ambient_styles(self):
+        from audio_engine.ai.radio_playlist import PLAYLIST_PRESETS
+        tracks = PLAYLIST_PRESETS["ambient_album"]
+        ambient_styles = [t for t in tracks if "ambient" in t]
+        assert len(ambient_styles) >= 2, "ambient_album should have at least 2 ambient styles"
+
+    def test_genre_presets_count(self):
+        from audio_engine.ai.radio_playlist import PLAYLIST_PRESETS
+        # At minimum 10 FF presets + 10 genre album presets
+        assert len(PLAYLIST_PRESETS) >= 20
+
+    def test_available_genres_not_empty(self):
+        from audio_engine.ai.radio_playlist import RadioPlaylistGenerator
+        gen = RadioPlaylistGenerator(sample_rate=SR, seed=0, backend="procedural")
+        genres = gen.available_genres()
+        assert len(genres) >= 10
+        assert "jazz" in genres
+        assert "rock" in genres
+        assert "blues" in genres
+        assert "metal" in genres
+
+
+# ---------------------------------------------------------------------------
+# RadioPlaylistGenerator.generate_album()
+# ---------------------------------------------------------------------------
+
+class TestGenerateAlbum:
+    def _make_gen(self) -> "RadioPlaylistGenerator":
+        from audio_engine.ai.radio_playlist import RadioPlaylistGenerator
+        return RadioPlaylistGenerator(sample_rate=SR, seed=0, backend="procedural")
+
+    def test_generate_jazz_album(self, tmp_path):
+        gen = self._make_gen()
+        manifest = gen.generate_album(
+            "jazz", output_dir=tmp_path, track_duration=3.0, quiet=True
+        )
+        assert manifest["genre"] == "jazz"
+        assert manifest["track_count"] >= 4
+        assert (tmp_path / "album.json").exists()
+        assert (tmp_path / "playlist.json").exists()
+
+    def test_generate_album_writes_album_json(self, tmp_path):
+        gen = self._make_gen()
+        gen.generate_album("rock", output_dir=tmp_path, track_duration=3.0, quiet=True)
+        data = json.loads((tmp_path / "album.json").read_text())
+        assert "title" in data
+        assert "genre" in data
+        assert "tracks" in data
+        assert data["genre"] == "rock"
+
+    def test_generate_album_custom_title(self, tmp_path):
+        gen = self._make_gen()
+        manifest = gen.generate_album(
+            "blues", output_dir=tmp_path, title="My Blues Album",
+            track_duration=3.0, quiet=True
+        )
+        assert manifest["title"] == "My Blues Album"
+
+    def test_generate_album_invalid_genre_raises(self):
+        gen = self._make_gen()
+        with pytest.raises(ValueError, match="Unknown genre"):
+            gen.generate_album("nonexistent_genre_xyz", quiet=True)
+
+    def test_generate_album_produces_wav_files(self, tmp_path):
+        gen = self._make_gen()
+        gen.generate_album("ambient", output_dir=tmp_path, track_duration=3.0, quiet=True)
+        wav_files = list(tmp_path.glob("*.wav"))
+        assert len(wav_files) >= 4
+
+    def test_generate_album_case_insensitive_genre(self, tmp_path):
+        gen = self._make_gen()
+        manifest = gen.generate_album(
+            "JAZZ", output_dir=tmp_path, track_duration=3.0, quiet=True
+        )
+        assert manifest["genre"] == "jazz"
+
+    def test_generate_album_genre_alias_edm(self, tmp_path):
+        """EDM should map to the electronic album preset."""
+        gen = self._make_gen()
+        manifest = gen.generate_album(
+            "edm", output_dir=tmp_path, track_duration=3.0, quiet=True
+        )
+        assert manifest["preset"] == "electronic_album"
+
+    def test_genre_presets_constant(self):
+        from audio_engine.ai.radio_playlist import GENRE_PRESETS
+        assert "jazz" in GENRE_PRESETS
+        assert "metal" in GENRE_PRESETS
+        assert "ambient" in GENRE_PRESETS
+        assert GENRE_PRESETS["jazz"] == "jazz_album"
+        assert GENRE_PRESETS["metal"] == "metal_album"
+
+
+# ---------------------------------------------------------------------------
+# CLI — generate-album command
+# ---------------------------------------------------------------------------
+
+class TestCLIGenerateAlbum:
+    def _run(self, argv: list[str]) -> int:
+        from audio_engine.cli import main
+        return main(argv)
+
+    def test_generate_album_jazz(self, tmp_path):
+        rc = self._run([
+            "generate-album",
+            "--genre", "jazz",
+            "--output-dir", str(tmp_path),
+            "--track-duration", "3",
+            "--sample-rate", "22050",
+            "--seed", "0",
+            "--no-vocals",
+            "--quiet",
+        ])
+        assert rc == 0
+        assert (tmp_path / "album.json").exists()
+        data = json.loads((tmp_path / "album.json").read_text())
+        assert data["genre"] == "jazz"
+        assert data["track_count"] >= 4
+
+    def test_generate_album_custom_title(self, tmp_path):
+        rc = self._run([
+            "generate-album",
+            "--genre", "rock",
+            "--title", "Epic Rock Session",
+            "--output-dir", str(tmp_path),
+            "--track-duration", "3",
+            "--sample-rate", "22050",
+            "--seed", "0",
+            "--no-vocals",
+            "--quiet",
+        ])
+        assert rc == 0
+        data = json.loads((tmp_path / "album.json").read_text())
+        assert data["title"] == "Epic Rock Session"
+
+    def test_generate_album_blues_produces_files(self, tmp_path):
+        rc = self._run([
+            "generate-album",
+            "--genre", "blues",
+            "--output-dir", str(tmp_path),
+            "--track-duration", "3",
+            "--sample-rate", "22050",
+            "--seed", "0",
+            "--quiet",
+        ])
+        assert rc == 0
+        wavs = list(tmp_path.glob("*.wav"))
+        assert len(wavs) >= 4
+
+    def test_generate_album_electronic(self, tmp_path):
+        rc = self._run([
+            "generate-album",
+            "--genre", "electronic",
+            "--output-dir", str(tmp_path),
+            "--track-duration", "3",
+            "--sample-rate", "22050",
+            "--seed", "0",
+            "--no-vocals",
+            "--quiet",
+        ])
+        assert rc == 0
+        assert (tmp_path / "album.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# style_for_request — multi-genre natural language resolver
+# ---------------------------------------------------------------------------
+
+class TestStyleForRequestGenres:
+    def _resolve(self, request: str) -> str:
+        from audio_engine.ai.music_library import style_for_request
+        return style_for_request(request)
+
+    def test_jazz_epic_request(self):
+        style = self._resolve("big band jazz")
+        assert style in ["jazz_epic", "jazz_ballad", "jazz_swing", "jazz_lounge"]
+
+    def test_blues_request(self):
+        style = self._resolve("blues ballad slow")
+        assert style in ["blues_epic", "blues_ballad", "rock_battle", "piano_ballad"]
+
+    def test_pop_ballad_request(self):
+        style = self._resolve("pop ballad")
+        assert style in ["pop_ballad_epic", "ff15_radio", "ff8_ballad", "piano_ballad"]
+
+    def test_metal_request(self):
+        style = self._resolve("heavy metal")
+        assert style in ["metal_epic", "ff16_battle", "rock_battle"]
+
+    def test_synthwave_request(self):
+        style = self._resolve("synthwave retrowave")
+        assert style in ["synthwave_epic", "electronic_ambient"]
+
+    def test_cinematic_request(self):
+        style = self._resolve("cinematic orchestral")
+        assert style in ["cinematic_orchestral", "orchestral_epic"]
+
+    def test_ambient_nature_request(self):
+        style = self._resolve("nature ambient forest")
+        assert style in ["ambient_nature", "horror_ambient", "healing"]
+
+    def test_world_music_request(self):
+        style = self._resolve("world music ethnic")
+        assert style in ["world_epic", "celtic_adventure"]
+
