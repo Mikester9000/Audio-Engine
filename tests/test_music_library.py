@@ -788,11 +788,11 @@ class TestCLIGenerateAlbum:
         from audio_engine import cli as cli_module
         import audio_engine.ai.radio_playlist as radio_playlist_module
 
-        captured: dict[str, object] = {}
+        captured_kwargs: dict[str, object] = {}
 
         class _StubRadioPlaylistGenerator:
             def __init__(self, **kwargs):
-                captured.update(kwargs)
+                captured_kwargs.update(kwargs)
 
             def generate_album(self, **_kwargs):
                 return {}
@@ -806,8 +806,8 @@ class TestCLIGenerateAlbum:
             "--quiet",
         ])
         assert rc == 0
-        assert captured["backend"] == "sample"
-        assert captured["backend_kwargs"] == {"samples_dir": str(tmp_path / "my_samples")}
+        assert captured_kwargs["backend"] == "sample"
+        assert captured_kwargs["backend_kwargs"] == {"samples_dir": str(tmp_path / "my_samples")}
 
 
 # ---------------------------------------------------------------------------

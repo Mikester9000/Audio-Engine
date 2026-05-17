@@ -307,6 +307,11 @@ _ALIAS_MAP: dict[str, str] = {
     "cinematic":               "cinematic_orchestral",
     "cinematic orchestral":    "cinematic_orchestral",
 }
+_ALIASES_BY_LENGTH: list[tuple[str, str]] = sorted(
+    _ALIAS_MAP.items(),
+    key=lambda item: len(item[0]),
+    reverse=True,
+)
 
 # Mood/keyword → style fallback map
 _MOOD_STYLE_MAP: list[tuple[list[str], str]] = [
@@ -462,7 +467,7 @@ def style_for_request(request: str) -> str:
     r = request.lower().strip()
 
     # 1. Direct alias match (exact song title)
-    for alias, style_key in sorted(_ALIAS_MAP.items(), key=lambda item: len(item[0]), reverse=True):
+    for alias, style_key in _ALIASES_BY_LENGTH:
         if alias in r:
             return style_key
 
