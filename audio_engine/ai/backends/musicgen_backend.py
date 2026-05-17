@@ -40,6 +40,7 @@ _STYLE_PROMPTS: dict[str, str] = {
 }
 _MAX_CHUNK_DURATION_SECONDS = 30.0
 _MIN_CHUNK_DURATION_SECONDS = 0.1
+_STITCH_CROSSFADE_SECONDS = 1.0
 
 
 class MusicGenBackend(InferenceBackend):
@@ -103,9 +104,13 @@ class MusicGenBackend(InferenceBackend):
                 _MIN_CHUNK_DURATION_SECONDS,
                 duration - (chunk_duration * (chunk_count - 1)),
             )
+            chunk_generation_lengths = chunk_lengths.copy()
+            if chunk_count > 1:
+                for idx in range(1, chunk_count):
+                    chunk_generation_lengths[idx] += _STITCH_CROSSFADE_SECONDS
 
             chunks: list[np.ndarray] = []
-            for idx, chunk_len in enumerate(chunk_lengths):
+            for idx, chunk_len in enumerate(chunk_generation_lengths):
                 if self.seed is not None:
                     # Keep deterministic per-chunk output while avoiding identical chunks.
                     torch.manual_seed(self.seed + idx)

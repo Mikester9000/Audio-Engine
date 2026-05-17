@@ -204,6 +204,10 @@ class OfflineBounce:
             preset = "large_hall" if self.profile == "ost" else "small_room"
             sig = apply_reverb(sig, self.sample_rate, preset=preset, mix=self._profile_reverb_mix)
 
+        # Re-apply limiting after profile-dependent spatial/tonal stages so
+        # output still honors the configured ceiling.
+        sig = self._limiter.process(sig)
+
         # 5. Dithering (only meaningful when exporting to 16-bit)
         if self._bit_depth == 16:
             sig = dither(sig, bit_depth=16)

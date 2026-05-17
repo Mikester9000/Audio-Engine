@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import contextlib
+import sys
+import types
+
 import numpy as np
 
 from audio_engine.ai.backends.musicgen_backend import MusicGenBackend
@@ -29,3 +33,42 @@ def test_fallback_generation_without_model(tmp_path):
     assert music.ndim == 2 and music.shape[1] == 2
     assert isinstance(sfx, np.ndarray) and sfx.ndim == 1 and sfx.size > 0
     assert isinstance(voice, np.ndarray) and voice.ndim == 1 and voice.size > 0
+
+
+def test_long_form_generation_adds_overlap_to_avoid_silence_padding(monkeypatch):
+    sample_rate = 10
+    captured_tokens: list[int] = []
+
+    class _DummyModel:
+        class _Config:
+            class _AudioEncoder:
+                frame_rate = sample_rate
+                sampling_rate = sample_rate
+
+            audio_encoder = _AudioEncoder()
+
+        config = _Config()
+
+        def generate(self, **kwargs):
+            tokens = int(kwargs["max_new_tokens"])
+            captured_tokens.append(tokens)
+            return np.ones((1, tokens), dtype=np.float32)
+
+    class _DummyProcessor:
+        def __call__(self, text, padding, return_tensors):
+            return {}
+
+    backend = MusicGenBackend(sample_rate=sample_rate)
+    dummy_torch = types.SimpleNamespace(
+        manual_seed=lambda _seed: None,
+        no_grad=lambda: contextlib.nullcontext(),
+    )
+    monkeypatch.setitem(sys.modules, "torch", dummy_torch)
+    monkeypatch.setattr(backend, "is_available", lambda: True)
+    monkeypatch.setattr(backend, "_load_model_bundle", lambda: (_DummyModel(), _DummyProcessor()))
+
+    audio = backend.generate_music_audio("battle", duration=65.0)
+
+    assert captured_tokens == [300, 310, 60]
+    assert audio.shape == (650, 2)
+    assert np.all(np.abs(audio[-sample_rate:]) > 0.0)

@@ -99,6 +99,22 @@ class TestOfflineBounce:
         assert out.shape[1] == 2
         assert out.dtype == np.float32
 
+    @pytest.mark.parametrize("profile", ["ost", "youtube", "procedural_neutral"])
+    def test_profile_presets_respect_limiter_ceiling_after_spatial_processing(self, profile):
+        ceiling_db = -6.0
+        ceiling = 10.0 ** (ceiling_db / 20.0)
+        bounce = OfflineBounce(
+            SR,
+            profile=profile,
+            target_lufs=-6.0,
+            ceiling_db=ceiling_db,
+            apply_master_eq=False,
+            apply_compression=False,
+        )
+        loud = np.ones((SR * 2, 2), dtype=np.float32)
+        out = bounce.process(loud)
+        assert np.max(np.abs(out)) <= ceiling + 1e-3
+
 
 # ---------------------------------------------------------------------------
 # StemRenderer

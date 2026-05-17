@@ -20,3 +20,4 @@ def test_crossfade_loop_reduces_loop_discontinuity():
     out = bake_crossfade_loop(mono, sample_rate=44100, crossfade_ms=500)
     after = abs(float(out[0] - out[-1]))
     assert after < before
+    assert np.isclose(out[-1], out[0], atol=1e-6)
