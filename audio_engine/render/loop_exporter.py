@@ -19,15 +19,19 @@ def bake_crossfade_loop(audio: np.ndarray, sample_rate: int, crossfade_ms: float
     fade = np.linspace(1.0 / crossfade_samples, 1.0, crossfade_samples, dtype=np.float32)
     fade_out = 1.0 - fade
     if arr.ndim == 1:
+        head = arr[:crossfade_samples].copy()
+        head_target = np.concatenate([head[1:], head[:1]])
         tail = arr[-crossfade_samples:].copy()
-        arr[-crossfade_samples:] = tail * fade_out + arr[0] * fade
+        arr[-crossfade_samples:] = tail * fade_out + head_target * fade
         return arr
 
     if arr.ndim == 2:
+        head = arr[:crossfade_samples, :].copy()
+        head_target = np.vstack([head[1:, :], head[:1, :]])
         fade = fade[:, None]
         fade_out = fade_out[:, None]
         tail = arr[-crossfade_samples:, :].copy()
-        arr[-crossfade_samples:, :] = tail * fade_out + arr[0:1, :] * fade
+        arr[-crossfade_samples:, :] = tail * fade_out + head_target * fade
         return arr
 
     return arr

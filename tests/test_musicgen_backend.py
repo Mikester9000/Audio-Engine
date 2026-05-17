@@ -35,7 +35,7 @@ def test_fallback_generation_without_model(tmp_path):
     assert isinstance(voice, np.ndarray) and voice.ndim == 1 and voice.size > 0
 
 
-def test_long_form_generation_adds_overlap_to_avoid_silence_padding(monkeypatch):
+def test_long_form_generation_preserves_duration_with_overlap(monkeypatch):
     sample_rate = 10
     captured_tokens: list[int] = []
 
