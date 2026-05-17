@@ -49,7 +49,7 @@ def _download_model(repo_id: str, target: Path) -> None:
 
 def main() -> int:
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    had_download_error = False
+    failed_downloads: list[str] = []
 
     for spec in MODEL_SPECS:
         target = spec["target"]
@@ -63,17 +63,18 @@ def main() -> int:
             _download_model(spec["repo_id"], target)
             print(f"Finished {spec['label']}.")
         except Exception as exc:
-            had_download_error = True
+            failed_downloads.append(spec["label"])
             print(f"ERROR: Failed downloading {spec['label']}: {exc}")
 
     missing = [spec["label"] for spec in MODEL_SPECS if not _is_model_present(spec["target"])]
-    if missing:
+    if failed_downloads or missing:
+        if failed_downloads:
+            print("ERROR: Download failures occurred for:")
+            for name in failed_downloads:
+                print(f"  - {name}")
         print("ERROR: Some model folders are missing after download:")
         for name in missing:
             print(f"  - {name}")
-        return 1
-
-    if had_download_error:
         return 1
 
     print("All required models are present in models/.")
