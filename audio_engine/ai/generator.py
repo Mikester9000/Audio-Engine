@@ -57,9 +57,24 @@ TrackStyle = Literal[
     "battle", "exploration", "ambient", "boss", "victory", "menu",
     # FF7 / FF8 era styles
     "ff7_battle", "ff7_overworld", "ff7_boss", "ff7_sad", "ff7_town",
-    "ff8_battle",
+    "ff8_battle", "ff8_ballad",
     # Shared retro-RPG styles
     "prelude", "world_map", "dungeon", "healing", "tension",
+    # FF1–FF6 (NES/SNES era) styles
+    "ff1_battle", "ff1_overworld", "ff4_battle", "ff4_theme",
+    "ff6_battle", "ff6_opera", "ff6_sad",
+    # FF9 / FF10 / PS2 era styles
+    "ff9_battle", "ff9_overworld", "ff10_calm", "ff10_battle",
+    "ff10_zanarkand",
+    # FF12 / FF13 / HD era styles
+    "ff12_battle", "ff13_battle", "ff13_theme",
+    # FF14 / FF15 / FF16 modern era styles
+    "ff14_battle", "ff14_overworld", "ff15_road", "ff15_radio",
+    "ff16_battle", "ff16_theme",
+    # Generic full-piece request styles (non-FF)
+    "orchestral_epic", "choral_fantasy", "celtic_adventure",
+    "jazz_lounge", "electronic_ambient", "rock_battle",
+    "piano_ballad", "folk_tavern", "horror_ambient", "triumph_fanfare",
 ]
 
 
@@ -377,6 +392,554 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         melody_pattern="half_notes",
         chord_pattern="half_notes",
         bars=8,
+    ),
+
+    # -----------------------------------------------------------------------
+    # FF1 – FF6  (NES / SNES era — square waves, limited polyphony)
+    # -----------------------------------------------------------------------
+
+    "ff1_battle": _StyleDef(
+        # Original Final Fantasy battle — NES-era square wave energy.
+        # Phrygian, 150 BPM, very simple instrumentation (2 voices).
+        bpm=150,
+        scale_name="phrygian",
+        root="D",
+        octave=4,
+        progression_name="i_bII_i_bVII",
+        instruments=["crystal_synth", "ff7_lead"],
+        accompaniment=["synth_pad"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="four_on_the_floor",
+        bars=4,
+    ),
+
+    "ff1_overworld": _StyleDef(
+        # FF1 overworld — bright, optimistic, NES-era feel.
+        # A major, 110 BPM, repetitive 4-bar loop.
+        bpm=110,
+        scale_name="major",
+        root="A",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["crystal_synth", "ff7_lead"],
+        accompaniment=["synth_pad"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="eighth_notes",
+        chord_pattern="half_notes",
+        bars=4,
+    ),
+
+    "ff4_battle": _StyleDef(
+        # FF4 "Fight 1" — SNES era, richer polyphony, D minor.
+        # The template for everything that followed — urgent, punchy.
+        bpm=136,
+        scale_name="natural_minor",
+        root="D",
+        octave=4,
+        progression_name="i_bVII_bVI_V",
+        instruments=["brass", "crystal_synth"],
+        accompaniment=["ff7_strings", "synth_pad"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="syncopated",
+        bars=8,
+    ),
+
+    "ff4_theme": _StyleDef(
+        # FF4 main theme — heroic, major, SNES orchestra.
+        # E major, 96 BPM, sweeping strings + brass.
+        bpm=96,
+        scale_name="major",
+        root="E",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["brass", "ff7_strings"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "ff6_battle": _StyleDef(
+        # FF6 "The Decisive Battle" — dramatic, complex, dissonant.
+        # B harmonic minor, 148 BPM, brass-heavy with strings.
+        bpm=148,
+        scale_name="harmonic_minor",
+        root="B",
+        octave=3,
+        progression_name="i_bII_i_bVII",
+        instruments=["brass", "ff7_strings"],
+        accompaniment=["brass", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "ff6_opera": _StyleDef(
+        # FF6 "Maria and Draco" opera scene — elegant, emotional, major.
+        # C major, 80 BPM, strings + piano + choir for the aria feel.
+        bpm=80,
+        scale_name="major",
+        root="C",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano", "flute"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "ff6_sad": _StyleDef(
+        # FF6 "Aria de Mezzo Carattere" / "Terra's Theme" emotional weight.
+        # Minor pentatonic, 70 BPM, piano + strings.
+        bpm=70,
+        scale_name="natural_minor",
+        root="D",
+        octave=4,
+        progression_name="i_bVI_bVII_i",
+        instruments=["piano", "ff7_strings"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    # -----------------------------------------------------------------------
+    # FF9 / FF10  (PS1 / early PS2 — transitional era, rich orchestration)
+    # -----------------------------------------------------------------------
+
+    "ff9_battle": _StyleDef(
+        # FF9 "Battle 1" — energetic, E minor, full SNES-homage orchestration.
+        # 140 BPM, similar energy to FF6 but with more instrument layers.
+        bpm=140,
+        scale_name="harmonic_minor",
+        root="E",
+        octave=4,
+        progression_name="i_bVII_bVI_V",
+        instruments=["brass", "ff7_strings"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="syncopated",
+        bars=8,
+    ),
+
+    "ff9_overworld": _StyleDef(
+        # FF9 "Crossing Those Hills" — nostalgic, warm, G major.
+        # 88 BPM, flute + strings + choir, feels like classic RPG travel.
+        bpm=88,
+        scale_name="major",
+        root="G",
+        octave=4,
+        progression_name="I_V_vi_IV",
+        instruments=["flute", "piano"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="eighth_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "ff10_calm": _StyleDef(
+        # FF10 "To Zanarkand" / "Wandering Flame" quiet moments.
+        # E major, 76 BPM, solo piano with very soft strings underneath.
+        bpm=76,
+        scale_name="major",
+        root="E",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano"],
+        accompaniment=["ff7_strings"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "ff10_battle": _StyleDef(
+        # FF10 "Fight with Seymour" / "Otherworld" aggressive rock/orchestral.
+        # F# harmonic minor, 144 BPM, heavy electric guitar + brass.
+        bpm=144,
+        scale_name="harmonic_minor",
+        root="F",
+        octave=3,
+        progression_name="i_bVII_bVI_V",
+        instruments=["ff8_electric_guitar", "brass"],
+        accompaniment=["ff7_strings", "brass"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="syncopated",
+        bars=8,
+    ),
+
+    "ff10_zanarkand": _StyleDef(
+        # "To Zanarkand" — the iconic melancholy piano intro.
+        # A major, 70 BPM, solo piano, absolutely minimal.
+        bpm=70,
+        scale_name="major",
+        root="A",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano"],
+        accompaniment=["piano"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    # -----------------------------------------------------------------------
+    # FF12 / FF13  (PS2 / PS3 — cinematic, orchestral with electronic elements)
+    # -----------------------------------------------------------------------
+
+    "ff12_battle": _StyleDef(
+        # FF12 "Boss Battle" — Hitoshi Sakimoto style: dissonant brass,
+        # irregular metre, D minor, 120 BPM.
+        bpm=120,
+        scale_name="natural_minor",
+        root="D",
+        octave=3,
+        progression_name="i_iv_bVII_bIII",
+        instruments=["brass", "ff7_strings"],
+        accompaniment=["brass", "synth_pad"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="syncopated",
+        bars=8,
+    ),
+
+    "ff13_battle": _StyleDef(
+        # FF13 "Blinded by Light" — Masashi Hamauzu style: synth + orchestra,
+        # major key unusually for battle, 140 BPM, modern hybrid.
+        bpm=140,
+        scale_name="major",
+        root="C",
+        octave=4,
+        progression_name="I_V_vi_IV",
+        instruments=["brass", "ff8_electric_guitar"],
+        accompaniment=["ff7_strings", "synth_pad"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "ff13_theme": _StyleDef(
+        # FF13 "Promised Eternity" — serene, Eb major, piano + strings + choir.
+        # 80 BPM, emotional and flowing.
+        bpm=80,
+        scale_name="major",
+        root="E",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano", "flute"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    # -----------------------------------------------------------------------
+    # FF14 / FF15 / FF16  (modern era — full live orchestra, choral, rock)
+    # -----------------------------------------------------------------------
+
+    "ff14_battle": _StyleDef(
+        # FF14 "Torn from the Heavens" / "Answers" energy — Soken style.
+        # Heavy, aggressive, G minor, 150 BPM, electric guitar + full orchestra.
+        bpm=150,
+        scale_name="harmonic_minor",
+        root="G",
+        octave=3,
+        progression_name="i_bVII_bVI_V",
+        instruments=["ff8_electric_guitar", "brass"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "ff14_overworld": _StyleDef(
+        # FF14 overworld/zone music — vast open-world adventuring feel.
+        # C major, 90 BPM, full orchestral sweep with choir.
+        bpm=90,
+        scale_name="major",
+        root="C",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["ff7_strings", "brass"],
+        accompaniment=["choir", "ff7_strings"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="eighth_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "ff15_road": _StyleDef(
+        # FF15 road trip / daytime travel — rock + orchestral, carefree.
+        # E major, 120 BPM, electric guitar lead over strings.
+        bpm=120,
+        scale_name="major",
+        root="E",
+        octave=4,
+        progression_name="I_V_vi_IV",
+        instruments=["ff8_electric_guitar", "piano"],
+        accompaniment=["ff7_strings", "brass"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="eight_notes",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "ff15_radio": _StyleDef(
+        # FF15 Regalia radio — plays covers of classic FF tracks.
+        # Mixed bag; here represented as a bright major pop-ish version.
+        # G major, 100 BPM, piano + electric guitar.
+        bpm=100,
+        scale_name="major",
+        root="G",
+        octave=4,
+        progression_name="I_V_vi_IV",
+        instruments=["piano", "ff8_electric_guitar"],
+        accompaniment=["ff7_strings"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="eighth_notes",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "ff16_battle": _StyleDef(
+        # FF16 "Titan Lost" / "Away" — Soken's most intense work.
+        # B minor, 156 BPM, brutal orchestra + choir + electric guitar.
+        bpm=156,
+        scale_name="harmonic_minor",
+        root="B",
+        octave=3,
+        progression_name="i_bVII_bVI_V",
+        instruments=["brass", "ff8_electric_guitar"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="syncopated",
+        bars=8,
+    ),
+
+    "ff16_theme": _StyleDef(
+        # FF16 main theme — epic, choral, dark fantasy.
+        # D minor, 88 BPM, full choir-led orchestral theme.
+        bpm=88,
+        scale_name="harmonic_minor",
+        root="D",
+        octave=3,
+        progression_name="i_bVI_bVII_i",
+        instruments=["brass", "ff7_strings"],
+        accompaniment=["choir", "brass"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    # -----------------------------------------------------------------------
+    # Generic full-piece request styles — non-FF, broad use cases
+    # -----------------------------------------------------------------------
+
+    "orchestral_epic": _StyleDef(
+        # Full cinematic orchestral epic — Hans Zimmer / John Williams territory.
+        # D minor, 104 BPM, full orchestra.
+        bpm=104,
+        scale_name="harmonic_minor",
+        root="D",
+        octave=3,
+        progression_name="i_bVII_bVI_V",
+        instruments=["brass", "ff7_strings"],
+        accompaniment=["choir", "ff7_strings"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "choral_fantasy": _StyleDef(
+        # Full choir + orchestra fantasy — sacred-fantasy blend.
+        # A minor, 76 BPM, choir-led with strings and piano.
+        bpm=76,
+        scale_name="natural_minor",
+        root="A",
+        octave=3,
+        progression_name="i_VI_III_VII",
+        instruments=["choir", "ff7_strings"],
+        accompaniment=["choir", "piano"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "celtic_adventure": _StyleDef(
+        # Celtic / folk-adventure style — flute lead, lively.
+        # D major (Dorian feel), 120 BPM.
+        bpm=120,
+        scale_name="dorian",
+        root="D",
+        octave=4,
+        progression_name="i_bVII_bVI_bVII",
+        instruments=["flute", "piano"],
+        accompaniment=["ff7_strings"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="eighth_notes",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "jazz_lounge": _StyleDef(
+        # Smooth jazz lounge — late-night atmosphere.
+        # C major, 88 BPM, piano + strings, jazz chord extensions.
+        bpm=88,
+        scale_name="major",
+        root="C",
+        octave=4,
+        progression_name="ii_V_I_VI",
+        instruments=["piano"],
+        accompaniment=["ff7_strings", "synth_pad"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="syncopated",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "electronic_ambient": _StyleDef(
+        # Electronic ambient / chill — synth pads, no melody.
+        # E minor, 70 BPM, pure atmosphere.
+        bpm=70,
+        scale_name="natural_minor",
+        root="E",
+        octave=3,
+        progression_name="i_bVI_bVII_i",
+        instruments=["synth_pad", "crystal_synth"],
+        accompaniment=["synth_pad"],
+        bass_instrument="synth_pad",
+        percussion_instrument=None,
+        melody_pattern="ambient",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "rock_battle": _StyleDef(
+        # Modern rock battle theme — electric guitar-driven, aggressive.
+        # A minor, 144 BPM, power chords + driving drums.
+        bpm=144,
+        scale_name="natural_minor",
+        root="A",
+        octave=3,
+        progression_name="i_bVII_bVI_V",
+        instruments=["ff8_electric_guitar", "brass"],
+        accompaniment=["ff7_strings"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "piano_ballad": _StyleDef(
+        # Solo piano ballad — intimate, emotional.
+        # F major, 66 BPM.
+        bpm=66,
+        scale_name="major",
+        root="F",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano"],
+        accompaniment=["piano"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "folk_tavern": _StyleDef(
+        # Tavern / folk shanty — lively, happy drinking-song energy.
+        # G major, 130 BPM, piano + flute.
+        bpm=130,
+        scale_name="major",
+        root="G",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["piano", "flute"],
+        accompaniment=["ff7_strings"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="syncopated",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "horror_ambient": _StyleDef(
+        # Horror / dark ambient — unsettling, tense, dissonant.
+        # C# minor, 55 BPM, pads + choir stabs.
+        bpm=55,
+        scale_name="phrygian",
+        root="C",
+        octave=3,
+        progression_name="i_bII_i_bVII",
+        instruments=["synth_pad", "choir"],
+        accompaniment=["synth_pad"],
+        bass_instrument="synth_pad",
+        percussion_instrument=None,
+        melody_pattern="ambient",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "triumph_fanfare": _StyleDef(
+        # Victory / triumph fanfare — short, punchy, celebratory.
+        # Bb major, 120 BPM, full brass + strings.
+        bpm=120,
+        scale_name="major",
+        root="B",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["brass", "ff7_strings"],
+        accompaniment=["brass", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="four_on_the_floor",
+        chord_pattern="half_notes",
+        bars=4,
     ),
 }
 
