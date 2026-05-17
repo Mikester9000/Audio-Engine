@@ -43,14 +43,15 @@ The repository now has a complete draft-to-approved pipeline on the newer reques
 - [x] Execute `SESSION-024` — add result-JSON sourcing path for review-log writing
 - [x] Execute `SESSION-025` — define and queue the next executable implementation session
 - [x] Execute `SESSION-026` — add legacy request-file batch-manifest parity
-- [ ] Execute `SESSION-027` — define and queue the next executable implementation session
+- [x] Execute `SESSION-027` — define and queue the next executable implementation session
+- [ ] Execute `SESSION-028` — add backend preflight verification command for optional neural workflows
 
 ## Recommended next PRs
 
-1. **Define and queue the next executable implementation session (SESSION-027)**
-   - Refresh continuity/session-control docs and set the next concrete implementation objective.
-2. **Stabilize optional neural backend quality + performance**
-   - Validate prompt presets and generation quality on real model downloads.
+1. **Add backend preflight verification command (SESSION-028)**
+   - Implement an additive `verify-backends` command with deterministic availability checks and machine-readable reporting for optional neural workflows.
+2. **Follow ordered completion roadmap through SESSION-045**
+   - Continue through queued capability, licensing, mastering, QA, export, deterministic regression, and closure sessions (`SESSION-029` → `SESSION-045`) as defined in `SESSION_QUEUE.md`.
 
 ## Do not deprioritize
 

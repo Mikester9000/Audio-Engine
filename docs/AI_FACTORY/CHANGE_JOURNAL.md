@@ -2,6 +2,29 @@
 
 > Append a short entry for every substantial PR. Keep entries brief and factual.
 
+## 2026-05-17 — Complete SESSION-027 (queue/state continuity refresh + next executable session definition)
+
+- Marked SESSION-027 completed and synchronized session-control artifacts:
+  - `docs/AI_FACTORY/SESSION_QUEUE.md`
+  - `docs/AI_FACTORY/CURRENT_SESSION.json`
+  - `docs/AI_FACTORY/SESSION_STATE.json`
+  - `docs/AI_FACTORY/SESSION_HISTORY.md`
+- Defined SESSION-028 as the next executable implementation task:
+  - additive `audio-engine verify-backends` preflight command
+  - deterministic backend-availability checks with optional bounded local-model smoke runs
+  - machine-readable readiness reporting for handoff continuity.
+- Refreshed continuity docs and implementation-state references:
+  - `docs/AI_FACTORY/ACTIVE_WORK.md`
+  - `docs/AI_FACTORY/HANDOFF.md`
+  - `docs/AI_FACTORY/CURRENT_STATE.md`
+  - `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`
+  - `docs/AI_FACTORY/FACTORY_STATUS.json`
+  - `docs/AI_FACTORY/KNOWN_ISSUES.md`
+- Verification:
+  - `python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json` → PASS
+  - `python -m json.tool docs/AI_FACTORY/SESSION_STATE.json` → PASS
+  - `python -m json.tool docs/AI_FACTORY/FACTORY_STATUS.json` → PASS
+
 ## 2026-05-17 — Complete SESSION-026 (legacy request-file batch-manifest parity)
 
 - Added additive legacy `batch_manifest.json` output writing in `AssetPipeline.execute_request_batch()`.
