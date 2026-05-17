@@ -157,11 +157,18 @@
 - Refreshed continuity/session-control docs to reflect SESSION-023/024 completion.
 - Defined SESSION-026 as the next concrete executable implementation session.
 
-## Current next session
-
 ### SESSION-026 — Add legacy request-file batch-manifest parity
 
-- **Status:** `ready`
+- **Status:** `completed`
 - **Task type:** `provenance + cli`
-- **Objective:** Reduce remaining divergence between newer request-batch execution and legacy `--request-file` execution by adding an additive legacy `batch_manifest.json` output with deterministic per-request records aligned to existing request/result metadata.
-- **Notes:** Preserve compatibility (`request_batch_result.json` remains unchanged), add focused integration/CLI coverage, and keep provenance/review-log contracts truthful.
+- Added additive legacy `batch_manifest.json` writing for `generate-request-batch --request-file` / `AssetPipeline.execute_request_batch` with deterministic per-request records aligned to existing request/result metadata.
+- Preserved compatibility by leaving `request_batch_result.json` behavior unchanged and added focused integration/CLI coverage for the new legacy manifest output.
+
+## Current next session
+
+### SESSION-027 — Define and queue the next executable implementation session
+
+- **Status:** `ready`
+- **Task type:** `docs_only`
+- **Objective:** Refresh continuity/session-control docs to reflect SESSION-026 completion and define the next concrete executable implementation task.
+- **Notes:** Keep queue/state/current-session/history synchronized and avoid claiming unverified implementation scope.

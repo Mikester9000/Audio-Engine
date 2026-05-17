@@ -1,11 +1,11 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "lastUpdated": "2026-05-17",
   "currentSession": {
-    "id": "SESSION-026",
-    "title": "Add legacy request-file batch-manifest parity",
+    "id": "SESSION-027",
+    "title": "Define and queue the next executable implementation session",
     "status": "ready",
-    "taskType": "provenance + cli"
+    "taskType": "docs_only"
   },
   "completedSessions": [
     {
@@ -130,6 +130,11 @@
     },
     {
       "id": "SESSION-025",
+      "status": "completed",
+      "completedDate": "2026-05-17"
+    },
+    {
+      "id": "SESSION-026",
       "status": "completed",
       "completedDate": "2026-05-17"
     }

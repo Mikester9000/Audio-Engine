@@ -4,26 +4,32 @@
 
 ## Last completed change
 
-Completed SESSION-025 (docs-only continuity/session-control refresh):
+Completed SESSION-026 (legacy request-file batch-manifest parity):
 
-- Marked SESSION-025 complete and advanced the queue to SESSION-026.
-- Synchronized `SESSION_QUEUE.md`, `CURRENT_SESSION.json`, `SESSION_STATE.json`, and `SESSION_HISTORY.md`.
-- Updated continuity docs (`ACTIVE_WORK.md`, `CURRENT_STATE.md`, `IMPLEMENTATION_MATRIX.md`, `CHANGE_JOURNAL.md`) to match current session state.
+- Added additive legacy `batch_manifest.json` writing in `AssetPipeline.execute_request_batch`.
+- Preserved compatibility: legacy `request_batch_result.json` behavior remains unchanged and optional via `--write-result`.
+- Added focused test coverage for deterministic legacy manifest output in integration and CLI paths.
 
 ## Verified in this session
 
 ```bash
+python -m pytest
+python tools/validate-assets.py assets/examples/ --verbose
+python -m pytest tests/test_integration.py -k "writes_batch_manifest_json and execute_request_batch"
+python -m pytest tests/test_engine_cli.py -k "request_file_writes_batch_manifest_json"
 python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
 python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 ```
 
 Observed result:
-- edited JSON session-control files parse successfully
-- continuity/session-control docs are synchronized on SESSION-026 as the active ready session
+- full test suite passed
+- asset-manifest validation passed
+- targeted legacy manifest integration/CLI tests passed
+- updated session-control JSON files parse successfully
 
 ## Immediate next best task
 
-Execute `SESSION-026` from `docs/AI_FACTORY/SESSION_QUEUE.md` to add additive legacy `batch_manifest.json` output parity on `generate-request-batch --request-file` without breaking existing result JSON behavior.
+Execute `SESSION-027` from `docs/AI_FACTORY/SESSION_QUEUE.md` to refresh continuity/session-control docs after SESSION-026 and define the next concrete executable implementation task.
 
 ## Files future agents should read first
 
@@ -62,3 +68,4 @@ Execute `SESSION-026` from `docs/AI_FACTORY/SESSION_QUEUE.md` to add additive le
 - [x] Optional provenance sidecars for legacy request-file execution path (SESSION-023)
 - [x] Result-JSON sourced review-log writing for legacy request-file workflow (SESSION-024)
 - [x] Queue advancement and next executable session definition (SESSION-025)
+- [x] Legacy request-file batch-manifest parity without result-json breakage (SESSION-026)

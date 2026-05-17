@@ -21,6 +21,10 @@
   - optional review-log update flags on `approve-draft` and `export-drafts`
   - review entries are sourced from provenance sidecars and can optionally include `qa-batch` snapshot fields
   - `write-review-log --from-result <request_batch_result.json>` can source entries from legacy request-file execution results
+- Legacy request-file execution now writes additive manifest parity output:
+  - `generate-request-batch --request-file ...` writes `<output_dir>/batch_manifest.json`
+  - manifest records keep deterministic per-request metadata (`request_id`, `asset_id`, `type`, `seed`, `file`, `status`)
+  - existing `request_batch_result.json` output behavior is unchanged and remains optional via `--write-result`
 - Request format behavior is strict:
   - requested `.ogg` outputs must be produced as `.ogg`
   - no silent OGG→WAV fallback in request-batch execution paths
@@ -34,6 +38,7 @@
   - backward-compatible `generate-request-batch --request-file` (`AssetPipeline.execute_request_batch`)
 - On the legacy `--request-file` path, `--music-duration` and `--sfx-duration` remain fallback defaults for requests that omit `durationSeconds`.
 - On the legacy `--request-file` path, provenance sidecars are now additive/optional via `generate-request-batch --write-provenance`; result records include `provenance_path` when written.
+- On the legacy `--request-file` path, manifest parity is now additive and always written to `<output_dir>/batch_manifest.json`.
 - OGG export depends on `soundfile`; if unavailable, requests that specify `.ogg` fail.
 
 ## Near-term goal

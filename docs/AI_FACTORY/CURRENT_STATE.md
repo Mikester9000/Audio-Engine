@@ -45,20 +45,23 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Variant-family QA review/report templates | Implemented (docs-contract) | `docs/AI_FACTORY/QA/REVIEW_WORKFLOW.md`, `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/review_log.example.v1.json` |
 | Machine-readable review-log writer + handoff integration | Implemented | `audio_engine/integration/asset_pipeline.py` (`ReviewLogWriter`), `audio_engine/cli.py` (`write-review-log`, review-log flags on `approve-draft`/`export-drafts`) |
 | Optional request-level duration field for both request-batch entrypoints | Implemented | `audio_engine/integration/factory_inputs.py` (`durationSeconds` parsing), `audio_engine/integration/asset_pipeline.py` (`RequestBatchPipeline` and `AssetPipeline.execute_request_batch` duration resolution), `tests/test_integration.py`, `tests/test_engine_cli.py` |
-| Legacy request-file provenance sidecars + result-driven review-log sourcing | Implemented | `audio_engine/integration/asset_pipeline.py` (`AssetPipeline.execute_request_batch(write_provenance)`, `ReviewLogWriter.append_from_result_json`), `audio_engine/cli.py` (`generate-request-batch --write-provenance`, `write-review-log --from-result`), `tests/test_integration.py`, `tests/test_engine_cli.py` |
+| Legacy request-file provenance sidecars + result-driven review-log sourcing + manifest parity | Implemented | `audio_engine/integration/asset_pipeline.py` (`AssetPipeline.execute_request_batch(write_provenance)` legacy `batch_manifest.json` writer, `ReviewLogWriter.append_from_result_json`), `audio_engine/cli.py` (`generate-request-batch --write-provenance`, `write-review-log --from-result`), `tests/test_integration.py`, `tests/test_engine_cli.py` |
 | Automated test suite | Implemented | `tests/` |
 
 ### Commands verified in this session
 
 ```bash
-python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
-python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
+python -m pip install -e ".[dev]"
+python -m pytest
+python tools/validate-assets.py assets/examples/ --verbose
+python -m pytest tests/test_integration.py -k "writes_batch_manifest_json and execute_request_batch"
+python -m pytest tests/test_engine_cli.py -k "request_file_writes_batch_manifest_json"
 ```
 
 Observed result in this session:
 
-- edited session-control JSON files parse successfully
-- current active session is SESSION-026 with synchronized queue/state/history continuity
+- baseline repo verification passed (full `pytest` + asset-manifest validation)
+- legacy request-file batch-manifest parity targeted integration/CLI tests passed
 
 ## Current repository structure
 
@@ -91,7 +94,7 @@ Observed result in this session:
 2. The current asset pipeline is aimed at `Game Engine for Teaching`, not yet fully generalized for `GameRewritten`.
 3. Voice generation exists but should be treated as lower priority and lower fidelity than music/SFX.
 4. Plan-driven orchestration currently requires explicit request-batch files that provide prompts/seeds/backends for all required plan targets; missing required requests are treated as execution errors.
-5. The backward-compatible `--request-file` path still defaults to legacy no-sidecar behavior unless `--write-provenance` is explicitly enabled, so richer downstream automation remains opt-in on that path.
+5. The backward-compatible `--request-file` path now writes additive `batch_manifest.json` parity by default, while richer sidecar/result artifacts remain opt-in via `--write-provenance` and `--write-result`.
 6. OGG export depends on `soundfile`; `.ogg` requests fail (no fallback-to-WAV) when encoder support is unavailable.
 
 ## Current blockers
@@ -105,4 +108,4 @@ None blocking the next session.
 
 ## Immediate interpretation
 
-This repo now has a complete draft-to-approved pipeline on the newer request-driven (`generate-request-batch --batch-file`) and plan-driven (`generate-plan-batch`) entrypoints: provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery includes executable backend evaluation metadata, repeated-SFX variation strategy has executable request-validation and provenance tracking support, review logs have executable generation/update surfaces (`write-review-log`, optional integration into approval/export commands, and result-JSON sourcing via `--from-result`), plan-driven orchestration enforces `durationTargetSeconds` on matched requests during execution, and the backward-compatible legacy `--request-file` path now supports explicit-duration behavior plus optional provenance sidecars while remaining a lighter-weight surface by default. Session-control continuity is synchronized with SESSION-026 queued as the next executable implementation step (legacy request-file batch-manifest parity).
+This repo now has a complete draft-to-approved pipeline on the newer request-driven (`generate-request-batch --batch-file`) and plan-driven (`generate-plan-batch`) entrypoints: provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery includes executable backend evaluation metadata, repeated-SFX variation strategy has executable request-validation and provenance tracking support, review logs have executable generation/update surfaces (`write-review-log`, optional integration into approval/export commands, and result-JSON sourcing via `--from-result`), plan-driven orchestration enforces `durationTargetSeconds` on matched requests during execution, and the backward-compatible legacy `--request-file` path now supports explicit-duration behavior plus optional provenance sidecars plus additive `batch_manifest.json` parity output while remaining compatibility-safe. Session-control continuity is synchronized with SESSION-027 queued as the next executable session-definition step.
