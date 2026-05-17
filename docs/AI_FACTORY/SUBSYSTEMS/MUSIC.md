@@ -13,11 +13,11 @@
 
 - per-target duration enforcement from plan metadata in execution paths
 - richer style-preset registry beyond current built-in styles
-- verified non-procedural backend adapters and quality benchmarks
+- verified non-procedural backend quality benchmarks using real downloaded model weights
 
-## Backend evaluation notes (SESSION-011)
+## Backend evaluation notes (SESSION-011 + optional neural scaffolding)
 
-- **Current implemented backend reality:** the only shipped backend is `procedural` (`audio_engine/ai/backend.py`).
+- **Current implemented backend reality:** `procedural` remains the default backend, with optional local-files-only neural adapters now available in `audio_engine/ai/backends/` (`musicgen`, `audiogen`, `kokoro`) when dependencies and local model folders are present.
 - **Current selection/discovery surfaces:** users can list registered backends with `audio-engine list-backends` and select one with `--backend` on music/SFX/voice generation commands.
 - **Current executable evaluation surface:** `BackendRegistry.evaluate_backends()` now reports backend availability, availability reason, dependency summary, and supported modalities; `audio-engine list-backends` prints this metadata.
 - **Availability behavior:** backend availability is dependency-driven (`is_available()`); missing runtime dependencies should be treated as unavailable/failing execution rather than as quality regressions.

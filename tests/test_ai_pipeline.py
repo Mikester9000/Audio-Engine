@@ -14,6 +14,7 @@ from audio_engine.ai import (
 )
 from audio_engine.ai.sfx_synth import synthesise_sfx, available_sfx_types
 from audio_engine.ai.voice_synth import synthesise_voice, VOICE_PRESETS
+from audio_engine.ai.backends import AudioGenBackend, KokoroBackend, MusicGenBackend
 
 
 SR = 22050
@@ -165,6 +166,35 @@ class TestBackendRegistry:
         assert procedural["availability_reason"] == "ready"
         assert "sfx" in procedural["supported_modalities"]
         assert "dependency_summary" in procedural
+
+    def test_optional_backends_import_does_not_break_registry(self):
+        assert "procedural" in BackendRegistry.available_backends()
+
+
+class TestOptionalNeuralBackends:
+    def test_musicgen_backend_falls_back_without_model(self, tmp_path):
+        backend = MusicGenBackend(model_path=tmp_path / "missing", sample_rate=SR, seed=7)
+        assert backend.name == "musicgen"
+        assert backend.is_available() is False
+        audio = backend.generate_music_audio("battle", duration=1.0)
+        assert audio.ndim == 2
+        assert audio.shape[1] == 2
+
+    def test_audiogen_backend_falls_back_without_model(self, tmp_path):
+        backend = AudioGenBackend(model_path=tmp_path / "missing", sample_rate=SR, seed=7)
+        assert backend.name == "audiogen"
+        assert backend.is_available() is False
+        audio = backend.generate_sfx_audio("explosion", duration=0.5)
+        assert audio.ndim == 1
+        assert len(audio) > 0
+
+    def test_kokoro_backend_falls_back_without_model(self, tmp_path):
+        backend = KokoroBackend(model_path=tmp_path / "missing", sample_rate=SR, seed=7)
+        assert backend.name == "kokoro"
+        assert backend.is_available() is False
+        audio = backend.generate_voice_audio("Welcome, hero.", voice_preset="narrator")
+        assert audio.ndim == 1
+        assert len(audio) > 0
 
 
 # ---------------------------------------------------------------------------

@@ -4,29 +4,29 @@
 
 ## Last completed change
 
-SESSION-023 + SESSION-024: Added optional provenance sidecars for legacy `generate-request-batch --request-file` runs and result-JSON sourced review-log writing (`write-review-log --from-result`) with metadata/relative-path handling and override parity.
+Added Windows offline bootstrap support and optional neural backend scaffolding:
+
+- `setup.bat` / `run.bat` in repo root
+- `tools/download_models.py` for idempotent local model downloads into `models/`
+- `audio_engine/ai/backends/` package with MusicGen/AudioGen/Kokoro adapters and safe registration guardrails
+- `WINDOWS_QUICKSTART.md` and `models/README.md`
+- `pyproject.toml` `[project.optional-dependencies].neural`
 
 ## Verified in this session
 
 ```bash
-python -m pytest tests/test_integration.py -k "append_from_result_json"
-python -m pytest tests/test_engine_cli.py -k "write_review_log_from_result"
+python -m pytest tests/test_ai_pipeline.py -k "OptionalNeuralBackends or optional_backends_import"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
-python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
-python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 ```
 
 Observed result:
-- targeted result-JSON review-log integration tests passed (`5` selected tests)
-- targeted result-JSON review-log CLI tests passed (`3` selected tests)
-- full repo test suite passed (`433`) and asset-manifest validation passed
-- updated session-control JSON files parsed successfully
-- SESSION-023 and SESSION-024 completed; queue advanced to SESSION-025
+- targeted optional-neural fallback tests passed
+- full repo test suite passed and asset-manifest validation passed
 
 ## Immediate next best task
 
-Execute `SESSION-025` from `docs/AI_FACTORY/SESSION_QUEUE.md`: define and queue the next executable implementation session, keeping continuity/session-control docs synchronized.
+Validate installed-model behavior for the new optional neural adapters on a Windows machine, then execute `SESSION-025` from `docs/AI_FACTORY/SESSION_QUEUE.md` to refresh continuity/session-control docs.
 
 ## Files future agents should read first
 

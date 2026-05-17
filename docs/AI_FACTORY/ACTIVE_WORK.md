@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline on the newer request-driven (`generate-request-batch --batch-file`) and plan-driven execution paths. SESSION-023 and SESSION-024 are now complete: the legacy request-file path can emit optional provenance sidecars and `write-review-log` can source entries directly from `request_batch_result.json`.
+The repository now has a complete draft-to-approved pipeline on the newer request-driven (`generate-request-batch --batch-file`) and plan-driven execution paths, plus Windows one-click setup/run scaffolding for optional offline neural generation (`setup.bat`, `run.bat`, `tools/download_models.py`, and local-files-only backend adapters).
 
 ## Now
 
@@ -45,7 +45,9 @@ The repository now has a complete draft-to-approved pipeline on the newer reques
 
 ## Recommended next PRs
 
-1. **Define and queue the next executable implementation session (SESSION-025)**
+1. **Stabilize optional neural backend quality + performance**
+   - Validate prompt presets and generation quality on real model downloads.
+2. **Define and queue the next executable implementation session (SESSION-025)**
    - Refresh continuity/session-control docs and set the next concrete implementation objective.
 
 ## Do not deprioritize
@@ -60,6 +62,6 @@ The repository now has a complete draft-to-approved pipeline on the newer reques
 ## Lower-priority work
 
 - premium voice generation
-- Windows-native developer ergonomics beyond basic setup
+- Windows-native developer ergonomics beyond the current setup/run bootstrap scripts
 - broad UI polish
 - nonessential refactors
