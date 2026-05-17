@@ -613,7 +613,7 @@ def _cmd_compose_piece(args: argparse.Namespace) -> None:
     print(f"\nDone. Saved to: {out_path}")
 
 
-
+def _cmd_list_styles(_args: argparse.Namespace) -> None:
     from audio_engine import AudioEngine
 
     styles = AudioEngine.available_styles()
@@ -1024,8 +1024,8 @@ def build_parser() -> argparse.ArgumentParser:
     sfx.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
 
     # --- remaster ---
-    # --- remaster ---
     rm = sub.add_parser(
+        "remaster",
         help=(
             "Remaster an existing WAV file by blending in real orchestral samples from a "
             "samples/ directory.  Drop .wav files into category sub-dirs (strings/, brass/, "
