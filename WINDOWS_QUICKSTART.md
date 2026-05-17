@@ -10,7 +10,7 @@
 
 Choose one:
 
-- `git clone <repo-url>`
+- `git clone https://github.com/Mikester9000/Audio-Engine.git`
 - Download ZIP from GitHub and extract it
 
 ## Step 2: Double-click `setup.bat`
