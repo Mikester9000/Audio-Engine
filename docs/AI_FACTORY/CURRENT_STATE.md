@@ -51,16 +51,14 @@ The repository contains a working Python audio engine with tests, a manifest val
 ### Commands verified in this session
 
 ```bash
-python -m pytest tests/test_ai_pipeline.py -k "OptionalNeuralBackends or optional_backends_import"
-python -m pytest
-python tools/validate-assets.py assets/examples/ --verbose
+python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
+python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 ```
 
 Observed result in this session:
 
-- optional neural backends import safely and fall back to procedural behavior when dependencies/models are absent
-- targeted neural-backend fallback tests passed
-- full repo test suite passed and asset-manifest validation passed
+- edited session-control JSON files parse successfully
+- current active session is SESSION-026 with synchronized queue/state/history continuity
 
 ## Current repository structure
 
@@ -107,4 +105,4 @@ None blocking the next session.
 
 ## Immediate interpretation
 
-This repo now has a complete draft-to-approved pipeline on the newer request-driven (`generate-request-batch --batch-file`) and plan-driven (`generate-plan-batch`) entrypoints: provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery includes executable backend evaluation metadata, repeated-SFX variation strategy has executable request-validation and provenance tracking support, review logs have executable generation/update surfaces (`write-review-log`, optional integration into approval/export commands, and result-JSON sourcing via `--from-result`), plan-driven orchestration enforces `durationTargetSeconds` on matched requests during execution, and the backward-compatible legacy `--request-file` path now supports explicit-duration behavior plus optional provenance sidecars while remaining a lighter-weight surface by default.
+This repo now has a complete draft-to-approved pipeline on the newer request-driven (`generate-request-batch --batch-file`) and plan-driven (`generate-plan-batch`) entrypoints: provenance sidecars → `qa-batch` → `export-drafts` → `approve-draft` → `approved/<type>/`. Requested `.ogg` outputs are strict in request-batch execution paths (no silent WAV fallback), backend selection/discovery includes executable backend evaluation metadata, repeated-SFX variation strategy has executable request-validation and provenance tracking support, review logs have executable generation/update surfaces (`write-review-log`, optional integration into approval/export commands, and result-JSON sourcing via `--from-result`), plan-driven orchestration enforces `durationTargetSeconds` on matched requests during execution, and the backward-compatible legacy `--request-file` path now supports explicit-duration behavior plus optional provenance sidecars while remaining a lighter-weight surface by default. Session-control continuity is synchronized with SESSION-026 queued as the next executable implementation step (legacy request-file batch-manifest parity).

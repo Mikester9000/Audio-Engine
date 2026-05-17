@@ -1,31 +1,30 @@
 {
-  "version": "1.6.0",
-  "lastUpdated": "2026-05-16",
+  "version": "1.7.0",
+  "lastUpdated": "2026-05-17",
   "currentSession": {
-    "id": "SESSION-025",
-    "title": "Define and queue the next executable implementation session",
+    "id": "SESSION-026",
+    "title": "Add legacy request-file batch-manifest parity",
     "status": "ready",
-    "taskType": "docs_only",
-    "objective": "Refresh continuity/session-control docs to reflect SESSION-023/024 completion and define the next concrete executable implementation task.",
+    "taskType": "provenance + cli",
+    "objective": "Reduce remaining divergence between newer request-batch execution and legacy --request-file execution by adding additive legacy batch-manifest output parity without breaking existing result JSON behavior.",
     "readFirst": [
-      "docs/AI_FACTORY/SESSION_QUEUE.md",
-      "docs/AI_FACTORY/HANDOFF.md",
-      "docs/AI_FACTORY/CURRENT_STATE.md",
-      "docs/AI_FACTORY/ACTIVE_WORK.md",
-      "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
-      "docs/AI_FACTORY/NEXT_PR_SEQUENCE.md",
+      "audio_engine/integration/asset_pipeline.py",
+      "audio_engine/cli.py",
+      "tests/test_integration.py",
+      "tests/test_engine_cli.py",
       "docs/AI_FACTORY/NO_DECISION_ZONES.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
       "docs/AI_FACTORY/SESSION_STATE.json",
-      "docs/AI_FACTORY/SESSION_HISTORY.md"
+      "docs/AI_FACTORY/VERIFICATION_PROFILES.md"
     ],
     "likelyModify": [
-      "docs/AI_FACTORY/SESSION_QUEUE.md",
-      "docs/AI_FACTORY/CURRENT_SESSION.json",
-      "docs/AI_FACTORY/SESSION_STATE.json",
-      "docs/AI_FACTORY/SESSION_HISTORY.md",
-      "docs/AI_FACTORY/ACTIVE_WORK.md",
-      "docs/AI_FACTORY/HANDOFF.md",
+      "audio_engine/integration/asset_pipeline.py",
+      "audio_engine/cli.py",
+      "tests/test_integration.py",
+      "tests/test_engine_cli.py",
+      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
       "docs/AI_FACTORY/CURRENT_STATE.md",
+      "docs/AI_FACTORY/HANDOFF.md",
       "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md"
     ]
   }

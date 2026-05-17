@@ -2,6 +2,23 @@
 
 > Append a short entry for every substantial PR. Keep entries brief and factual.
 
+## 2026-05-17 — Complete SESSION-025 (queue/state continuity refresh + next executable session definition)
+
+- Marked SESSION-025 as completed and synchronized session-control files:
+  - `docs/AI_FACTORY/SESSION_QUEUE.md`
+  - `docs/AI_FACTORY/CURRENT_SESSION.json`
+  - `docs/AI_FACTORY/SESSION_STATE.json`
+  - `docs/AI_FACTORY/SESSION_HISTORY.md`
+- Defined SESSION-026 as the next executable implementation task: additive legacy `batch_manifest.json` parity for `generate-request-batch --request-file` while preserving existing `request_batch_result.json` compatibility.
+- Refreshed continuity docs to match current session state:
+  - `docs/AI_FACTORY/ACTIVE_WORK.md`
+  - `docs/AI_FACTORY/HANDOFF.md`
+  - `docs/AI_FACTORY/CURRENT_STATE.md`
+  - `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`
+- Verification:
+  - `python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json` → PASS
+  - `python -m json.tool docs/AI_FACTORY/SESSION_STATE.json` → PASS
+
 ## 2026-05-16 — Complete SESSION-023 + SESSION-024 (legacy provenance sidecars + result-JSON review-log sourcing)
 
 - Added optional provenance-sidecar writing for legacy `generate-request-batch --request-file` via `--write-provenance`.

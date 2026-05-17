@@ -4,29 +4,26 @@
 
 ## Last completed change
 
-Added Windows offline bootstrap support and optional neural backend scaffolding:
+Completed SESSION-025 (docs-only continuity/session-control refresh):
 
-- `setup.bat` / `run.bat` in repo root
-- `tools/download_models.py` for idempotent local model downloads into `models/`
-- `audio_engine/ai/backends/` package with MusicGen/AudioGen/Kokoro adapters and safe registration guardrails
-- `WINDOWS_QUICKSTART.md` and `models/README.md`
-- `pyproject.toml` `[project.optional-dependencies].neural`
+- Marked SESSION-025 complete and advanced the queue to SESSION-026.
+- Synchronized `SESSION_QUEUE.md`, `CURRENT_SESSION.json`, `SESSION_STATE.json`, and `SESSION_HISTORY.md`.
+- Updated continuity docs (`ACTIVE_WORK.md`, `CURRENT_STATE.md`, `IMPLEMENTATION_MATRIX.md`, `CHANGE_JOURNAL.md`) to match current session state.
 
 ## Verified in this session
 
 ```bash
-python -m pytest tests/test_ai_pipeline.py -k "OptionalNeuralBackends or optional_backends_import"
-python -m pytest
-python tools/validate-assets.py assets/examples/ --verbose
+python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
+python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 ```
 
 Observed result:
-- targeted optional-neural fallback tests passed
-- full repo test suite passed and asset-manifest validation passed
+- edited JSON session-control files parse successfully
+- continuity/session-control docs are synchronized on SESSION-026 as the active ready session
 
 ## Immediate next best task
 
-Validate installed-model behavior for the new optional neural adapters on a Windows machine, then execute `SESSION-025` from `docs/AI_FACTORY/SESSION_QUEUE.md` to refresh continuity/session-control docs.
+Execute `SESSION-026` from `docs/AI_FACTORY/SESSION_QUEUE.md` to add additive legacy `batch_manifest.json` output parity on `generate-request-batch --request-file` without breaking existing result JSON behavior.
 
 ## Files future agents should read first
 
@@ -64,3 +61,4 @@ Validate installed-model behavior for the new optional neural adapters on a Wind
 - [x] Queue advancement and next executable session definition (SESSION-022)
 - [x] Optional provenance sidecars for legacy request-file execution path (SESSION-023)
 - [x] Result-JSON sourced review-log writing for legacy request-file workflow (SESSION-024)
+- [x] Queue advancement and next executable session definition (SESSION-025)
