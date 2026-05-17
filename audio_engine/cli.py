@@ -210,7 +210,7 @@ def _cmd_remaster(args: argparse.Namespace) -> None:
         base_backend=base_backend,
     )
 
-    cats = backend._lib.available_categories()
+    cats = backend.available_sample_categories()
     if not cats:
         print(
             f"Warning: no .wav samples found in '{samples_dir}'. "
@@ -582,6 +582,8 @@ def _cmd_compose_piece(args: argparse.Namespace) -> None:
     # Resolve backend
     if args.samples_dir:
         backend = "sample"
+    elif args.orchestral:
+        backend = "synth_orchestral"
     elif args.ps1:
         backend = "ps1"
     else:
@@ -606,6 +608,7 @@ def _cmd_compose_piece(args: argparse.Namespace) -> None:
         sections=sections,
         with_vocals=args.with_vocals,
         duration=args.duration,
+        quiet=args.quiet,
     )
 
     exporter = AudioExporter(sample_rate=args.sample_rate)
@@ -914,7 +917,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--samples-dir",
         default=None,
         metavar="DIR",
-        help="Path to samples directory (voice samples not blended, but base backend is set).",
+        help=(
+            "Path to samples directory (no effect on voice audio — voice samples are not "
+            "blended; the base backend is still selected by --ps1/--orchestral)."
+        ),
     )
     gv.add_argument(
         "--ps1-reverb",
@@ -1248,6 +1254,10 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="DIR",
         help="Path to samples directory for sample-augmented generation.",
+    )
+    cp.add_argument(
+        "--quiet", action="store_true",
+        help="Suppress per-section progress messages.",
     )
 
     # --- list-styles ---

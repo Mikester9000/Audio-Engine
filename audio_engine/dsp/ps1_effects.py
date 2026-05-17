@@ -91,18 +91,24 @@ def _ms_to_samples(ms: float, sr: int) -> int:
 
 
 def _lp_filter(signal: np.ndarray, cutoff_hz: float, sr: int) -> np.ndarray:
-    """Single-pole IIR low-pass filter (efficient, no scipy import needed)."""
+    """Single-pole IIR low-pass filter (vectorised via scipy.signal.lfilter when available)."""
     if cutoff_hz >= sr / 2.0:
         return signal
     rc = 1.0 / (2.0 * np.pi * cutoff_hz)
     dt = 1.0 / sr
     alpha = dt / (rc + dt)
-    out = np.empty_like(signal, dtype=np.float64)
-    prev = float(signal[0])
-    for i, x in enumerate(signal):
-        prev = prev + alpha * (float(x) - prev)
-        out[i] = prev
-    return out.astype(np.float32)
+    try:
+        from scipy.signal import lfilter  # type: ignore[import]
+        b = np.array([alpha], dtype=np.float64)
+        a = np.array([1.0, -(1.0 - alpha)], dtype=np.float64)
+        return lfilter(b, a, signal.astype(np.float64)).astype(np.float32)
+    except ImportError:
+        out = np.empty_like(signal, dtype=np.float64)
+        prev = float(signal[0])
+        for i, x in enumerate(signal):
+            prev = prev + alpha * (float(x) - prev)
+            out[i] = prev
+        return out.astype(np.float32)
 
 
 class PS1EffectsChain:
@@ -221,19 +227,30 @@ class PS1EffectsChain:
         lp_cutoff = float(params["lp_cutoff"])
         wet = float(params["wet"])
 
-        # Build multi-tap comb reverb
+        # Build multi-tap comb reverb (vectorised via scipy.signal.lfilter when available)
         reverb_out = np.zeros(n + 1024, dtype=np.float64)
-        for delay_ms in params["delay_ms"]:
-            delay_n = _ms_to_samples(delay_ms, sr) + pre_delay_n
-            buf = np.zeros(delay_n + n, dtype=np.float64)
-            buf[:n] = sig
-            tail = np.zeros(n, dtype=np.float64)
-            for i in range(n):
-                if i >= delay_n:
-                    tail[i] = buf[i - delay_n] + feedback * tail[i - delay_n]
-                else:
-                    tail[i] = 0.0
-            reverb_out[:n] += tail / len(params["delay_ms"])
+        n_taps = len(params["delay_ms"])
+        try:
+            from scipy.signal import lfilter  # type: ignore[import]
+            for delay_ms in params["delay_ms"]:
+                delay_n = _ms_to_samples(delay_ms, sr) + pre_delay_n
+                # Feedback comb filter: y[n] = x[n-D] + feedback*y[n-D]
+                # Transfer function: H(z) = z^{-D} / (1 - feedback*z^{-D})
+                b_comb = np.zeros(delay_n + 1, dtype=np.float64)
+                b_comb[delay_n] = 1.0
+                a_comb = np.zeros(delay_n + 1, dtype=np.float64)
+                a_comb[0] = 1.0
+                a_comb[delay_n] = -feedback
+                tail = lfilter(b_comb, a_comb, sig)
+                reverb_out[:n] += tail / n_taps
+        except ImportError:
+            for delay_ms in params["delay_ms"]:
+                delay_n = _ms_to_samples(delay_ms, sr) + pre_delay_n
+                tail = np.zeros(n, dtype=np.float64)
+                for i in range(n):
+                    if i >= delay_n:
+                        tail[i] = sig[i - delay_n] + feedback * tail[i - delay_n]
+                reverb_out[:n] += tail / n_taps
 
         reverb_out = reverb_out[:n]
 

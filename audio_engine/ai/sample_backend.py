@@ -124,6 +124,10 @@ class SampleBackend(InferenceBackend):
     def name(self) -> str:
         return f"sample[{self._base.name}]"
 
+    def available_sample_categories(self) -> list[str]:
+        """Return sorted list of sample categories with at least one loaded sample."""
+        return self._lib.available_categories()
+
     def dependency_summary(self) -> str:
         cats = self._lib.available_categories()
         if cats:

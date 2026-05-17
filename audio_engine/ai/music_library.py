@@ -164,8 +164,6 @@ FF_RADIO_CATALOG: list[TrackEntry] = [
     TrackEntry("folk_tavern",      "Folk Tavern",          "generic","Generic",              "theme",     130, "lively",    False, "Unknown",         "folk-tavern",       ["folk","tavern","lively","drinking"]),
     TrackEntry("horror_ambient",   "Horror Ambient",       "generic","Generic",              "ambient",    55, "unsettling",False, "Unknown",         "horror-ambient",    ["horror","dark","ambient","dissonant"]),
     TrackEntry("triumph_fanfare",  "Triumph Fanfare",      "generic","Generic",              "fanfare",   120, "triumphant",False, "Unknown",         "triumph-fanfare",   ["fanfare","victory","brass","short"]),
-    TrackEntry("ff6_opera",        "Opera Aria",           "ff6",  "Final Fantasy VI",       "opera",      80, "romantic",  True,  "Nobuo Uematsu",   "opera-aria",        ["opera","ballad","vocals","romantic"]),
-    TrackEntry("ff10_calm",        "Calm Ballad",          "ff10", "Final Fantasy X",        "theme",      76, "bittersweet",False,"Nobuo Uematsu",   "calm-ballad",       ["piano","strings","emotional","bittersweet"]),
 ]
 
 # Index for fast lookup

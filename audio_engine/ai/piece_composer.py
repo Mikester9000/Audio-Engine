@@ -188,6 +188,7 @@ class PieceComposer:
         with_vocals: bool = True,
         duration: float = 90.0,
         backend: str | None = None,
+        quiet: bool = False,
     ) -> np.ndarray:
         """Generate a multi-section musical piece.
 
@@ -235,7 +236,8 @@ class PieceComposer:
                 rng=self._rng,
             )
             section_audios.append(audio)
-            print(f"  [{i+1}/{len(sec_defs)}] {sec_def.name}: {sec_dur:.1f}s", flush=True)
+            if not quiet:
+                print(f"  [{i+1}/{len(sec_defs)}] {sec_def.name}: {sec_dur:.1f}s", flush=True)
 
         # Assemble with crossfades
         assembled = self._crossfade_sections(section_audios, sec_defs)

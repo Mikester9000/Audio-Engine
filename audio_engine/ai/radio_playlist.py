@@ -239,6 +239,7 @@ class RadioPlaylistGenerator:
                         entry=entry,
                         duration=track_duration,
                         with_vocals=with_vocals,
+                        quiet=quiet,
                     )
                     actual_duration = audio.shape[0] / self.sample_rate
                     self._export(audio, out_path, fmt)
@@ -319,6 +320,7 @@ class RadioPlaylistGenerator:
         entry: TrackEntry | None,
         duration: float,
         with_vocals: bool | None,
+        quiet: bool = False,
     ) -> np.ndarray:
         """Generate a full structured piece for one track."""
         from audio_engine.ai.piece_composer import PieceComposer, SECTION_TEMPLATES
@@ -350,6 +352,7 @@ class RadioPlaylistGenerator:
             sections=sections,
             with_vocals=use_vocals,
             duration=duration,
+            quiet=quiet,
         )
 
     def _export(self, audio: np.ndarray, path: Path, fmt: str) -> None:
