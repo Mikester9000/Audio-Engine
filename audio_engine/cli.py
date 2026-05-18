@@ -138,9 +138,11 @@ def _cmd_generate_music(args: argparse.Namespace) -> None:
     from audio_engine.ai import MusicGen
 
     backend = _make_backend(args)
-    gen = MusicGen(sample_rate=args.sample_rate, backend=backend, seed=args.seed)
+    profile = getattr(args, "profile", "game") or "game"
+    gen = MusicGen(sample_rate=args.sample_rate, backend=backend, seed=args.seed,
+                   mastering_profile=profile)
     mode_label = _resolve_backend(args)
-    print(f"Generating music [{mode_label}]: '{args.prompt}' → {args.output} …")
+    print(f"Generating music [{mode_label}] [{profile}]: '{args.prompt}' → {args.output} …")
     path = gen.generate_to_file(
         prompt=args.prompt,
         output_path=args.output,
@@ -805,7 +807,122 @@ def _cmd_list_backends(_args: argparse.Namespace) -> None:
         )
 
 
+def _cmd_verify_backends(args: argparse.Namespace) -> None:
+    """Run deterministic preflight checks on all registered backends and emit a JSON report."""
+    import datetime
+    import json
+
+    import numpy as np
+
+    import audio_engine.ai.backends as _optional_backends  # noqa: F401
+    from audio_engine.ai.backend import BackendRegistry
+
+    sample_rate = args.sample_rate
+    smoke = args.smoke
+    quiet = args.quiet
+
+    results: list[dict] = []
+    all_available = True
+
+    for name in BackendRegistry.available_backends():
+        try:
+            backend = BackendRegistry.get(name, sample_rate=sample_rate)
+            available = backend.is_available()
+            reason = backend.availability_reason()
+            modalities = list(backend.supported_modalities())
+            dep_summary = backend.dependency_summary()
+        except Exception as exc:
+            results.append({
+                "backend": name,
+                "available": False,
+                "availability_reason": f"instantiation error: {exc}",
+                "supported_modalities": [],
+                "dependency_summary": "unknown",
+                "smoke_run": None,
+            })
+            all_available = False
+            if not quiet:
+                print(f"  [error]  {name}: {exc}")
+            continue
+
+        smoke_backend = backend
+        if smoke and available:
+            try:
+                smoke_backend = BackendRegistry.get(name, sample_rate=sample_rate, seed=42)
+            except TypeError:
+                smoke_backend = backend
+
+        smoke_result: dict | None = None
+        if smoke and available:
+            smoke_result = {"music": None, "sfx": None, "voice": None}
+            for modality in modalities:
+                try:
+                    if modality == "music":
+                        audio = smoke_backend.generate_music_audio(
+                            style="battle",
+                            duration=0.25,
+                        )
+                        ok = isinstance(audio, np.ndarray) and audio.size > 0
+                        smoke_result["music"] = "pass" if ok else "fail: empty output"
+                    elif modality == "sfx":
+                        audio = smoke_backend.generate_sfx_audio(
+                            sfx_type="explosion",
+                            duration=0.25,
+                        )
+                        ok = isinstance(audio, np.ndarray) and audio.size > 0
+                        smoke_result["sfx"] = "pass" if ok else "fail: empty output"
+                    elif modality == "voice":
+                        audio = smoke_backend.generate_voice_audio(text="hello")
+                        ok = isinstance(audio, np.ndarray) and audio.size > 0
+                        smoke_result["voice"] = "pass" if ok else "fail: empty output"
+                except Exception as exc:
+                    smoke_result[modality] = f"fail: {exc}"
+
+        record = {
+            "backend": name,
+            "available": available,
+            "availability_reason": reason,
+            "supported_modalities": modalities,
+            "dependency_summary": dep_summary,
+            "smoke_run": smoke_result,
+        }
+        results.append(record)
+        if not available:
+            all_available = False
+
+        if not quiet:
+            status_label = "available" if available else "unavailable"
+            print(f"  [{status_label}]  {name}: {reason}")
+            if smoke_result:
+                for mod, res in smoke_result.items():
+                    if res is not None:
+                        print(f"             smoke/{mod}: {res}")
+
+    report = {
+        "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+        "sampleRate": sample_rate,
+        "smokeRunEnabled": smoke,
+        "allAvailable": all_available,
+        "backends": results,
+    }
+
+    if args.output_report:
+        out_path = Path(args.output_report)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+        if not quiet:
+            print(f"\nReport written → {out_path}")
+    else:
+        print()
+        print(json.dumps(report, indent=2))
+
+    if not all_available:
+        raise SystemExit(2)
+
+
 def build_parser() -> argparse.ArgumentParser:
+    from audio_engine.render.offline_bounce import VALID_PROFILES
+
     parser = argparse.ArgumentParser(
         prog="audio-engine",
         description="Audio Engine – produce AI-assisted music, SFX, and voice.",
@@ -882,6 +999,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="room",
         choices=["room", "hall", "space", "echo", "pipe", "off"],
         help="SPU reverb mode used with --ps1 (default: room).",
+    )
+    gm.add_argument(
+        "--profile",
+        choices=VALID_PROFILES,
+        default="game",
+        help="Mastering profile preset (default: game).",
     )
 
     # --- generate-sfx ---
@@ -1312,6 +1435,37 @@ def build_parser() -> argparse.ArgumentParser:
 
     # --- list-backends ---
     sub.add_parser("list-backends", help="List available generation backends.")
+
+    # --- verify-backends ---
+    vb = sub.add_parser(
+        "verify-backends",
+        help=(
+            "Run deterministic preflight checks on all registered backends and emit a "
+            "machine-readable JSON report.  Use --smoke to also run brief generation "
+            "smoke tests when a backend is available."
+        ),
+    )
+    vb.add_argument(
+        "--output-report", "-o",
+        help="Path to write the JSON preflight report (optional; prints to stdout if omitted).",
+    )
+    vb.add_argument(
+        "--smoke",
+        action="store_true",
+        help=(
+            "Run a brief (0.25 s) generation smoke test per modality for each available "
+            "backend.  Results appear in the report under 'smoke_run'."
+        ),
+    )
+    vb.add_argument(
+        "--sample-rate", type=int, default=44100,
+        help="Sample rate passed to each backend during instantiation (default: 44100).",
+    )
+    vb.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-backend progress messages (report is still written/printed).",
+    )
 
     # --- studio ---
     sub.add_parser("studio", help="Launch the local Tkinter Audio Engine Studio.")
@@ -1826,6 +1980,7 @@ def main(argv: list[str] | None = None) -> int:
         "list-styles": _cmd_list_styles,
         "list-instruments": _cmd_list_instruments,
         "list-backends": _cmd_list_backends,
+        "verify-backends": _cmd_verify_backends,
         "studio": _cmd_studio,
         "generate-request-batch": _cmd_generate_request_batch,
         "generate-plan-batch": _cmd_generate_plan_batch,

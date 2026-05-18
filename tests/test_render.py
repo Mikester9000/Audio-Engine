@@ -92,14 +92,14 @@ class TestOfflineBounce:
         with pytest.raises(ValueError, match="loop_end"):
             bounce.process_and_export(_stereo(_sine()), tmp_path / "x.wav", loop_start=0)
 
-    @pytest.mark.parametrize("profile", ["game", "ost", "youtube", "procedural_neutral"])
+    @pytest.mark.parametrize("profile", ["game", "ost", "youtube", "vocal_mix", "procedural_neutral"])
     def test_profile_presets_process(self, profile):
         bounce = OfflineBounce(SR, profile=profile)
         out = bounce.process(_stereo(_sine(duration=0.5)))
         assert out.shape[1] == 2
         assert out.dtype == np.float32
 
-    @pytest.mark.parametrize("profile", ["ost", "youtube", "procedural_neutral"])
+    @pytest.mark.parametrize("profile", ["ost", "youtube", "vocal_mix", "procedural_neutral"])
     def test_profile_presets_respect_limiter_ceiling_after_spatial_processing(self, profile):
         ceiling_db = -6.0
         ceiling = 10.0 ** (ceiling_db / 20.0)
@@ -114,6 +114,26 @@ class TestOfflineBounce:
         loud = np.ones((SR * 2, 2), dtype=np.float32)
         out = bounce.process(loud)
         assert np.max(np.abs(out)) <= ceiling + 1e-3
+
+    def test_vocal_mix_profile_produces_nonzero_output(self):
+        """vocal_mix profile should produce non-silent output with appropriate reverb."""
+        bounce = OfflineBounce(SR, profile="vocal_mix")
+        signal = _stereo(_sine(duration=0.5))
+        out = bounce.process(signal)
+        assert out.shape[1] == 2
+        assert np.max(np.abs(out)) > 1e-6
+
+    def test_invalid_profile_raises(self):
+        with pytest.raises(ValueError, match="profile must be one of"):
+            OfflineBounce(SR, profile="nonexistent_profile")
+
+    def test_valid_profiles_exported(self):
+        from audio_engine.render.offline_bounce import VALID_PROFILES
+        assert "game" in VALID_PROFILES
+        assert "ost" in VALID_PROFILES
+        assert "vocal_mix" in VALID_PROFILES
+        assert "youtube" in VALID_PROFILES
+        assert "procedural_neutral" in VALID_PROFILES
 
 
 # ---------------------------------------------------------------------------

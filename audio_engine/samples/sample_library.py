@@ -31,8 +31,8 @@ to pure procedural synthesis.
 
 Pitch shifting
 --------------
-Samples are pitch-shifted via ratio-based resampling (``scipy.signal.resample_poly``
-when available, otherwise a simple numpy repeat/decimate).  This is the same
+Samples are pitch-shifted via ratio-based resampling (``scipy.signal.resample``
+when available, otherwise numpy interpolation).  This is the same
 technique used by tracker software and early samplers — appropriate for the
 PS1/PS2 aesthetic where pitch shifting was done in hardware via playback rate.
 """

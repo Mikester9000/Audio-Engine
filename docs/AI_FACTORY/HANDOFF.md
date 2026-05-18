@@ -4,7 +4,44 @@
 
 ## Last completed change
 
-Completed procedural audio quality-overhaul implementation scope:
+Completed SESSION-028, SESSION-035, SESSION-030, SESSION-033, SESSION-034, and SESSION-039 in a single PR:
+
+- **SESSION-028** (`verify-backends`): Added `audio-engine verify-backends` CLI command with deterministic per-backend availability checks, optional 0.25 s smoke runs per modality, and a structured JSON report. Exits 0 when all backends are available; exits 2 when any are unavailable. 6 targeted tests added.
+- **SESSION-035** (mastering profiles): Added `vocal_mix` profile to `OfflineBounce` (low-mid tighten + air boost + 0.12 reverb mix; reverb preset `medium_hall`). Exported `VALID_PROFILES` constant. Added `mastering_profile` parameter to `MusicGen` so CLI `--profile` wires directly to the bounce pipeline. Exposed `--profile` flag on `generate-music`. 4 new tests.
+- **SESSION-030** (WAV ingestion contract): Created `docs/AI_FACTORY/SCHEMAS/WAV_INGESTION_CONTRACT.md` with explicit folder layout, accepted formats, naming rules, pitch-shift behavior, rejection rules, and CLI integration table.
+- **SESSION-033** (license inventory): Created `docs/AI_FACTORY/LICENSE_INVENTORY.md` with SPDX-mapped per-package rows for all core, optional neural, and model-weight dependencies.
+- **SESSION-034** (commercial eligibility matrix): Created `docs/AI_FACTORY/COMMERCIAL_ELIGIBILITY_MATRIX.md` with allow/conditional/block by backend×model combination and safe commercial-use workflow.
+- **SESSION-039** (autopilot contracts): Created `docs/AI_FACTORY/AUTOPILOT_COMMAND_CONTRACTS.md` with ordered no-choice step sequences for all 11 production workflow types.
+
+## Verified in this session
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest   # 928 passed
+python tools/validate-assets.py assets/examples/ --verbose
+python -m pytest tests/test_engine_cli.py -k "verify_backends"
+python -m pytest tests/test_render.py -k "vocal_mix"
+python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
+python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
+```
+
+Observed result:
+- full pytest passes (928 tests)
+- asset manifest validation passes
+- all `verify_backends` tests pass (6 new tests)
+- all `vocal_mix` render tests pass
+- SESSION_STATE.json and CURRENT_SESSION.json parse cleanly
+
+## Immediate next best task
+
+Execute `SESSION-036` (expand QA gates for professional WAV release quality).
+
+## Files future agents should read first
+
+1. `docs/AI_FACTORY/README.md`
+2. `docs/AI_FACTORY/CURRENT_STATE.md`
+3. `docs/AI_FACTORY/SESSION_QUEUE.md`
+
 
 - Replaced Markov-only melody behavior with structured phrase planning (`intro → A → A-var → B → climax → cadence`) using new `audio_engine/composer/phrase.py` (`SectionPlanner`, `MotifBank`).
 - Upgraded procedural music arrangement to layered orchestration with cadence-aware phrase endings and loop pickup continuity while keeping deterministic seed behavior.

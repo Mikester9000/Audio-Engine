@@ -844,6 +844,126 @@ def test_cli_list_backends(capsys):
     assert "supports:" in captured.out
 
 
+# ---------------------------------------------------------------------------
+# SESSION-028: verify-backends tests
+# ---------------------------------------------------------------------------
+
+def test_cli_verify_backends_subcommand_registered():
+    import argparse
+
+    parser = build_parser()
+    subparsers_actions = [
+        action
+        for action in parser._actions
+        if isinstance(action, argparse._SubParsersAction)
+    ]
+    assert subparsers_actions
+    assert "verify-backends" in subparsers_actions[0].choices
+
+
+def test_cli_verify_backends_returns_json(tmp_path, capsys):
+    import json
+
+    report_path = tmp_path / "preflight.json"
+    rc = main(["verify-backends", "--output-report", str(report_path)])
+    # rc is 0 when all backends available; procedural is always available
+    assert rc in (0, 2)
+    assert report_path.exists()
+    report = json.loads(report_path.read_text())
+    assert "backends" in report
+    assert "generatedAt" in report
+    assert "allAvailable" in report
+    assert isinstance(report["backends"], list)
+    names = [b["backend"] for b in report["backends"]]
+    assert "procedural" in names
+
+
+def test_cli_verify_backends_procedural_available(tmp_path):
+    import json
+
+    report_path = tmp_path / "preflight.json"
+    main(["verify-backends", "--output-report", str(report_path), "--quiet"])
+    report = json.loads(report_path.read_text())
+    procedural = next(b for b in report["backends"] if b["backend"] == "procedural")
+    assert procedural["available"] is True
+
+
+def test_cli_verify_backends_prints_to_stdout_when_no_report(capsys):
+    import json
+
+    rc = main(["verify-backends", "--quiet"])
+    captured = capsys.readouterr()
+    # Output should be valid JSON even when no --output-report path given
+    report = json.loads(captured.out)
+    assert "backends" in report
+
+
+def test_cli_verify_backends_smoke_run_procedural(tmp_path):
+    import json
+
+    report_path = tmp_path / "preflight_smoke.json"
+    rc = main(["verify-backends", "--smoke", "--output-report", str(report_path), "--quiet"])
+    assert rc in (0, 2)
+    report = json.loads(report_path.read_text())
+    assert report["smokeRunEnabled"] is True
+    procedural = next(b for b in report["backends"] if b["backend"] == "procedural")
+    assert procedural["smoke_run"] is not None
+    # At least music should pass for the procedural backend
+    assert procedural["smoke_run"].get("music") == "pass"
+
+
+def test_cli_verify_backends_exits_2_when_backend_unavailable(tmp_path, monkeypatch):
+    from audio_engine.ai.backend import BackendRegistry
+
+    class _UnavailableBackend:
+        def is_available(self):
+            return False
+
+        def availability_reason(self):
+            return "simulated unavailable"
+
+        def supported_modalities(self):
+            return ("music",)
+
+        def dependency_summary(self):
+            return "simulated dependency"
+
+    monkeypatch.setattr(
+        BackendRegistry,
+        "available_backends",
+        classmethod(lambda cls: ["simulated_backend"]),
+    )
+    monkeypatch.setattr(
+        BackendRegistry,
+        "get",
+        classmethod(lambda cls, name, **kwargs: _UnavailableBackend()),
+    )
+
+    report_path = tmp_path / "preflight_unavailable.json"
+    with pytest.raises(SystemExit) as excinfo:
+        main(["verify-backends", "--output-report", str(report_path), "--quiet"])
+
+    assert excinfo.value.code == 2
+    report = json.loads(report_path.read_text())
+    assert report["allAvailable"] is False
+    assert report["backends"][0]["available"] is False
+
+
+def test_cli_verify_backends_report_schema(tmp_path):
+    import json
+
+    report_path = tmp_path / "preflight_schema.json"
+    main(["verify-backends", "--output-report", str(report_path), "--quiet"])
+    report = json.loads(report_path.read_text())
+    for backend in report["backends"]:
+        assert "backend" in backend
+        assert "available" in backend
+        assert "availability_reason" in backend
+        assert "supported_modalities" in backend
+        assert "dependency_summary" in backend
+        assert "smoke_run" in backend
+
+
 def test_cli_generate_plan_batch_subcommand_registered(capsys):
     import argparse
 
@@ -914,3 +1034,68 @@ def test_cli_generate_voice_accepts_seed_and_backend(tmp_path):
     ])
     assert rc == 0
     assert Path(out).exists()
+
+
+# ---------------------------------------------------------------------------
+# SESSION-035: mastering profile tests
+# ---------------------------------------------------------------------------
+
+def test_cli_generate_music_profile_flag_vocal_mix(tmp_path):
+    """--profile vocal_mix should be accepted and produce a WAV output."""
+    out = str(tmp_path / "music_vocal.wav")
+    rc = main([
+        "generate-music",
+        "--prompt", "calm ambient exploration",
+        "--duration", "0.5",
+        "--output", out,
+        "--seed", "42",
+        "--profile", "vocal_mix",
+    ])
+    assert rc == 0
+    assert Path(out).exists()
+    assert Path(out).stat().st_size > 0
+
+
+def test_cli_generate_music_profile_flag_ost(tmp_path):
+    """--profile ost should be accepted and produce a WAV output."""
+    out = str(tmp_path / "music_ost.wav")
+    rc = main([
+        "generate-music",
+        "--prompt", "orchestral overworld theme",
+        "--duration", "0.5",
+        "--output", out,
+        "--seed", "7",
+        "--profile", "ost",
+    ])
+    assert rc == 0
+    assert Path(out).exists()
+
+
+def test_cli_generate_music_profile_flag_default_game(tmp_path):
+    """--profile game is the default and should work without explicit flag."""
+    out = str(tmp_path / "music_game.wav")
+    rc = main([
+        "generate-music",
+        "--prompt", "battle theme",
+        "--duration", "0.5",
+        "--output", out,
+        "--seed", "1",
+    ])
+    assert rc == 0
+    assert Path(out).exists()
+
+
+def test_cli_generate_music_profile_choices_match_offline_bounce():
+    import argparse
+
+    from audio_engine.render.offline_bounce import VALID_PROFILES
+
+    parser = build_parser()
+    subparsers_action = next(
+        action for action in parser._actions if isinstance(action, argparse._SubParsersAction)
+    )
+    gm_parser = subparsers_action.choices["generate-music"]
+    profile_action = next(
+        action for action in gm_parser._actions if action.dest == "profile"
+    )
+    assert list(profile_action.choices) == list(VALID_PROFILES)

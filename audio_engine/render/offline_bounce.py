@@ -28,8 +28,10 @@ from audio_engine.dsp.reverb import apply_reverb
 from audio_engine.dsp.stereo import apply_mid_side_width
 from audio_engine.export.audio_exporter import AudioExporter
 
-__all__ = ["OfflineBounce"]
-_VALID_PROFILES = {"game", "ost", "youtube", "procedural_neutral"}
+__all__ = ["OfflineBounce", "VALID_PROFILES"]
+_VALID_PROFILES = {"game", "ost", "youtube", "vocal_mix", "procedural_neutral"}
+#: Public alias for use in CLI argument choices.
+VALID_PROFILES = sorted(_VALID_PROFILES)
 
 
 def _lufs_loudness(signal: np.ndarray, sample_rate: int) -> float:
@@ -101,7 +103,7 @@ class OfflineBounce:
         ceiling_db: float | None = None,
         apply_master_eq: bool = True,
         apply_compression: bool = True,
-        profile: Literal["game", "ost", "youtube", "procedural_neutral"] = "game",
+        profile: Literal["game", "ost", "youtube", "vocal_mix", "procedural_neutral"] = "game",
     ) -> None:
         if profile not in _VALID_PROFILES:
             valid = ", ".join(sorted(_VALID_PROFILES))
@@ -112,6 +114,7 @@ class OfflineBounce:
             "game": {"target_lufs": -16.0, "ceiling_db": -0.3, "width": 1.0, "reverb_mix": 0.0},
             "ost": {"target_lufs": -14.0, "ceiling_db": -0.8, "width": 1.2, "reverb_mix": 0.18},
             "youtube": {"target_lufs": -14.0, "ceiling_db": -1.0, "width": 1.15, "reverb_mix": 0.08},
+            "vocal_mix": {"target_lufs": -16.0, "ceiling_db": -0.5, "width": 1.1, "reverb_mix": 0.12},
             "procedural_neutral": {"target_lufs": -16.0, "ceiling_db": -0.8, "width": 1.0, "reverb_mix": 0.03},
         }[profile]
 
@@ -154,6 +157,11 @@ class OfflineBounce:
             eq.add_band(EQBand(9000.0, gain_db=+0.5, q=0.707, band_type="high_shelf"))
         elif profile == "youtube":
             eq.add_band(EQBand(120.0, gain_db=-1.0, q=0.707, band_type="low_shelf"))
+            eq.add_band(EQBand(8000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
+        elif profile == "vocal_mix":
+            # Tighten low-mids to reduce muddiness under vocals
+            eq.add_band(EQBand(200.0, gain_db=-2.0, q=0.707, band_type="low_shelf"))
+            # Air boost to add sparkle without harshness
             eq.add_band(EQBand(8000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
         else:
             # Low-shelf: gently tighten the low end
@@ -201,7 +209,12 @@ class OfflineBounce:
             sig = apply_mid_side_width(sig, width=self._profile_width)
 
         if self._profile_reverb_mix > 0.0:
-            preset = "large_hall" if self.profile == "ost" else "small_room"
+            if self.profile == "ost":
+                preset = "large_hall"
+            elif self.profile == "vocal_mix":
+                preset = "medium_hall"
+            else:
+                preset = "small_room"
             sig = apply_reverb(sig, self.sample_rate, preset=preset, mix=self._profile_reverb_mix)
 
         # Re-apply limiting after profile-dependent spatial/tonal stages so
