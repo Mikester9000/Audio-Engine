@@ -114,19 +114,19 @@ class Effects:
         """
         wet = np.clip(wet, 0.0, 1.0)
         n = len(signal)
+        if n == 0:
+            return signal.astype(np.float32)
         t = np.arange(n) / self.sample_rate
         lfo = depth * self.sample_rate * (0.5 + 0.5 * np.sin(2.0 * np.pi * rate * t))
-        chorus_out = np.zeros(n, dtype=np.float64)
         sig_f64 = signal.astype(np.float64)
-        for i in range(n):
-            delay_f = lfo[i]
-            delay_i = int(delay_f)
-            frac = delay_f - delay_i
-            idx0 = i - delay_i
-            idx1 = idx0 - 1
-            s0 = sig_f64[max(idx0, 0)]
-            s1 = sig_f64[max(idx1, 0)]
-            chorus_out[i] = s0 + frac * (s1 - s0)
+        idx = np.arange(n, dtype=np.float64) - lfo
+        idx = np.clip(idx, 0.0, n - 1.0)
+        idx0 = np.floor(idx).astype(np.int64)
+        idx1 = np.clip(idx0 - 1, 0, n - 1)
+        frac = idx - idx0
+        s0 = sig_f64[idx0]
+        s1 = sig_f64[idx1]
+        chorus_out = s0 + frac * (s1 - s0)
         return (wet * chorus_out + (1.0 - wet) * sig_f64).astype(np.float32)
 
     # ------------------------------------------------------------------

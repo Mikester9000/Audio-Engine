@@ -2,14 +2,14 @@
 
 ## What exists now
 
-- local formant-based voice synthesis
+- local deterministic phoneme-aware voice synthesis (voiced/unvoiced split, plosive/fricative handling, sentence prosody arc)
 - voice presets: narrator, hero, villain, announcer, npc
 - CLI access through `generate-voice`
 - current batch asset pipeline can generate voice lines
 
 ## Current assessment
 
-Voice is present and useful for placeholder, system, or narration scenarios, but it should be treated as **lower priority** than music and SFX.
+Voice is now materially improved for procedural offline output, but it should still be treated as **lower priority** than music and SFX for roadmap prioritization.
 
 ## What is missing
 

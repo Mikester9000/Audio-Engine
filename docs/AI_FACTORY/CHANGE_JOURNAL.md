@@ -2,6 +2,17 @@
 
 > Append a short entry for every substantial PR. Keep entries brief and factual.
 
+## 2026-05-18 — Implement SESSION-029 override (procedural quality overhaul + studio)
+
+- Added `audio_engine/composer/phrase.py` with `PhraseRole`, `PhraseBlock`, deterministic `SectionPlanner`, and `MotifBank`.
+- Reworked `audio_engine/ai/generator.py` to use structured phrase sections, motif variations, cadence-aware phrase endings, loop pickup continuity, and up to 8 orchestration layers.
+- Rewrote `audio_engine/ai/sfx_synth.py` recipes so major SFX families use distinct synthesis strategies (explosion, footstep, hit/impact, whoosh/swing, laser, coin/pickup, jump, magic/elemental spells, summon/cure, progression/UI, sword/slash).
+- Rebuilt `audio_engine/ai/voice_synth.py` with deterministic seed support, voiced/unvoiced segmentation, plosive/fricative handling, sentence-level pitch arcs, and per-segment envelopes.
+- Upgraded `audio_engine/composer/sequencer.py` with role/priority metadata and 8-active-layer voice management; lower-priority older notes release first when over budget.
+- Vectorized `Effects.chorus()` in `audio_engine/synthesizer/effects.py` to remove per-sample Python loop overhead.
+- Added `audio_engine/ui/studio.py`, `audio_engine/ui/__init__.py`, and additive CLI command `audio-engine studio`.
+- Added focused tests in `tests/test_procedural_overhaul.py` and updated continuity docs/state to record SESSION-029 completion and SESSION-029b planning.
+
 ## 2026-05-17 — Complete SESSION-027 (queue/state continuity refresh + next executable session definition)
 
 - Marked SESSION-027 completed and synchronized session-control artifacts:

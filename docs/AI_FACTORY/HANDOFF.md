@@ -4,30 +4,32 @@
 
 ## Last completed change
 
-Completed MusicGen-medium consolidation + synth-quality/doc roadmap update PR scope:
+Completed procedural audio quality-overhaul implementation scope:
 
-- Consolidated default offline neural path to MusicGen Medium only (`download_models.py`, backend registration, MusicGen backend model path).
-- Added sample drop-in scaffold under `samples/` with committed `.gitkeep` structure and documentation.
-- Added additive DSP quality modules (`chorus`, Schroeder `reverb` helper, stereo imaging), loop crossfade baking, and mastering profile presets.
-- Upgraded core procedural instrument voicing for strings/brass/piano/choir/flute/bass/synth-pad/percussion.
-- Refreshed roadmap/state docs (`NEXT_PR_SEQUENCE.md`, `CURRENT_STATE.md`, `ACTIVE_WORK.md`, `SESSION_QUEUE.md`).
+- Replaced Markov-only melody behavior with structured phrase planning (`intro → A → A-var → B → climax → cadence`) using new `audio_engine/composer/phrase.py` (`SectionPlanner`, `MotifBank`).
+- Upgraded procedural music arrangement to layered orchestration with cadence-aware phrase endings and loop pickup continuity while keeping deterministic seed behavior.
+- Rewrote SFX recipes to category-specific synthesis strategies (explosion, footstep, hit/impact, whoosh/swing, laser, coin/pickup, jump, magic elemental spells, cure/summon, progression/UI cues, sword/slash).
+- Rebuilt procedural voice synthesis with phoneme-class voiced/unvoiced handling, plosive/fricative treatment, sentence-level prosody arcs, and deterministic seed support.
+- Added 8-voice active-layer management plus role-aware mixing/EQ in `Sequencer`; vectorized `Effects.chorus` to remove per-sample Python loops.
+- Added local Tkinter studio workflow module and additive `audio-engine studio` CLI command.
+- Updated continuity docs to mark SESSION-029 implemented (user override) and queued SESSION-029b UI/tooling follow-up.
 
 ## Verified in this session
 
 ```bash
-python -m pytest
-python tools/validate-assets.py assets/examples/ --verbose
-python -m pytest tests/test_musicgen_backend.py tests/test_dsp_chorus.py tests/test_dsp_reverb.py tests/test_dsp_stereo.py tests/test_loop_exporter.py
+python -m pytest tests/test_procedural_overhaul.py tests/test_generator.py tests/test_sequencer.py tests/test_effects.py tests/test_ai_pipeline.py -k "not OptionalNeuralBackends"
+python -m pytest tests/test_ps1_era.py -k "FF7StylePresets or FF7SFXTypes"
+python -m pytest tests/test_engine_cli.py -k "list_styles or generate or studio"
 ```
 
 Observed result:
-- baseline tests and asset-manifest validation passed before changes
-- focused tests for new MusicGen backend + DSP/loop modules pass
-- docs/roadmap updates reflect MusicGen-medium single-model direction and inserted SESSION-028b/028c planning
+- procedural-overhaul focused tests pass (phrase planner, SFX spectral differentiation, deterministic music/voice generation, sequencer 8-layer limit, studio wiring)
+- PS1/FF-style regression slices pass for style presets + expanded SFX aliases
+- CLI regression slice passes with additive `studio` command coverage
 
 ## Immediate next best task
 
-Execute `SESSION-028` from `docs/AI_FACTORY/SESSION_QUEUE.md` to add `audio-engine verify-backends` preflight reporting for optional neural backend readiness.
+Execute `SESSION-028` (`verify-backends`) next, then follow SESSION-029b for iterative studio tooling UX improvements.
 
 ## Files future agents should read first
 

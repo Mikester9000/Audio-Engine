@@ -49,6 +49,7 @@ from audio_engine.composer.scale import Scale, ScaleLibrary
 from audio_engine.composer.chord import ChordProgression
 from audio_engine.composer.pattern import RhythmPattern
 from audio_engine.composer.sequencer import Note, Sequencer
+from audio_engine.composer.phrase import MotifBank, PhraseRole, SectionPlanner
 from audio_engine.synthesizer.instrument import InstrumentLibrary
 
 __all__ = ["TrackStyle", "MusicGenerator"]
@@ -1385,7 +1386,7 @@ class MusicGenerator:
 
     def __init__(self, sample_rate: int = 44100, seed: int | None = None) -> None:
         self.sample_rate = sample_rate
-        self._rng = random.Random(seed)
+        self._seed = seed
 
     # ------------------------------------------------------------------
     # Public API
@@ -1419,92 +1420,139 @@ class MusicGenerator:
 
         sdef = _STYLE_DEFS[style]
         effective_bars = bars if bars is not None else sdef.bars
+        rng = self._rng_for_call(style, effective_bars)
+        scale_name = self._resolve_scale_name(style, sdef.scale_name)
+        scale = ScaleLibrary.get(scale_name, sdef.root, sdef.octave)
 
         seq = Sequencer(bpm=sdef.bpm, sample_rate=self.sample_rate)
-        scale = ScaleLibrary.get(sdef.scale_name, sdef.root, sdef.octave)
+        self._configure_tracks(seq, sdef)
 
-        bar_dur = seq.bar_duration
+        planner = SectionPlanner(style=style, total_bars=effective_bars, seed=self._seed)
+        blocks = planner.plan()
+        motif_bank = MotifBank(scale_degree_count=len(scale.intervals), seed=self._seed)
+        motif_seed = motif_bank.seed_motif()
+        cadence_target = 1
+        bar_duration = seq.bar_duration
 
-        # --- Build chord progression ---
-        prog = ChordProgression(scale, sdef.progression_name)
-        chords = prog.chords  # list of Chord objects (one per chord change)
+        for block in blocks:
+            for rel_bar in range(block.bar_length):
+                bar_index = block.bar_start + rel_bar
+                if bar_index >= effective_bars:
+                    break
+                bar_onset = bar_index * bar_duration
+                is_phrase_end = rel_bar == block.bar_length - 1
+                motif = self._vary_motif(motif_bank, motif_seed, block.motif_variation, rel_bar)
+                if is_phrase_end:
+                    motif[-1] = cadence_target
 
-        # --- Add instrument tracks ---
-        chord_patt = getattr(RhythmPattern, sdef.chord_pattern, RhythmPattern.half_notes)()
-        melody_patt = getattr(RhythmPattern, sdef.melody_pattern, RhythmPattern.eighth_notes)()
+                chord_degrees = self._chord_for_bar(style, bar_index)
+                chord_freqs = [scale.degree(d) for d in chord_degrees]
+                root_freq = chord_freqs[0]
+                density_steps = max(2, int(round(2 + 6 * block.melody_density)))
+                note_len = bar_duration / density_steps
 
-        for inst_name in sdef.instruments:
-            inst = InstrumentLibrary.get(inst_name, self.sample_rate)
-            pan = self._rng.uniform(-0.3, 0.3)
-            seq.add_track(f"melody_{inst_name}", inst, pan=pan, volume=0.8)
-
-        for inst_name in sdef.accompaniment:
-            inst = InstrumentLibrary.get(inst_name, self.sample_rate)
-            pan = self._rng.uniform(-0.5, 0.5)
-            seq.add_track(f"chord_{inst_name}", inst, pan=pan, volume=0.6)
-
-        bass_inst = InstrumentLibrary.get(sdef.bass_instrument, self.sample_rate)
-        seq.add_track("bass", bass_inst, pan=0.0, volume=0.85)
-
-        if sdef.percussion_instrument:
-            perc_inst = InstrumentLibrary.get(sdef.percussion_instrument, self.sample_rate)
-            seq.add_track("percussion", perc_inst, pan=0.0, volume=0.9)
-
-        # --- Populate notes bar by bar ---
-        for bar_idx in range(effective_bars):
-            bar_onset = bar_idx * bar_dur
-            chord = chords[bar_idx % len(chords)]
-
-            # Melody layer
-            mel_triggers = melody_patt.note_durations(bar_dur)
-            num_mel_notes = len(mel_triggers)
-            mel_freqs = _markov_melody(
-                scale, num_mel_notes, start_degree=1, rng=self._rng, octave_range=2
-            )
-
-            for track_name_suffix in sdef.instruments:
-                for (rel_onset, note_dur), freq in zip(mel_triggers, mel_freqs):
-                    vel = self._rng.uniform(0.6, 1.0)
-                    seq.add_note(
-                        f"melody_{track_name_suffix}",
-                        freq,
-                        bar_onset + rel_onset,
-                        note_dur * 0.9,
-                        velocity=vel,
-                    )
-
-            # Chord layer
-            chord_triggers = chord_patt.note_durations(bar_dur)
-            for inst_name in sdef.accompaniment:
-                for rel_onset, note_dur in chord_triggers:
-                    for chord_freq in chord.frequencies:
-                        # Drop chord tones by one octave for richness
+                lead_should_play = not (
+                    block.role in {PhraseRole.INTRO, PhraseRole.A_VAR, PhraseRole.B_PHRASE}
+                    and rng.random() < 0.1
+                )
+                if lead_should_play:
+                    for step in range(density_steps):
+                        degree = motif[step % len(motif)]
+                        if is_phrase_end and step == density_steps - 1:
+                            degree = cadence_target
+                        freq = scale.degree(degree + 7)
                         seq.add_note(
-                            f"chord_{inst_name}",
-                            chord_freq * 0.5,
-                            bar_onset + rel_onset,
-                            note_dur * 0.85,
-                            velocity=0.55,
+                            "lead_melody",
+                            freq,
+                            bar_onset + step * note_len,
+                            note_len * 0.92,
+                            velocity=0.55 + 0.4 * block.arrangement_density,
                         )
 
-            # Bass – root note of current chord
-            bass_freq = chord.frequencies[0] * 0.25   # two octaves below
-            for rel_onset, note_dur in chord_patt.note_durations(bar_dur):
-                seq.add_note("bass", bass_freq, bar_onset + rel_onset, note_dur * 0.9, velocity=0.8)
+                if block.arrangement_density > 0.56 and block.role in {PhraseRole.A_VAR, PhraseRole.B_PHRASE, PhraseRole.CLIMAX}:
+                    counter = motif_bank.sequence_down(motif, steps=1 if block.role != PhraseRole.CLIMAX else 2)
+                    for step in range(max(2, density_steps // 2)):
+                        degree = counter[step % len(counter)]
+                        seq.add_note(
+                            "counter_melody",
+                            scale.degree(degree + 6),
+                            bar_onset + (step + 0.5) * (bar_duration / max(2, density_steps // 2)),
+                            max(0.08, note_len * 0.8),
+                            velocity=0.35 + 0.32 * block.arrangement_density,
+                        )
 
-            # Percussion
-            if sdef.percussion_instrument:
-                perc_patt = RhythmPattern.four_on_the_floor()
-                for rel_onset, note_dur in perc_patt.note_durations(bar_dur):
-                    # Use a fixed pitched 'hit' frequency for the drum voice
+                if block.arrangement_density > 0.45 and rng.random() > 0.08:
+                    for chord_freq in chord_freqs:
+                        seq.add_note(
+                            "harmony_pad",
+                            chord_freq * 0.5,
+                            bar_onset,
+                            bar_duration * 0.96,
+                            velocity=0.28 + 0.25 * block.arrangement_density,
+                        )
+
+                if block.arrangement_density > 0.38 and rng.random() > 0.12:
+                    for hit in (0.0, 0.5):
+                        for chord_freq in chord_freqs:
+                            seq.add_note(
+                                "chord_support",
+                                chord_freq,
+                                bar_onset + hit * bar_duration,
+                                bar_duration * 0.46,
+                                velocity=0.3 + 0.28 * block.arrangement_density,
+                            )
+
+                if block.arrangement_density > 0.5:
+                    ostinato_steps = 8 if block.role in {PhraseRole.B_PHRASE, PhraseRole.CLIMAX} else 4
+                    ost_len = bar_duration / ostinato_steps
+                    tones = [chord_degrees[0], chord_degrees[-1], motif[0]]
+                    for step in range(ostinato_steps):
+                        degree = tones[step % len(tones)] + 12
+                        seq.add_note(
+                            "high_ostinato",
+                            scale.degree(degree),
+                            bar_onset + step * ost_len,
+                            ost_len * 0.8,
+                            velocity=0.24 + 0.2 * block.arrangement_density,
+                        )
+
+                for hit in (0.0, 0.5):
                     seq.add_note(
-                        "percussion",
-                        80.0,   # low thud
-                        bar_onset + rel_onset,
-                        min(note_dur, 0.15),
-                        velocity=self._rng.uniform(0.7, 1.0),
+                        "bass_line",
+                        root_freq * 0.25,
+                        bar_onset + hit * bar_duration,
+                        bar_duration * 0.44,
+                        velocity=0.52 + 0.32 * block.arrangement_density,
                     )
 
+                if "perc_low" in seq._tracks:
+                    perc_strength = 0.35 + 0.55 * block.arrangement_density
+                    for beat in (0.0, 0.5):
+                        seq.add_note(
+                            "perc_low",
+                            80.0,
+                            bar_onset + beat * bar_duration,
+                            min(0.15, bar_duration * 0.2),
+                            velocity=perc_strength,
+                        )
+                    if block.arrangement_density > 0.52:
+                        for beat in (0.25, 0.75):
+                            seq.add_note(
+                                "perc_texture",
+                                220.0,
+                                bar_onset + beat * bar_duration,
+                                min(0.12, bar_duration * 0.18),
+                                velocity=0.28 + 0.42 * block.arrangement_density,
+                            )
+
+        pickup_onset = max(0.0, effective_bars * bar_duration - seq.beat_duration * 0.5)
+        seq.add_note(
+            "lead_melody",
+            scale.degree(motif_seed[0] + 7),
+            pickup_onset,
+            min(seq.beat_duration * 0.4, 0.24),
+            velocity=0.35,
+        )
         return seq
 
     # ------------------------------------------------------------------
@@ -1537,3 +1585,74 @@ class MusicGenerator:
     def available_styles() -> list[str]:
         """Return sorted list of available style names."""
         return sorted(_STYLE_DEFS.keys())
+
+    def _rng_for_call(self, style: str, bars: int) -> random.Random:
+        style_hash = sum((idx + 1) * ord(ch) for idx, ch in enumerate(style))
+        return random.Random((self._seed or 0) + style_hash + bars * 7919)
+
+    def _resolve_scale_name(self, style: str, default: str) -> str:
+        family = style.lower()
+        if family == "battle":
+            return "harmonic_minor"
+        if family == "exploration":
+            return "major"
+        if family == "ambient":
+            return "dorian"
+        if family == "boss":
+            return "phrygian"
+        if family == "victory":
+            return "major"
+        if family == "menu":
+            return "dorian"
+        return default
+
+    def _configure_tracks(self, seq: Sequencer, sdef: _StyleDef) -> None:
+        lead_name = sdef.instruments[0] if sdef.instruments else "strings"
+        counter_name = sdef.instruments[1] if len(sdef.instruments) > 1 else "flute"
+        ostinato_name = "crystal_synth"
+        pad_name = sdef.accompaniment[0] if sdef.accompaniment else "synth_pad"
+        chord_name = sdef.accompaniment[1] if len(sdef.accompaniment) > 1 else "strings"
+        bass_name = sdef.bass_instrument or "bass"
+
+        seq.add_track("lead_melody", InstrumentLibrary.get(lead_name, self.sample_rate), pan=-0.08, volume=0.9, priority=100, role="melody")
+        seq.add_track("counter_melody", InstrumentLibrary.get(counter_name, self.sample_rate), pan=0.14, volume=0.58, priority=90, role="counter")
+        seq.add_track("high_ostinato", InstrumentLibrary.get(ostinato_name, self.sample_rate), pan=0.26, volume=0.45, priority=50, role="texture")
+        seq.add_track("harmony_pad", InstrumentLibrary.get(pad_name, self.sample_rate), pan=-0.16, volume=0.5, priority=70, role="harmony")
+        seq.add_track("chord_support", InstrumentLibrary.get(chord_name, self.sample_rate), pan=0.04, volume=0.5, priority=60, role="harmony")
+        seq.add_track("bass_line", InstrumentLibrary.get(bass_name, self.sample_rate), pan=0.0, volume=0.86, priority=95, role="bass")
+
+        if sdef.percussion_instrument:
+            perc_inst = InstrumentLibrary.get(sdef.percussion_instrument, self.sample_rate)
+            seq.add_track("perc_low", perc_inst, pan=0.0, volume=0.78, priority=85, role="percussion")
+            seq.add_track("perc_texture", perc_inst, pan=0.32, volume=0.42, priority=40, role="texture")
+
+    def _vary_motif(self, bank: MotifBank, motif: list[int], mode: str, offset: int) -> list[int]:
+        if mode == "sequence_up":
+            return bank.sequence_up(motif, steps=1 + (offset % 2))
+        if mode == "sequence_down":
+            return bank.sequence_down(motif, steps=1 + (offset % 2))
+        if mode == "invert":
+            return bank.invert(motif)
+        if mode == "rhythmic_augment":
+            return bank.rhythmic_augment(motif)
+        if mode == "rhythmic_diminish":
+            return bank.rhythmic_diminish(motif)
+        return motif[:]
+
+    def _chord_for_bar(self, style: str, bar_index: int) -> list[int]:
+        style_family = style.lower()
+        if style_family == "battle":
+            progression = [[1, 3, 5], [5, 7, 2], [6, 1, 3], [5, 7, 2]]
+        elif style_family == "exploration":
+            progression = [[1, 3, 5], [4, 6, 1], [5, 7, 2], [1, 3, 5]]
+        elif style_family == "ambient":
+            progression = [[1, 4, 5], [2, 5, 6], [1, 4, 6], [2, 5, 7]]
+        elif style_family == "boss":
+            progression = [[1, 2, 5], [2, 5, 7], [1, 2, 5], [7, 2, 5]]
+        elif style_family == "victory":
+            progression = [[1, 3, 5], [4, 6, 1], [5, 7, 2], [1, 3, 5]]
+        elif style_family == "menu":
+            progression = [[1, 2, 5], [6, 1, 3], [4, 5, 1], [1, 2, 5]]
+        else:
+            progression = [[1, 3, 5], [4, 6, 1], [5, 7, 2], [1, 3, 5]]
+        return progression[bar_index % len(progression)]

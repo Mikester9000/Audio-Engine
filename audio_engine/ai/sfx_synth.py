@@ -1,25 +1,4 @@
-"""
-Procedural SFX synthesizer.
-
-Generates sound effects using parametric synthesis techniques (additive,
-FM, filtered noise, transient shaping).  Each SFX type has a tailored
-recipe that produces a recognisable result without any external model or
-sample library.
-
-This module is used by :class:`~audio_engine.ai.backend.ProceduralBackend`
-as the default SFX generation path.
-
-SFX types supported
--------------------
-``explosion``, ``footstep``, ``click``, ``beep``, ``hit``, ``impact``,
-``whoosh``, ``laser``, ``coin``, ``pickup``, ``jump``, ``magic``, ``fire``,
-``water``, ``wind``, ``ping``, ``generic``
-
-Adding a new SFX type
----------------------
-Define a function ``_sfx_<typename>(duration, pitch_hz, sr, rng)`` that
-returns a mono float32 array, then add it to ``_SFX_FUNCTIONS``.
-"""
+"""Procedural SFX synthesizer with distinct per-category recipes."""
 
 from __future__ import annotations
 
@@ -27,496 +6,438 @@ from typing import Callable
 
 import numpy as np
 
-__all__ = ["synthesise_sfx"]
+__all__ = ["synthesise_sfx", "available_sfx_types"]
 
 
-# ---------------------------------------------------------------------------
-# Utility helpers
-# ---------------------------------------------------------------------------
+def _sine(freq: float, duration: float, sr: int, amp: float = 1.0, phase: float = 0.0) -> np.ndarray:
+    n = max(1, int(duration * sr))
+    t = np.arange(n, dtype=np.float64) / sr
+    return (amp * np.sin(2.0 * np.pi * freq * t + phase)).astype(np.float32)
 
-def _adsr(
-    n_samples: int,
-    sr: int,
-    attack_ms: float = 5.0,
-    decay_ms: float = 50.0,
-    sustain: float = 0.7,
-    release_ms: float = 100.0,
-) -> np.ndarray:
-    """Generate a normalised ADSR envelope of length *n_samples*."""
+
+def _square(freq: float, duration: float, sr: int, amp: float = 1.0) -> np.ndarray:
+    sig = _sine(freq, duration, sr, amp=1.0)
+    return (amp * np.sign(sig + 1e-8)).astype(np.float32)
+
+
+def _exp_env(n: int, decay: float) -> np.ndarray:
+    t = np.linspace(0.0, 1.0, n, dtype=np.float64)
+    return np.exp(-decay * t).astype(np.float32)
+
+
+def _adsr(n: int, sr: int, attack_ms: float, decay_ms: float, sustain: float, release_ms: float) -> np.ndarray:
     a = max(1, int(sr * attack_ms / 1000.0))
     d = max(1, int(sr * decay_ms / 1000.0))
     r = max(1, int(sr * release_ms / 1000.0))
-    s = max(0, n_samples - a - d - r)
-
-    env = np.zeros(n_samples, dtype=np.float64)
-    # Attack
-    env[:a] = np.linspace(0.0, 1.0, a)
-    # Decay
-    end_d = min(a + d, n_samples)
-    env[a:end_d] = np.linspace(1.0, sustain, end_d - a)
-    # Sustain
-    end_s = min(a + d + s, n_samples)
-    env[end_d:end_s] = sustain
-    # Release
-    env[end_s:] = np.linspace(sustain, 0.0, n_samples - end_s)
-    return env.astype(np.float32)
+    s = max(0, n - a - d - r)
+    env = np.zeros(n, dtype=np.float32)
+    env[:a] = np.linspace(0.0, 1.0, a, dtype=np.float32)
+    env[a : a + d] = np.linspace(1.0, sustain, d, dtype=np.float32)
+    env[a + d : a + d + s] = sustain
+    env[a + d + s :] = np.linspace(sustain, 0.0, n - (a + d + s), dtype=np.float32)
+    return env
 
 
 def _band_noise(n: int, lo: float, hi: float, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Generate band-limited noise between *lo* and *hi* Hz."""
     from scipy.signal import butter, sosfilt  # type: ignore[import]
 
-    noise = rng.standard_normal(n).astype(np.float64)
+    raw = rng.standard_normal(n).astype(np.float64)
     nyq = sr / 2.0
     low = np.clip(lo / nyq, 1e-4, 0.999)
     high = np.clip(hi / nyq, 1e-4, 0.999)
     if high <= low:
-        high = min(low + 0.01, 0.999)
+        high = min(low + 0.02, 0.999)
     sos = butter(4, [low, high], btype="band", output="sos")
-    return sosfilt(sos, noise).astype(np.float32)
+    return sosfilt(sos, raw).astype(np.float32)
 
 
-def _sine(freq: float, duration: float, sr: int, amp: float = 1.0) -> np.ndarray:
-    n = int(duration * sr)
-    t = np.arange(n) / sr
-    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)
+def _moving_band_noise(
+    n: int,
+    start_hz: float,
+    end_hz: float,
+    bandwidth: float,
+    sr: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    from scipy.signal import butter, sosfilt  # type: ignore[import]
+
+    steps = 8
+    segment_len = max(1, n // steps)
+    segments: list[np.ndarray] = []
+    centers = np.linspace(start_hz, end_hz, steps)
+    for c in centers:
+        lo = max(80.0, c - bandwidth / 2.0)
+        hi = min(sr / 2.0 - 50.0, c + bandwidth / 2.0)
+        raw = rng.standard_normal(segment_len).astype(np.float64)
+        sos = butter(2, [lo / (sr / 2.0), hi / (sr / 2.0)], btype="band", output="sos")
+        segments.append(sosfilt(sos, raw).astype(np.float32))
+    out = np.concatenate(segments)
+    if len(out) < n:
+        out = np.pad(out, (0, n - len(out)))
+    return out[:n]
 
 
-def _exp_decay(n: int, decay_rate: float = 10.0) -> np.ndarray:
-    """Exponential decay envelope from 1 to ≈0."""
-    t = np.linspace(0.0, 1.0, n)
-    return np.exp(-decay_rate * t).astype(np.float32)
+def _reverb(signal: np.ndarray, sr: int, room_seconds: float, decay: float, seed: int) -> np.ndarray:
+    from scipy.signal import fftconvolve  # type: ignore[import]
+
+    n_ir = max(64, int(room_seconds * sr))
+    rng = np.random.default_rng(seed)
+    ir = rng.standard_normal(n_ir).astype(np.float64)
+    ir *= np.exp(-np.linspace(0.0, decay, n_ir))
+    ir /= np.sum(np.abs(ir)) + 1e-9
+    wet = fftconvolve(signal.astype(np.float64), ir, mode="full")[: len(signal)]
+    return wet.astype(np.float32)
 
 
-# ---------------------------------------------------------------------------
-# SFX type recipes
-# ---------------------------------------------------------------------------
+def _freq_sweep(start_hz: float, end_hz: float, duration: float, sr: int, exp: bool = False) -> np.ndarray:
+    n = max(1, int(duration * sr))
+    if exp:
+        freqs = np.geomspace(max(1.0, start_hz), max(1.0, end_hz), n)
+    else:
+        freqs = np.linspace(start_hz, end_hz, n)
+    phase = 2.0 * np.pi * np.cumsum(freqs / sr)
+    return np.sin(phase).astype(np.float32)
+
 
 def _sfx_explosion(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Low rumble + transient burst."""
-    n = int(duration * sr)
-    # Low-band noise burst
-    noise = _band_noise(n, 30.0, 300.0, sr, rng)
-    mid_noise = _band_noise(n, 300.0, 2000.0, sr, rng)
-    env = _exp_decay(n, decay_rate=3.0 / max(duration, 0.1))
-    return np.clip((0.7 * noise + 0.3 * mid_noise) * env, -1.0, 1.0)
+    d = max(duration, 0.7)
+    n = int(d * sr)
+    sweep = _freq_sweep(80.0, 30.0, d, sr)
+    low = _band_noise(n, 30.0, 120.0, sr, rng)
+    mid = _band_noise(n, 120.0, 900.0, sr, rng)
+    high = _band_noise(n, 900.0, 3500.0, sr, rng)
+    env = _exp_env(n, decay=4.0)
+    dry = (0.5 * sweep + 0.25 * low + 0.18 * mid + 0.07 * high) * env
+    wet = _reverb(dry.astype(np.float32), sr, room_seconds=1.8, decay=5.5, seed=19)
+    return (0.6 * dry + 0.4 * wet).astype(np.float32)
 
 
 def _sfx_footstep(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Short transient click with low-mid body."""
-    n = int(max(duration, 0.1) * sr)
-    noise = _band_noise(n, 80.0, 2000.0, sr, rng)
-    env = _adsr(n, sr, attack_ms=2.0, decay_ms=30.0, sustain=0.0, release_ms=20.0)
-    return np.clip(noise * env * 0.8, -1.0, 1.0)
-
-
-def _sfx_click(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Short UI-style click."""
-    n = int(max(duration, 0.05) * sr)
-    freq = pitch_hz or 1200.0
-    tone = _sine(freq, max(duration, 0.05), sr)
-    env = _adsr(n, sr, attack_ms=1.0, decay_ms=20.0, sustain=0.0, release_ms=10.0)
-    return np.clip(tone[:n] * env, -1.0, 1.0)
-
-
-def _sfx_beep(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Pure tone beep."""
-    freq = pitch_hz or 880.0
-    tone = _sine(freq, duration, sr)
-    n = len(tone)
-    env = _adsr(n, sr, attack_ms=5.0, decay_ms=10.0, sustain=1.0, release_ms=40.0)
-    return np.clip(tone * env * 0.8, -1.0, 1.0)
+    d = max(duration, 0.12)
+    n = int(d * sr)
+    body = _sine(120.0, d, sr)
+    body_env = _adsr(n, sr, attack_ms=1.0, decay_ms=35.0, sustain=0.0, release_ms=45.0)
+    material = _band_noise(n, 180.0, 2400.0, sr, rng)
+    noise_env = _adsr(n, sr, attack_ms=0.5, decay_ms=20.0, sustain=0.0, release_ms=35.0)
+    dry = 0.7 * body[:n] * body_env + 0.45 * material * noise_env
+    rev = _reverb(dry.astype(np.float32), sr, room_seconds=0.18, decay=3.0, seed=27)
+    return (0.88 * dry + 0.12 * rev).astype(np.float32)
 
 
 def _sfx_hit(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Impact hit with punch."""
-    n = int(max(duration, 0.1) * sr)
-    freq = pitch_hz or 150.0
-    tone = _sine(freq, max(duration, 0.1), sr)
-    noise = _band_noise(n, 200.0, 4000.0, sr, rng)
-    env = _adsr(n, sr, attack_ms=2.0, decay_ms=80.0, sustain=0.0, release_ms=40.0)
-    return np.clip((0.5 * tone[:n] + 0.5 * noise) * env, -1.0, 1.0)
-
-
-def _sfx_impact(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    return _sfx_hit(duration, pitch_hz, sr, rng)
+    d = max(duration, 0.2)
+    n = int(d * sr)
+    base = pitch_hz or 190.0
+    partials = [1.0, 1.41, 1.93, 2.65]
+    tone = np.zeros(n, dtype=np.float32)
+    for p in partials:
+        drop = _freq_sweep(base * p, max(55.0, base * p * 0.6), d, sr)
+        tone += (0.3 / p) * drop[:n]
+    transient_n = max(1, int(0.03 * sr))
+    transient = _band_noise(transient_n, 1200.0, 10000.0, sr, rng)
+    burst = np.zeros(n, dtype=np.float32)
+    burst[:transient_n] = transient * _exp_env(transient_n, 15.0)
+    env = _adsr(n, sr, attack_ms=1.0, decay_ms=60.0, sustain=0.0, release_ms=80.0)
+    return (tone + burst) * env
 
 
 def _sfx_whoosh(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Rising/falling noise sweep."""
-    n = int(max(duration, 0.2) * sr)
-    noise = _band_noise(n, 500.0, 8000.0, sr, rng)
-    # Bow-shaped amplitude
-    t = np.linspace(0.0, np.pi, n)
-    env = np.sin(t).astype(np.float32)
-    return np.clip(noise * env * 0.9, -1.0, 1.0)
+    d = max(duration, 0.25)
+    n = int(d * sr)
+    sweep = _moving_band_noise(n, 400.0, 7500.0, bandwidth=1700.0, sr=sr, rng=rng)
+    bow = np.sin(np.linspace(0.0, np.pi, n, dtype=np.float64)).astype(np.float32)
+    return (sweep * bow).astype(np.float32)
 
 
 def _sfx_laser(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Sci-fi downward frequency sweep."""
-    n = int(max(duration, 0.2) * sr)
-    start_freq = pitch_hz or 2000.0
-    end_freq = start_freq * 0.2
-    t = np.arange(n) / sr
-    freq = np.linspace(start_freq, end_freq, n)
-    phase = np.cumsum(2.0 * np.pi * freq / sr)
-    wave = np.sin(phase).astype(np.float32)
-    env = _exp_decay(n, decay_rate=4.0)
-    return np.clip(wave * env, -1.0, 1.0)
+    d = max(duration, 0.18)
+    n = int(d * sr)
+    sweep = _freq_sweep(2000.0, 400.0, d, sr, exp=True)
+    sq = _square(900.0, d, sr, amp=0.22)
+    env = _exp_env(n, decay=6.0)
+    return (0.78 * sweep[:n] + 0.22 * sq[:n]) * env
 
 
 def _sfx_coin(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Classic coin collect chime (two-note ding)."""
-    d = max(duration, 0.15) / 2.0
+    d = max(duration, 0.2)
     n = int(d * sr)
-    f1 = pitch_hz or 1047.0  # C6
-    f2 = f1 * 1.5            # G6 (perfect fifth)
-    t = np.arange(n) / sr
-    env = _exp_decay(n, decay_rate=8.0)
-    note1 = np.sin(2.0 * np.pi * f1 * t).astype(np.float32) * env
-    note2 = np.sin(2.0 * np.pi * f2 * t).astype(np.float32) * env
-    return np.concatenate([note1, note2]) * 0.9
-
-
-def _sfx_pickup(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Item pickup arpeggio."""
-    return _sfx_coin(duration, pitch_hz, sr, rng)
+    base = pitch_hz or 1047.0
+    t = np.arange(n, dtype=np.float64) / sr
+    primary = np.sin(2.0 * np.pi * base * t)
+    second = 0.55 * np.sin(2.0 * np.pi * (base * 1.5) * t)
+    sparkle = np.zeros(n, dtype=np.float64)
+    for i, ratio in enumerate((2.0, 2.5, 3.0, 3.5)):
+        start = min(n - 1, int((0.008 * i) * sr))
+        seg = n - start
+        if seg <= 0:
+            continue
+        tt = np.arange(seg, dtype=np.float64) / sr
+        sparkle[start:] += 0.15 * np.sin(2.0 * np.pi * base * ratio * tt)
+    env = _exp_env(n, decay=10.0)
+    return ((primary + second + sparkle) * env).astype(np.float32)
 
 
 def _sfx_jump(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Rising frequency sweep jump sound."""
-    n = int(max(duration, 0.2) * sr)
-    start_freq = pitch_hz or 200.0
-    end_freq = start_freq * 3.0
-    t = np.arange(n) / sr
-    freq = np.linspace(start_freq, end_freq, n)
-    phase = np.cumsum(2.0 * np.pi * freq / sr)
-    wave = np.sin(phase).astype(np.float32)
-    env = _adsr(n, sr, attack_ms=5.0, decay_ms=100.0, sustain=0.0, release_ms=50.0)
-    return np.clip(wave * env, -1.0, 1.0)
+    d = max(duration, 0.22)
+    n = int(d * sr)
+    glide = _freq_sweep(200.0, 600.0, d, sr)
+    noise = _band_noise(n, 1000.0, 7000.0, sr, rng)
+    transient = np.zeros(n, dtype=np.float32)
+    transient_n = max(1, int(0.02 * sr))
+    transient[:transient_n] = noise[:transient_n] * _exp_env(transient_n, 18.0)
+    env = _adsr(n, sr, attack_ms=2.0, decay_ms=70.0, sustain=0.0, release_ms=80.0)
+    return (glide[:n] * env + 0.2 * transient).astype(np.float32)
 
 
 def _sfx_magic(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Shimmering magic sparkle."""
-    n = int(max(duration, 0.5) * sr)
-    # Stacked detuned sines with random phases
-    base = pitch_hz or 880.0
-    signal = np.zeros(n, dtype=np.float64)
-    for harmonic in [1.0, 1.5, 2.0, 3.0, 4.0]:
-        freq = base * harmonic
-        phase_offset = rng.uniform(0, 2 * np.pi)
-        t = np.arange(n) / sr
-        signal += np.sin(2.0 * np.pi * freq * t + phase_offset) / 5.0
-    env = _adsr(n, sr, attack_ms=50.0, decay_ms=200.0, sustain=0.3, release_ms=200.0)
-    return np.clip(signal * env, -1.0, 1.0).astype(np.float32)
-
-
-def _sfx_fire(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Crackling fire."""
-    n = int(max(duration, 0.5) * sr)
-    noise = _band_noise(n, 100.0, 1200.0, sr, rng)
-    # Slow amplitude modulation to simulate flickering
-    t = np.linspace(0.0, duration, n)
-    mod = 0.6 + 0.4 * np.sin(2.0 * np.pi * 3.0 * t) * rng.uniform(0.8, 1.2, n)
-    return np.clip((noise * mod).astype(np.float32), -1.0, 1.0)
-
-
-def _sfx_water(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Flowing water."""
-    n = int(max(duration, 0.5) * sr)
-    noise = _band_noise(n, 300.0, 3000.0, sr, rng)
-    t = np.linspace(0.0, duration, n)
-    mod = 0.7 + 0.3 * np.sin(2.0 * np.pi * 5.0 * t)
-    return np.clip((noise * mod).astype(np.float32), -1.0, 1.0)
-
-
-def _sfx_wind(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Howling wind."""
-    n = int(max(duration, 0.5) * sr)
-    noise = _band_noise(n, 50.0, 800.0, sr, rng)
-    t = np.linspace(0.0, duration, n)
-    mod = 0.5 + 0.5 * np.abs(np.sin(2.0 * np.pi * 0.5 * t))
-    return np.clip((noise * mod).astype(np.float32), -1.0, 1.0)
-
-
-def _sfx_ping(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """UI notification ping."""
-    return _sfx_beep(duration, pitch_hz or 1500.0, sr, rng)
-
-
-def _sfx_generic(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Generic 'blip' sound."""
-    return _sfx_beep(duration, pitch_hz, sr, rng)
-
-
-# ---------------------------------------------------------------------------
-# SFX function registry
-# ---------------------------------------------------------------------------
-
-_SFX_FUNCTIONS: dict[str, Callable] = {
-    "explosion": _sfx_explosion,
-    "footstep":  _sfx_footstep,
-    "click":     _sfx_click,
-    "tick":      _sfx_click,
-    "beep":      _sfx_beep,
-    "hit":       _sfx_hit,
-    "impact":    _sfx_impact,
-    "whoosh":    _sfx_whoosh,
-    "laser":     _sfx_laser,
-    "coin":      _sfx_coin,
-    "pickup":    _sfx_pickup,
-    "jump":      _sfx_jump,
-    "land":      _sfx_footstep,
-    "door":      _sfx_hit,
-    "open":      _sfx_whoosh,
-    "close":     _sfx_click,
-    "magic":     _sfx_magic,
-    "spell":     _sfx_magic,
-    "fire":      _sfx_fire,
-    "water":     _sfx_water,
-    "wind":      _sfx_wind,
-    "ping":      _sfx_ping,
-    "alert":     _sfx_ping,
-    "notification": _sfx_ping,
-    "generic":   _sfx_generic,
-}
-
-
-# ---------------------------------------------------------------------------
-# FF7 / FF8 era SFX — modern synthesis character, retro RPG triggers
-# ---------------------------------------------------------------------------
-
-def _sfx_sword_swing(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Metallic whoosh + brief ting — sword or weapon swing."""
-    n = int(max(duration, 0.3) * sr)
-    # Noise whoosh layer
-    whoosh = _band_noise(n, 800.0, 8000.0, sr, rng)
-    t_w = np.linspace(0.0, np.pi * 0.8, n)
-    whoosh_env = np.sin(t_w).astype(np.float32) * 0.7
-    # High metallic ting at end
-    ting_start = int(n * 0.6)
-    ting_dur = max(duration * 0.4, 0.05)
-    freq = pitch_hz or 3500.0
-    ting = _sine(freq, ting_dur, sr)
-    ting_n = len(ting)
-    ting_env = _exp_decay(ting_n, decay_rate=12.0)
-    output = np.zeros(n, dtype=np.float32)
-    output += whoosh * whoosh_env
-    end_idx = min(ting_start + ting_n, n)
-    output[ting_start:end_idx] += (ting[:end_idx - ting_start] * ting_env[:end_idx - ting_start]) * 0.4
-    return np.clip(output, -1.0, 1.0)
+    d = max(duration, 0.6)
+    n = int(d * sr)
+    base = pitch_hz or 620.0
+    t = np.arange(n, dtype=np.float64) / sr
+    sig = np.zeros(n, dtype=np.float64)
+    for _ in range(rng.integers(4, 7)):
+        detune = rng.uniform(-0.025, 0.025)
+        ratio = rng.choice([1.0, 1.5, 2.0, 2.5, 3.0])
+        sig += np.sin(2.0 * np.pi * (base * ratio * (1 + detune)) * t + rng.uniform(0, 2 * np.pi))
+    sig /= max(1, np.max(np.abs(sig)))
+    flutter = 1.0 + 0.12 * np.sin(2.0 * np.pi * 11.0 * t + rng.uniform(0, 2 * np.pi))
+    env = _adsr(n, sr, attack_ms=20.0, decay_ms=180.0, sustain=0.42, release_ms=260.0)
+    dry = (sig * flutter * env).astype(np.float32)
+    wet = _reverb(dry, sr, room_seconds=1.4, decay=4.8, seed=37)
+    return (0.6 * dry + 0.4 * wet).astype(np.float32)
 
 
 def _sfx_spell_fire(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Fire spell burst — roar with crackling high end."""
-    n = int(max(duration, 0.6) * sr)
-    low  = _band_noise(n, 60.0, 500.0, sr, rng)
-    mid  = _band_noise(n, 500.0, 3000.0, sr, rng)
-    hi   = _band_noise(n, 3000.0, 10000.0, sr, rng)
-    env  = _adsr(n, sr, attack_ms=15.0, decay_ms=80.0, sustain=0.5, release_ms=200.0)
-    return np.clip((0.5 * low + 0.35 * mid + 0.15 * hi) * env, -1.0, 1.0)
+    d = max(duration, 0.7)
+    n = int(d * sr)
+    roar = _band_noise(n, 60.0, 500.0, sr, rng)
+    crackle = _band_noise(n, 3000.0, 10000.0, sr, rng)
+    transient = _band_noise(n, 800.0, 2500.0, sr, rng)
+    attack = np.zeros(n, dtype=np.float32)
+    attack_n = max(1, int(0.06 * sr))
+    attack[:attack_n] = transient[:attack_n] * _exp_env(attack_n, 10.0)
+    env = _adsr(n, sr, attack_ms=10.0, decay_ms=90.0, sustain=0.45, release_ms=220.0)
+    return (0.62 * roar + 0.28 * crackle + 0.25 * attack) * env
 
 
 def _sfx_spell_ice(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Ice/Blizzard spell — crystalline shattering shimmer."""
-    n = int(max(duration, 0.5) * sr)
-    # High-freq crackle
-    crackle = _band_noise(n, 4000.0, 16000.0, sr, rng)
-    # Short ring-mod style tone
-    freq = pitch_hz or 1800.0
-    tone = _sine(freq, max(duration, 0.5), sr)
-    n_tone = len(tone)
-    env = _adsr(n, sr, attack_ms=5.0, decay_ms=50.0, sustain=0.2, release_ms=180.0)
-    mixed = 0.55 * crackle + 0.45 * tone[:n]
-    return np.clip(mixed * env, -1.0, 1.0)
+    d = max(duration, 0.6)
+    n = int(d * sr)
+    base = pitch_hz or 1800.0
+    t = np.arange(n, dtype=np.float64) / sr
+    partials = np.zeros(n, dtype=np.float64)
+    for ratio in (1.0, 1.37, 1.91, 2.73):
+        partials += 0.22 * np.sin(2.0 * np.pi * base * ratio * t + rng.uniform(0, 2 * np.pi))
+    crackle = _band_noise(n, 3500.0, 12000.0, sr, rng) * 0.22
+    env = _adsr(n, sr, attack_ms=3.0, decay_ms=80.0, sustain=0.28, release_ms=180.0)
+    dry = (partials + crackle) * env
+    cold = _reverb(dry.astype(np.float32), sr, room_seconds=0.9, decay=4.3, seed=41)
+    return (0.72 * dry + 0.28 * cold).astype(np.float32)
 
 
 def _sfx_spell_thunder(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Thunder/Lightning spell — crack then bass rumble."""
-    n = int(max(duration, 0.5) * sr)
-    # Sharp crack transient
-    crack_n = min(int(0.04 * sr), n)
-    crack = _band_noise(crack_n, 200.0, 14000.0, sr, rng)
-    crack_env = _exp_decay(crack_n, decay_rate=30.0)
-    # Low rumble tail
-    rumble = _band_noise(n, 30.0, 250.0, sr, rng)
-    rumble_env = _adsr(n, sr, attack_ms=20.0, decay_ms=100.0, sustain=0.3, release_ms=250.0)
-    output = np.zeros(n, dtype=np.float32)
-    output[:crack_n] += (crack * crack_env).astype(np.float32) * 0.9
-    output += (rumble * rumble_env).astype(np.float32) * 0.6
-    return np.clip(output, -1.0, 1.0)
-
-
-def _sfx_limit_break(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Limit break / ultimate power surge — rising noise + harmonic explosion."""
-    n = int(max(duration, 0.8) * sr)
-    # Rising sweep
-    start_freq = pitch_hz or 80.0
-    end_freq = start_freq * 16.0
-    t = np.arange(n) / sr
-    freq = np.linspace(start_freq, end_freq, n)
-    phase = np.cumsum(2.0 * np.pi * freq / sr)
-    sweep = np.sin(phase).astype(np.float32)
-    # Noise burst
-    noise = _band_noise(n, 100.0, 8000.0, sr, rng)
-    # Swell envelope
-    env_up = np.linspace(0.0, 1.0, n)
-    env = (env_up ** 2).astype(np.float32)
-    mixed = (0.6 * sweep + 0.4 * noise) * env
-    return np.clip(mixed, -1.0, 1.0)
+    d = max(duration, 0.7)
+    n = int(d * sr)
+    crack_n = max(1, int(0.05 * sr))
+    crack = _band_noise(crack_n, 300.0, 16000.0, sr, rng) * _exp_env(crack_n, 24.0)
+    out = np.zeros(n, dtype=np.float32)
+    out[:crack_n] += crack
+    rumble = _band_noise(n, 30.0, 200.0, sr, rng)
+    rumble_env = _adsr(n, sr, attack_ms=12.0, decay_ms=90.0, sustain=0.3, release_ms=250.0)
+    out += 0.7 * rumble * rumble_env
+    echo_delay = int(0.11 * sr)
+    if echo_delay < n:
+        out[echo_delay:] += 0.22 * out[:-echo_delay]
+    return out
 
 
 def _sfx_cure(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Cure / heal spell — gentle ascending chime cascade."""
-    n = int(max(duration, 0.5) * sr)
-    base = pitch_hz or 880.0
-    output = np.zeros(n, dtype=np.float32)
-    # Three ascending bell tones with stagger
-    for i, (interval, delay_frac) in enumerate([(1.0, 0.0), (1.25, 0.15), (1.5, 0.30)]):
-        freq = base * interval
-        delay_n = int(delay_frac * sr)
-        bell_dur = max(duration - delay_frac, 0.1)
-        bell_n = int(bell_dur * sr)
-        t = np.arange(bell_n) / sr
-        bell = (np.sin(2.0 * np.pi * freq * t) + 0.4 * np.sin(4.0 * np.pi * freq * t)).astype(np.float32)
-        env = _exp_decay(bell_n, decay_rate=6.0)
-        bell *= env * 0.35
-        end = min(delay_n + bell_n, n)
-        output[delay_n:end] += bell[:end - delay_n]
-    return np.clip(output, -1.0, 1.0)
+    d = max(duration, 0.7)
+    n = int(d * sr)
+    base = pitch_hz or 660.0
+    notes = [base, base * 1.25, base * 1.5]
+    out = np.zeros(n, dtype=np.float32)
+    for i, note in enumerate(notes):
+        delay = int((0.15 * i) * sr)
+        seg = n - delay
+        if seg <= 0:
+            continue
+        t = np.arange(seg, dtype=np.float64) / sr
+        bell = (
+            0.75 * np.sin(2.0 * np.pi * note * t)
+            + 0.22 * np.sin(2.0 * np.pi * note * 2.0 * t)
+            + 0.12 * np.sin(2.0 * np.pi * note * 3.0 * t)
+        )
+        env = _exp_env(seg, decay=6.5)
+        out[delay:] += (bell * env * 0.4).astype(np.float32)
+    shimmer = _band_noise(n, 4500.0, 11000.0, sr, rng) * 0.08
+    wet = _reverb(out + shimmer, sr, room_seconds=1.2, decay=4.4, seed=51)
+    return (0.6 * out + 0.4 * wet).astype(np.float32)
 
 
 def _sfx_summon(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Summon / summoning sequence — epic bass hit with rising orchestral swell."""
-    n = int(max(duration, 1.0) * sr)
-    # Deep bass impact
-    bass_freq = pitch_hz or 55.0
-    bass = _sine(bass_freq, max(duration, 1.0), sr)
-    bass_env = _exp_decay(n, decay_rate=2.0)
-    # Mid orchestral swell
-    swell = _band_noise(n, 200.0, 4000.0, sr, rng)
-    swell_env = np.clip(np.linspace(0.0, 1.0, n) ** 0.5, 0.0, 1.0).astype(np.float32)
-    # High shimmer
-    shimmer = _band_noise(n, 5000.0, 12000.0, sr, rng)
-    shimmer_env = swell_env * 0.3
-    mixed = (
-        0.5 * bass[:n] * bass_env
-        + 0.35 * swell * swell_env
-        + 0.15 * shimmer * shimmer_env
-    )
-    return np.clip(mixed, -1.0, 1.0)
+    d = max(duration, 1.0)
+    n = int(d * sr)
+    bass = _sine(55.0, d, sr)
+    bass_env = _exp_env(n, decay=3.0)
+    swell = _band_noise(n, 300.0, 5000.0, sr, rng)
+    rise = np.linspace(0.0, 1.0, n, dtype=np.float32)
+    shimmer = _band_noise(n, 4000.0, 12000.0, sr, rng)
+    return (0.58 * bass[:n] * bass_env + 0.32 * swell * rise + 0.16 * shimmer * rise).astype(np.float32)
+
+
+def _sfx_limit_break(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    d = max(duration, 0.8)
+    n = int(d * sr)
+    rise = _freq_sweep(70.0, 1700.0, d, sr, exp=True)
+    surge = _band_noise(n, 200.0, 9000.0, sr, rng) * np.linspace(0.0, 1.0, n, dtype=np.float32)
+    return (0.65 * rise[:n] + 0.45 * surge).astype(np.float32)
 
 
 def _sfx_save_point(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Save point / checkpoint — ascending four-note chime (classic JRPG)."""
-    base = pitch_hz or 880.0
-    note_dur = max(duration / 4.0, 0.12)
-    notes = [base, base * 1.25, base * 1.5, base * 2.0]  # root, M3, P5, octave
-    segments = []
-    for freq in notes:
-        n_note = int(note_dur * sr)
-        t = np.arange(n_note) / sr
-        wave = (
-            0.7 * np.sin(2.0 * np.pi * freq * t)
-            + 0.2 * np.sin(4.0 * np.pi * freq * t)
-            + 0.1 * np.sin(6.0 * np.pi * freq * t)
-        ).astype(np.float32)
-        env = _exp_decay(n_note, decay_rate=7.0)
-        segments.append(wave * env)
-    return np.concatenate(segments).astype(np.float32)
+    base = pitch_hz or 523.25
+    notes = [base, base * 1.25, base * 1.5, base * 2.0]
+    note_dur = max(0.12, max(duration, 0.48) / 4.0)
+    parts: list[np.ndarray] = []
+    for f in notes:
+        n = int(note_dur * sr)
+        t = np.arange(n, dtype=np.float64) / sr
+        note = (
+            0.65 * np.sin(2.0 * np.pi * f * t)
+            + 0.23 * np.sin(2.0 * np.pi * 2 * f * t)
+            + 0.12 * np.sin(2.0 * np.pi * 3 * f * t)
+        )
+        parts.append((note * _exp_env(n, 8.0)).astype(np.float32))
+    return np.concatenate(parts).astype(np.float32)
 
 
 def _sfx_level_up(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Level up / experience gain — classic ascending arpeggio fanfare."""
-    base = pitch_hz or 523.25  # C5
-    # 8-note ascending major arpeggio: C E G C E G C (+ octave C)
-    scale_ratios = [1.0, 1.2599, 1.4983, 2.0, 2.5198, 2.9966, 4.0]
-    note_dur = max(duration / len(scale_ratios), 0.07)
-    segments = []
-    for ratio in scale_ratios:
-        freq = base * ratio
-        n_note = int(note_dur * sr)
-        t = np.arange(n_note) / sr
-        wave = (np.sin(2.0 * np.pi * freq * t) + 0.3 * np.sin(4.0 * np.pi * freq * t)).astype(np.float32)
-        env = _adsr(n_note, sr, attack_ms=2.0, decay_ms=40.0, sustain=0.0, release_ms=10.0)
-        segments.append(wave * env * 0.8)
-    return np.concatenate(segments).astype(np.float32)
+    base = pitch_hz or 523.25
+    ratios = [1.0, 1.1225, 1.2599, 1.3348, 1.4983, 1.6818, 2.0]
+    note_dur = max(0.06, max(duration, 0.5) / len(ratios))
+    parts: list[np.ndarray] = []
+    for i, r in enumerate(ratios):
+        n = int(note_dur * sr)
+        t = np.arange(n, dtype=np.float64) / sr
+        f = base * r
+        tone = np.sin(2.0 * np.pi * f * t) + 0.25 * np.sin(2.0 * np.pi * 2 * f * t)
+        sparkle = 0.08 * np.sin(2.0 * np.pi * (f * 3.5) * t + i * 0.4)
+        parts.append(((tone + sparkle) * _exp_env(n, 11.0)).astype(np.float32))
+    return np.concatenate(parts).astype(np.float32)
 
 
 def _sfx_game_over(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Game over / defeated — descending minor arpeggio."""
-    base = pitch_hz or 440.0  # A4
-    # Descending: A → F# → D → A (minor third stack, down)
-    scale_ratios = [1.0, 0.794, 0.630, 0.5]
-    note_dur = max(duration / len(scale_ratios), 0.18)
-    segments = []
-    for ratio in scale_ratios:
-        freq = base * ratio
-        n_note = int(note_dur * sr)
-        t = np.arange(n_note) / sr
-        wave = (
-            0.6 * np.sin(2.0 * np.pi * freq * t)
-            + 0.25 * np.sin(4.0 * np.pi * freq * t)
-            + 0.15 * np.sin(3.0 * np.pi * freq * t)
-        ).astype(np.float32)
-        env = _adsr(n_note, sr, attack_ms=5.0, decay_ms=60.0, sustain=0.3, release_ms=80.0)
-        segments.append(wave * env * 0.75)
-    return np.concatenate(segments).astype(np.float32)
+    base = pitch_hz or 440.0
+    ratios = [1.0, 0.84, 0.67, 0.5]
+    note_dur = max(0.14, max(duration, 0.55) / len(ratios))
+    parts: list[np.ndarray] = []
+    for r in ratios:
+        n = int(note_dur * sr)
+        t = np.arange(n, dtype=np.float64) / sr
+        f = base * r
+        tone = 0.7 * np.sin(2.0 * np.pi * f * t) + 0.2 * np.sin(2.0 * np.pi * 1.5 * f * t)
+        parts.append((tone * _adsr(n, sr, 3.0, 50.0, 0.22, 90.0)).astype(np.float32))
+    return np.concatenate(parts).astype(np.float32)
 
 
-def _sfx_menu_open(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Menu open / UI confirm — short bright two-tone chime."""
-    return _sfx_cure(max(duration, 0.25), pitch_hz or 1200.0, sr, rng)
+def _sfx_sword(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    d = max(duration, 0.3)
+    n = int(d * sr)
+    whoosh = _moving_band_noise(n, 2500.0, 9000.0, bandwidth=2200.0, sr=sr, rng=rng)
+    whoosh *= np.sin(np.linspace(0.0, np.pi, n, dtype=np.float64)).astype(np.float32)
+    ring_d = max(0.08, d * 0.35)
+    ring_n = int(ring_d * sr)
+    ring_t = np.arange(ring_n, dtype=np.float64) / sr
+    ring = (
+        0.5 * np.sin(2.0 * np.pi * 2400.0 * ring_t)
+        + 0.3 * np.sin(2.0 * np.pi * 3700.0 * ring_t)
+        + 0.2 * np.sin(2.0 * np.pi * 5100.0 * ring_t)
+    )
+    ring *= _exp_env(ring_n, 18.0)
+    out = whoosh.astype(np.float32)
+    start = max(0, n - ring_n)
+    out[start : start + ring_n] += ring[: n - start].astype(np.float32)
+    return out
 
 
-def _sfx_menu_close(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
-    """Menu close / UI cancel — descending two-tone."""
-    base = pitch_hz or 1200.0
-    note_dur = max(duration / 2.0, 0.08)
-    segments = []
-    for freq in [base, base * 0.794]:
-        n_note = int(note_dur * sr)
-        t = np.arange(n_note) / sr
-        wave = np.sin(2.0 * np.pi * freq * t).astype(np.float32)
-        env = _exp_decay(n_note, decay_rate=9.0)
-        segments.append(wave * env * 0.75)
-    return np.concatenate(segments).astype(np.float32)
+def _sfx_ui_click(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    d = max(duration, 0.03)
+    n = int(d * sr)
+    tone = _sine(pitch_hz or 800.0, d, sr)
+    noise = _band_noise(n, 2500.0, 10000.0, sr, rng)
+    env = _exp_env(n, 18.0)
+    return (0.75 * tone[:n] + 0.25 * noise) * env
 
 
-# Add FF7/FF8 types to the registry
-_SFX_FUNCTIONS.update({
-    "sword_swing":   _sfx_sword_swing,
-    "sword":         _sfx_sword_swing,
-    "slash":         _sfx_sword_swing,
-    "spell_fire":    _sfx_spell_fire,
-    "fire":          _sfx_spell_fire,
-    "firaga":        _sfx_spell_fire,
-    "spell_ice":     _sfx_spell_ice,
-    "ice":           _sfx_spell_ice,
-    "blizzard":      _sfx_spell_ice,
+def _sfx_confirm(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    note_d = max(0.06, max(duration, 0.16) / 2.0)
+    first = _sine(800.0, note_d, sr) * _exp_env(int(note_d * sr), 10.0)
+    second = _sine(1200.0, note_d, sr) * _exp_env(int(note_d * sr), 10.0)
+    return np.concatenate([first, second]).astype(np.float32)
+
+
+def _sfx_cancel(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    note_d = max(0.06, max(duration, 0.16) / 2.0)
+    first = _sine(1200.0, note_d, sr) * _exp_env(int(note_d * sr), 10.0)
+    second = _sine(800.0, note_d, sr) * _exp_env(int(note_d * sr), 10.0)
+    return np.concatenate([first, second]).astype(np.float32)
+
+
+def _sfx_generic(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    return _sfx_ui_click(max(duration, 0.08), pitch_hz or 900.0, sr, rng)
+
+
+_SFX_FUNCTIONS: dict[str, Callable[[float, float | None, int, np.random.Generator], np.ndarray]] = {
+    "explosion": _sfx_explosion,
+    "footstep": _sfx_footstep,
+    "hit": _sfx_hit,
+    "impact": _sfx_hit,
+    "whoosh": _sfx_whoosh,
+    "swing": _sfx_whoosh,
+    "laser": _sfx_laser,
+    "coin": _sfx_coin,
+    "pickup": _sfx_coin,
+    "jump": _sfx_jump,
+    "magic": _sfx_magic,
+    "spell": _sfx_magic,
+    "spell_fire": _sfx_spell_fire,
+    "spell_ice": _sfx_spell_ice,
     "spell_thunder": _sfx_spell_thunder,
-    "thunder":       _sfx_spell_thunder,
-    "lightning":     _sfx_spell_thunder,
-    "bolt":          _sfx_spell_thunder,
-    "limit_break":   _sfx_limit_break,
-    "limit":         _sfx_limit_break,
-    "ultimate":      _sfx_limit_break,
-    "cure":          _sfx_cure,
-    "heal":          _sfx_cure,
-    "summon":        _sfx_summon,
-    "save_point":    _sfx_save_point,
-    "checkpoint":    _sfx_save_point,
-    "level_up":      _sfx_level_up,
-    "levelup":       _sfx_level_up,
-    "exp":           _sfx_level_up,
-    "game_over":     _sfx_game_over,
-    "gameover":      _sfx_game_over,
-    "defeat":        _sfx_game_over,
-    "menu_open":     _sfx_menu_open,
-    "confirm":       _sfx_menu_open,
-    "menu_close":    _sfx_menu_close,
-    "cancel":        _sfx_menu_close,
-})
+    "heal": _sfx_cure,
+    "cure": _sfx_cure,
+    "summon": _sfx_summon,
+    "limit_break": _sfx_limit_break,
+    "limit": _sfx_limit_break,
+    "ultimate": _sfx_limit_break,
+    "save_point": _sfx_save_point,
+    "checkpoint": _sfx_save_point,
+    "level_up": _sfx_level_up,
+    "levelup": _sfx_level_up,
+    "exp": _sfx_level_up,
+    "game_over": _sfx_game_over,
+    "gameover": _sfx_game_over,
+    "defeat": _sfx_game_over,
+    "sword": _sfx_sword,
+    "sword_swing": _sfx_sword,
+    "slash": _sfx_sword,
+    "ui_click": _sfx_ui_click,
+    "click": _sfx_ui_click,
+    "tick": _sfx_ui_click,
+    "ping": _sfx_ui_click,
+    "confirm": _sfx_confirm,
+    "menu_open": _sfx_confirm,
+    "cancel": _sfx_cancel,
+    "menu_close": _sfx_cancel,
+    "fire": _sfx_spell_fire,
+    "ice": _sfx_spell_ice,
+    "thunder": _sfx_spell_thunder,
+    "lightning": _sfx_spell_thunder,
+    "bolt": _sfx_spell_thunder,
+    "water": _sfx_magic,
+    "wind": _sfx_whoosh,
+    "beep": _sfx_confirm,
+    "generic": _sfx_generic,
+}
 
 
 def synthesise_sfx(
@@ -526,35 +447,11 @@ def synthesise_sfx(
     sample_rate: int = 44100,
     seed: int | None = None,
 ) -> np.ndarray:
-    """Generate a sound effect using procedural synthesis.
-
-    Parameters
-    ----------
-    sfx_type:
-        SFX category keyword.  Unknown types fall back to ``"generic"``.
-    duration:
-        Target duration in seconds.
-    pitch_hz:
-        Optional base pitch frequency override in Hz.
-    sample_rate:
-        Audio sample rate in Hz.
-    seed:
-        RNG seed for reproducibility.
-
-    Returns
-    -------
-    np.ndarray
-        Mono float32 audio array.
-
-    Example
-    -------
-    >>> audio = synthesise_sfx("explosion", duration=1.5)
-    """
+    """Generate deterministic mono float32 audio for an SFX type."""
     rng = np.random.default_rng(seed)
-    fn = _SFX_FUNCTIONS.get(sfx_type, _sfx_generic)
-    audio = fn(duration, pitch_hz, sample_rate, rng)
-    # Normalise to -9 dBFS to keep fixture-driven QA loudness checks in range.
-    peak = np.max(np.abs(audio))
+    fn = _SFX_FUNCTIONS.get(sfx_type.lower(), _sfx_generic)
+    audio = fn(duration, pitch_hz, sample_rate, rng).astype(np.float32)
+    peak = float(np.max(np.abs(audio)))
     if peak > 1e-9:
         target = 10.0 ** (-9.0 / 20.0)
         audio = (audio / peak * target).astype(np.float32)
@@ -562,5 +459,4 @@ def synthesise_sfx(
 
 
 def available_sfx_types() -> list[str]:
-    """Return the list of recognised SFX type keywords."""
     return sorted(_SFX_FUNCTIONS)

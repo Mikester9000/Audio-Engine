@@ -4,6 +4,8 @@
 
 - style-based generation through `AudioEngine.generate_track()`
 - prompt-driven generation through `MusicGen`
+- structured phrase planning + motif variation via `audio_engine/composer/phrase.py` (`SectionPlanner`, `MotifBank`)
+- cadence-aware, loop-friendly 8-layer procedural arrangement in `audio_engine/ai/generator.py`
 - mastering through `OfflineBounce`
 - CLI access through `generate` and `generate-music`
 - backend selection/discovery surfaces through `generate-music --backend` and `list-backends`
@@ -11,9 +13,9 @@
 
 ## What is missing
 
-- per-target duration enforcement from plan metadata in execution paths
 - richer style-preset registry beyond current built-in styles
 - verified non-procedural backend quality benchmarks using real downloaded model weights
+- studio-side reusable profile/preset management for creation workflows
 
 ## Backend evaluation notes (SESSION-011 + optional neural scaffolding)
 
