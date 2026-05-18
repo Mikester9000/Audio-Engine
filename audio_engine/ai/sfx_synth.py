@@ -412,6 +412,24 @@ def _sfx_sword(duration: float, pitch_hz: float | None, sr: int, rng: np.random.
     return out
 
 
+def _sfx_parry(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    d = max(duration, 0.24)
+    n = int(d * sr)
+    clang = _sfx_sword(d, pitch_hz, sr, rng)[:n]
+    body = np.zeros(n, dtype=np.float32)
+    transient_n = max(1, int(0.018 * sr))
+    transient = _band_noise(transient_n, 1400.0, 10000.0, sr, rng) * _exp_env(transient_n, 24.0)
+    body[:transient_n] = transient
+    ring = (
+        0.34 * _sine(1750.0, d, sr)
+        + 0.22 * _sine(2630.0, d, sr, phase=np.pi / 7.0)
+        + 0.12 * _sine(3890.0, d, sr, phase=np.pi / 5.0)
+    )[:n]
+    ring *= _exp_env(n, 12.0)
+    low_impact = _sine(pitch_hz or 320.0, d, sr, amp=0.16)[:n] * _exp_env(n, 16.0)
+    return (0.52 * clang + body + ring + low_impact).astype(np.float32)
+
+
 def _sfx_ui_click(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
     d = max(duration, 0.03)
     n = int(d * sr)
@@ -469,6 +487,8 @@ _SFX_FUNCTIONS: dict[str, Callable[[float, float | None, int, np.random.Generato
     "game_over": _sfx_game_over,
     "gameover": _sfx_game_over,
     "defeat": _sfx_game_over,
+    "parry": _sfx_parry,
+    "block": _sfx_parry,
     "sword": _sfx_sword,
     "sword_swing": _sfx_sword,
     "slash": _sfx_sword,

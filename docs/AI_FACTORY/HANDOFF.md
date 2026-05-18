@@ -13,10 +13,19 @@ Completed procedural audio quality-overhaul implementation scope:
 - Added 8-voice active-layer management plus role-aware mixing/EQ in `Sequencer`; vectorized `Effects.chorus` to remove per-sample Python loops.
 - Added local Tkinter studio workflow module and additive `audio-engine studio` CLI command.
 - Updated continuity docs to mark SESSION-029 implemented (user override) and queued SESSION-029b UI/tooling follow-up.
+- Follow-up QA Gate fix: SFX prompt parsing now recognizes `parry`/`block` explicitly and routes them to a dedicated metallic parry recipe so the committed combat-parry fixture clears the CI loudness floor.
 
 ## Verified in this session
 
 ```bash
+python -m pytest
+python tools/validate-assets.py assets/examples/ --verbose
+audio-engine generate-request-batch --batch-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json --output-dir /tmp/ci_qa_batch_local --quiet
+audio-engine qa-batch --input-dir /tmp/ci_qa_batch_local/drafts/sfx --output-report /tmp/ci_qa_batch_local/qa_report.json --recursive
+audio-engine generate-request-batch --batch-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json --output-dir /tmp/ci_qa_music_local --quiet
+audio-engine qa-batch --input-dir /tmp/ci_qa_music_local/drafts/music --output-report /tmp/ci_qa_music_local/qa_report.json --recursive
+audio-engine generate-request-batch --batch-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.voice.v1.json --output-dir /tmp/ci_qa_voice_local --quiet
+audio-engine qa-batch --input-dir /tmp/ci_qa_voice_local/drafts/voice --output-report /tmp/ci_qa_voice_local/qa_report.json --recursive
 python -m pytest tests/test_procedural_overhaul.py tests/test_generator.py tests/test_sequencer.py tests/test_effects.py tests/test_ai_pipeline.py -k "not OptionalNeuralBackends"
 python -m pytest tests/test_ps1_era.py -k "FF7StylePresets or FF7SFXTypes"
 python -m pytest tests/test_engine_cli.py -k "list_styles or generate or studio"
@@ -26,6 +35,9 @@ Observed result:
 - procedural-overhaul focused tests pass (phrase planner, SFX spectral differentiation, deterministic music/voice generation, sequencer 8-layer limit, studio wiring)
 - PS1/FF-style regression slices pass for style presets + expanded SFX aliases
 - CLI regression slice passes with additive `studio` command coverage
+- full pytest passes (914 tests)
+- asset manifest validation passes
+- local reproduction of the Audio QA Gate workflow now passes for SFX, music, and voice fixtures; `req_sfx_combat_parry_v1.wav` now clears QA at -18.19 LUFS
 
 ## Immediate next best task
 
