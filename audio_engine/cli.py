@@ -814,6 +814,7 @@ def _cmd_verify_backends(args: argparse.Namespace) -> None:
 
     import numpy as np
 
+    import audio_engine.ai.backends as _optional_backends  # noqa: F401
     from audio_engine.ai.backend import BackendRegistry
 
     sample_rate = args.sample_rate
@@ -844,40 +845,34 @@ def _cmd_verify_backends(args: argparse.Namespace) -> None:
                 print(f"  [error]  {name}: {exc}")
             continue
 
+        smoke_backend = backend
+        if smoke and available:
+            try:
+                smoke_backend = BackendRegistry.get(name, sample_rate=sample_rate, seed=42)
+            except TypeError:
+                smoke_backend = backend
+
         smoke_result: dict | None = None
         if smoke and available:
             smoke_result = {"music": None, "sfx": None, "voice": None}
             for modality in modalities:
                 try:
                     if modality == "music":
-                        try:
-                            audio = backend.generate_music_audio(
-                                style="battle", duration=0.25, seed=42
-                            )
-                        except TypeError:
-                            audio = backend.generate_music_audio(
-                                style="battle", duration=0.25
-                            )
+                        audio = smoke_backend.generate_music_audio(
+                            style="battle",
+                            duration=0.25,
+                        )
                         ok = isinstance(audio, np.ndarray) and audio.size > 0
                         smoke_result["music"] = "pass" if ok else "fail: empty output"
                     elif modality == "sfx":
-                        try:
-                            audio = backend.generate_sfx_audio(
-                                sfx_type="explosion", duration=0.25, seed=42
-                            )
-                        except TypeError:
-                            audio = backend.generate_sfx_audio(
-                                sfx_type="explosion", duration=0.25
-                            )
+                        audio = smoke_backend.generate_sfx_audio(
+                            sfx_type="explosion",
+                            duration=0.25,
+                        )
                         ok = isinstance(audio, np.ndarray) and audio.size > 0
                         smoke_result["sfx"] = "pass" if ok else "fail: empty output"
                     elif modality == "voice":
-                        try:
-                            audio = backend.generate_voice_audio(
-                                text="hello", seed=42
-                            )
-                        except TypeError:
-                            audio = backend.generate_voice_audio(text="hello")
+                        audio = smoke_backend.generate_voice_audio(text="hello")
                         ok = isinstance(audio, np.ndarray) and audio.size > 0
                         smoke_result["voice"] = "pass" if ok else "fail: empty output"
                 except Exception as exc:
@@ -926,6 +921,8 @@ def _cmd_verify_backends(args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    from audio_engine.render.offline_bounce import VALID_PROFILES
+
     parser = argparse.ArgumentParser(
         prog="audio-engine",
         description="Audio Engine – produce AI-assisted music, SFX, and voice.",
@@ -1005,7 +1002,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     gm.add_argument(
         "--profile",
-        choices=["game", "ost", "youtube", "vocal_mix", "procedural_neutral"],
+        choices=VALID_PROFILES,
         default="game",
         help="Mastering profile preset (default: game).",
     )

@@ -912,6 +912,43 @@ def test_cli_verify_backends_smoke_run_procedural(tmp_path):
     assert procedural["smoke_run"].get("music") == "pass"
 
 
+def test_cli_verify_backends_exits_2_when_backend_unavailable(tmp_path, monkeypatch):
+    from audio_engine.ai.backend import BackendRegistry
+
+    class _UnavailableBackend:
+        def is_available(self):
+            return False
+
+        def availability_reason(self):
+            return "simulated unavailable"
+
+        def supported_modalities(self):
+            return ("music",)
+
+        def dependency_summary(self):
+            return "simulated dependency"
+
+    monkeypatch.setattr(
+        BackendRegistry,
+        "available_backends",
+        classmethod(lambda cls: ["simulated_backend"]),
+    )
+    monkeypatch.setattr(
+        BackendRegistry,
+        "get",
+        classmethod(lambda cls, name, **kwargs: _UnavailableBackend()),
+    )
+
+    report_path = tmp_path / "preflight_unavailable.json"
+    with pytest.raises(SystemExit) as excinfo:
+        main(["verify-backends", "--output-report", str(report_path), "--quiet"])
+
+    assert excinfo.value.code == 2
+    report = json.loads(report_path.read_text())
+    assert report["allAvailable"] is False
+    assert report["backends"][0]["available"] is False
+
+
 def test_cli_verify_backends_report_schema(tmp_path):
     import json
 
@@ -1046,3 +1083,19 @@ def test_cli_generate_music_profile_flag_default_game(tmp_path):
     ])
     assert rc == 0
     assert Path(out).exists()
+
+
+def test_cli_generate_music_profile_choices_match_offline_bounce():
+    import argparse
+
+    from audio_engine.render.offline_bounce import VALID_PROFILES
+
+    parser = build_parser()
+    subparsers_action = next(
+        action for action in parser._actions if isinstance(action, argparse._SubParsersAction)
+    )
+    gm_parser = subparsers_action.choices["generate-music"]
+    profile_action = next(
+        action for action in gm_parser._actions if action.dest == "profile"
+    )
+    assert list(profile_action.choices) == list(VALID_PROFILES)

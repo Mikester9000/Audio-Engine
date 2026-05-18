@@ -48,10 +48,10 @@
 | Property        | Requirement                                              |
 |-----------------|----------------------------------------------------------|
 | Container       | WAV (`.wav` or `.WAV`)                                   |
-| Encoding        | PCM linear (int16 or int32 preferred; float32 accepted)  |
+| Encoding        | PCM linear (int8/int16/int32)                            |
 | Channels        | Mono or stereo (multi-channel files are averaged to mono)|
 | Sample rate     | Any — files are resampled to engine sample rate on load  |
-| Bit depth       | 16, 24, or 32 bit                                        |
+| Bit depth       | 8, 16, or 32 bit PCM                                     |
 | Duration        | Any — engine will trim or loop to target duration        |
 | File size limit | No hard limit; large files increase load time            |
 
@@ -72,7 +72,7 @@
 ## 4. Pitch-shift behaviour
 
 - The engine pitch-shifts samples at runtime using ratio-based resampling
-  (`scipy.signal.resample_poly` when available, otherwise NumPy interpolation).
+  (`scipy.signal.resample` when available, otherwise NumPy interpolation).
 - This is the tracker/hardware-sampler approach: appropriate for PS1/PS2-era
   aesthetic targets.
 - Pitch ratio is computed from the note interval requested by the generation
@@ -89,7 +89,8 @@ The scanner **silently skips** (does not reject the whole folder) files that:
 - Cannot be opened as a valid WAV file (corrupted, wrong container, etc.)
 - Have zero frames after reading
 
-Files with unsupported bit depths are loaded with best-effort type coercion.
+24-bit PCM and float WAV files are not part of the current executable contract;
+convert these to supported PCM depths before ingestion.
 
 No hard rejections of individual files will halt the entire ingestion; problematic
 files are simply omitted from the category cache.
