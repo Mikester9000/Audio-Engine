@@ -37,6 +37,7 @@ class SectionPlanner:
     def __init__(self, style: str, total_bars: int, seed: int | None = None) -> None:
         self.style = style
         self.total_bars = max(4, total_bars)
+        # Keep seed=None distinct from seed=0 by capturing a random base seed per planner instance.
         self._seed = seed if seed is not None else random.SystemRandom().randrange(0, 2**31)
         style_hash = sum((idx + 1) * ord(ch) for idx, ch in enumerate(style))
         # Mix style and bar count into the seed to keep repeatable section plans per request shape.

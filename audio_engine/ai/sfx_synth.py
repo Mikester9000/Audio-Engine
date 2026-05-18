@@ -495,7 +495,7 @@ def synthesise_sfx(
     sample_rate: int = 44100,
     seed: int | None = None,
 ) -> np.ndarray:
-    """Generate deterministic mono float32 audio for an SFX type when seed is provided."""
+    """Generate mono float32 audio for an SFX type; deterministic with a seed, non-deterministic otherwise."""
     rng = np.random.default_rng(seed)
     fn = _SFX_FUNCTIONS.get(sfx_type.lower(), _sfx_generic)
     audio = fn(duration, pitch_hz, sample_rate, rng).astype(np.float32)
