@@ -64,7 +64,7 @@ class Filter:
     # ------------------------------------------------------------------
 
     def _design(self, btype: str, cutoff: float) -> np.ndarray:
-        key = (btype, float(cutoff))
+        key = (btype, cutoff)
         cached = self._design_cache.get(key)
         if cached is not None:
             return cached

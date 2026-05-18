@@ -39,9 +39,9 @@ VOICE_PRESETS: dict[str, _VoicePreset] = {
 
 _BASE_FORMANTS = np.array([700.0, 1220.0, 2600.0], dtype=np.float64)
 _SUBHARMONIC_PHASE_OFFSET = 0.33
-_NOISE_BAND_MIN = 0.001
-_NOISE_BAND_MAX = 0.949
-_NOISE_BAND_MIN_WIDTH = 0.05
+_NOISE_BAND_MIN = 0.001  # Avoid zero-width/zero-frequency band edges during normalization.
+_NOISE_BAND_MAX = 0.949  # Leave room for the minimum high-edge spacing below Nyquist.
+_NOISE_BAND_MIN_WIDTH = 0.05  # Keep a stable minimum normalized band-pass width for low sample rates.
 
 _VOWELS = set("aeiouy")
 _PLOSIVES = set("pbtdkg")

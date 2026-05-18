@@ -37,11 +37,11 @@ def test_section_planner_short_forms_still_cover_requested_bars():
 
 
 def test_section_planner_seed_none_differs_from_zero(monkeypatch):
-    class _StubSystemRandom:
+    class StubSystemRandom:
         def randrange(self, start: int, stop: int | None = None) -> int:
             return 12345
 
-    monkeypatch.setattr("audio_engine.composer.phrase.random.SystemRandom", lambda: _StubSystemRandom())
+    monkeypatch.setattr("audio_engine.composer.phrase.random.SystemRandom", lambda: StubSystemRandom())
     none_seed = SectionPlanner(style="battle", total_bars=16, seed=None).plan()
     zero_seed = SectionPlanner(style="battle", total_bars=16, seed=0).plan()
     assert none_seed != zero_seed
@@ -94,11 +94,11 @@ def test_music_generator_structured_and_deterministic():
 
 
 def test_music_generator_seed_none_differs_from_zero(monkeypatch):
-    class _StubSystemRandom:
+    class StubSystemRandom:
         def randrange(self, start: int, stop: int | None = None) -> int:
             return 54321
 
-    monkeypatch.setattr("audio_engine.ai.generator.random.SystemRandom", lambda: _StubSystemRandom())
+    monkeypatch.setattr("audio_engine.ai.generator.random.SystemRandom", lambda: StubSystemRandom())
     none_seed = MusicGenerator(sample_rate=22050, seed=None).generate_audio(style="battle", bars=4)
     zero_seed = MusicGenerator(sample_rate=22050, seed=0).generate_audio(style="battle", bars=4)
     assert not np.array_equal(none_seed, zero_seed)

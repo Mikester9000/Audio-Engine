@@ -22,6 +22,7 @@ _NORMALIZED_MAX_EDGE = 0.999
 
 
 def _normalized_band(lo: float, hi: float, sr: int, min_width: float = 0.02) -> tuple[float, float] | None:
+    """Normalize a frequency band to Nyquist-relative edges or return None when out of range."""
     nyq = sr / 2.0
     if nyq <= 0.0 or hi <= 0.0 or lo >= nyq:
         return None
