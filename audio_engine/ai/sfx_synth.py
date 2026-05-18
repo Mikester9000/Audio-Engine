@@ -18,7 +18,7 @@ import numpy as np
 __all__ = ["synthesise_sfx", "available_sfx_types"]
 
 
-def _normalised_band(lo: float, hi: float, sr: int, min_width: float = 0.02) -> tuple[float, float] | None:
+def _normalized_band(lo: float, hi: float, sr: int, min_width: float = 0.02) -> tuple[float, float] | None:
     nyq = sr / 2.0
     if nyq <= 0.0 or hi <= 0.0 or lo >= nyq:
         return None
@@ -62,7 +62,7 @@ def _band_noise(n: int, lo: float, hi: float, sr: int, rng: np.random.Generator)
     from scipy.signal import butter, sosfilt  # type: ignore[import]
 
     raw = rng.standard_normal(n).astype(np.float64)
-    band = _normalised_band(lo, hi, sr)
+    band = _normalized_band(lo, hi, sr)
     if band is None:
         return raw.astype(np.float32)
     low, high = band
@@ -88,7 +88,7 @@ def _moving_band_noise(
         lo = max(80.0, c - bandwidth / 2.0)
         hi = min(sr / 2.0 - 50.0, c + bandwidth / 2.0)
         raw = rng.standard_normal(segment_len).astype(np.float64)
-        band = _normalised_band(lo, hi, sr, min_width=0.04)
+        band = _normalized_band(lo, hi, sr, min_width=0.04)
         if band is None:
             segments.append(raw.astype(np.float32))
             continue
@@ -495,7 +495,7 @@ def synthesise_sfx(
     sample_rate: int = 44100,
     seed: int | None = None,
 ) -> np.ndarray:
-    """Generate mono float32 audio for an SFX type, deterministic when seed is provided."""
+    """Generate deterministic mono float32 audio for an SFX type when seed is provided."""
     rng = np.random.default_rng(seed)
     fn = _SFX_FUNCTIONS.get(sfx_type.lower(), _sfx_generic)
     audio = fn(duration, pitch_hz, sample_rate, rng).astype(np.float32)

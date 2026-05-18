@@ -33,7 +33,7 @@ def test_section_planner_short_forms_still_cover_requested_bars():
     assert [block.role.name for block in plan] == ["INTRO", "A_PHRASE", "CLIMAX", "CADENCE"]
 
 
-def test_section_planner_seed_none_does_not_collide_with_zero(monkeypatch):
+def test_section_planner_seed_none_differs_from_zero(monkeypatch):
     class _StubSystemRandom:
         def randrange(self, start: int, stop: int | None = None) -> int:
             return 12345
@@ -90,7 +90,7 @@ def test_music_generator_structured_and_deterministic():
     np.testing.assert_array_equal(a1, a2)
 
 
-def test_music_generator_seed_none_does_not_collide_with_zero(monkeypatch):
+def test_music_generator_seed_none_differs_from_zero(monkeypatch):
     class _StubSystemRandom:
         def randrange(self, start: int, stop: int | None = None) -> int:
             return 54321
