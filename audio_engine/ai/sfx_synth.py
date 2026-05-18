@@ -420,6 +420,8 @@ def _sfx_parry(duration: float, pitch_hz: float | None, sr: int, rng: np.random.
     transient_n = max(1, int(0.018 * sr))
     transient = _band_noise(transient_n, 1400.0, 10000.0, sr, rng) * _exp_env(transient_n, 24.0)
     body[:transient_n] = transient
+    # Use high inharmonic partials plus a short low thunk so parries read as
+    # bright metal-on-metal impacts while still carrying enough energy for QA.
     ring = (
         0.34 * _sine(1750.0, d, sr)
         + 0.22 * _sine(2630.0, d, sr, phase=np.pi / 7.0)

@@ -475,6 +475,7 @@ class TestSFXSynth:
         np.testing.assert_array_equal(a, b)
 
     def test_parry_sfx_meets_qa_loudness_floor(self):
+        # Use the committed combat-parry fixture seed so this stays aligned with QA Gate coverage.
         audio = synthesise_sfx("parry", duration=1.0, sample_rate=44100, seed=305024)
         result = LoudnessMeter(sample_rate=44100).measure(audio)
         assert result.integrated_lufs > -30.0
