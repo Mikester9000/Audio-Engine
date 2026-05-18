@@ -228,6 +228,7 @@ class ProceduralBackend(InferenceBackend):
             voice_preset=voice_preset,
             speed=speed,
             sample_rate=self.sample_rate,
+            seed=self._seed,
         )
 
 

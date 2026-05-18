@@ -186,6 +186,13 @@ def _cmd_generate_voice(args: argparse.Namespace) -> None:
     print(f"Done. Saved to: {path}")
 
 
+def _cmd_studio(args: argparse.Namespace) -> None:
+    """Launch local Tkinter studio GUI."""
+    from audio_engine.ui import launch_studio
+
+    launch_studio()
+
+
 def _cmd_remaster(args: argparse.Namespace) -> None:
     """Remaster an existing WAV file by blending in orchestral samples."""
     import wave
@@ -1306,6 +1313,9 @@ def build_parser() -> argparse.ArgumentParser:
     # --- list-backends ---
     sub.add_parser("list-backends", help="List available generation backends.")
 
+    # --- studio ---
+    sub.add_parser("studio", help="Launch the local Tkinter Audio Engine Studio.")
+
     # --- list-music-library ---
     lml = sub.add_parser(
         "list-music-library",
@@ -1816,6 +1826,7 @@ def main(argv: list[str] | None = None) -> int:
         "list-styles": _cmd_list_styles,
         "list-instruments": _cmd_list_instruments,
         "list-backends": _cmd_list_backends,
+        "studio": _cmd_studio,
         "generate-request-batch": _cmd_generate_request_batch,
         "generate-plan-batch": _cmd_generate_plan_batch,
         "generate-game-assets": _cmd_generate_game_assets,

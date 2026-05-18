@@ -196,10 +196,17 @@
 
 ### SESSION-029 — Finalize dual synth profile targets (PS1/PS2-era + orchestral)
 
+- **Status:** `completed` (implemented by user override)
+- **Task type:** `implementation + tests`
+- **Objective:** Implement procedural quality-overhaul code paths for PS2-era JRPG-targeted output: structured phrase planning, motif reuse/variation, 8-layer arrangement management, recipe-specific SFX synthesis, and upgraded voice synthesis.
+- **Notes:** Includes additive `audio-engine studio` GUI tooling surface and deterministic seed-preserving behavior across music/SFX/voice.
+
+### SESSION-029b — Expand creation tooling / studio workflow
+
 - **Status:** `planned`
-- **Task type:** `docs_only`
-- **Objective:** Lock style-family profile contracts for PS1/PS2-era synth output and orchestral synth output so downstream generation requests use stable profile names and constraints.
-- **Notes:** Keep this as style-family guidance, not artist-copy guidance, and preserve existing generation defaults.
+- **Task type:** `cli + ui`
+- **Objective:** Add post-MVP creation tooling improvements for the local studio workflow (presets, profile loading, batch generation shortcuts, and error-recovery UX).
+- **Notes:** Keep Tkinter/local-offline constraints and preserve existing CLI command compatibility.
 
 ### SESSION-030 — Add strict WAV sample-folder ingestion contract
 

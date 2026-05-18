@@ -1,6 +1,6 @@
 {
-  "version": "1.9.0",
-  "lastUpdated": "2026-05-17",
+  "version": "1.10.0",
+  "lastUpdated": "2026-05-18",
   "currentSession": {
     "id": "SESSION-028",
     "title": "Add backend preflight verification command for optional neural workflows",

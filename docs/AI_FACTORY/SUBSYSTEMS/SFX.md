@@ -4,6 +4,7 @@
 
 - prompt-driven SFX generation via `SFXGen`
 - procedural synthesis helpers in `audio_engine/ai/sfx_synth.py`
+- category-specific synthesis recipes (explosion/footstep/hit/whoosh/laser/coin/jump/magic elemental spell families/heal/summon/progression/UI/sword)
 - CLI access through `generate-sfx`
 - current game integration map covers combat, magic, world, quest, and UI events
 
@@ -12,6 +13,7 @@
 - formal taxonomy for material-dependent footsteps and environment variants
 - automatic variation-generation workflow for repeated gameplay events
 - broader request/review manifest coverage for additional SFX families beyond the current committed fixture set
+- deeper material/environment variant authoring (surface-specific footsteps, weapon/material subfamilies)
 
 ## Variation strategy for repeated categories (SESSION-012)
 

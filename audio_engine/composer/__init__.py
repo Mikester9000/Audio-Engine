@@ -4,6 +4,7 @@ from audio_engine.composer.scale import Scale, ScaleLibrary
 from audio_engine.composer.chord import Chord, ChordProgression
 from audio_engine.composer.pattern import RhythmPattern
 from audio_engine.composer.sequencer import Sequencer, Note
+from audio_engine.composer.phrase import PhraseRole, PhraseBlock, SectionPlanner, MotifBank
 
 __all__ = [
     "Scale",
@@ -13,4 +14,8 @@ __all__ = [
     "RhythmPattern",
     "Sequencer",
     "Note",
+    "PhraseRole",
+    "PhraseBlock",
+    "SectionPlanner",
+    "MotifBank",
 ]

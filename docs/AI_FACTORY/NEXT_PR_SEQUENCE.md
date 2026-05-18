@@ -47,16 +47,25 @@
 - **Verification commands:** `python -m pytest tests/test_engine_cli.py tests/test_ai_pipeline.py`
 - **Definition of done:** Command reports availability/dependency status and optional smoke outcomes.
 
-## PR-12 — PS1/PS2 and orchestral synth profile contracts (SESSION-029)
+## PR-12 — Procedural quality-overhaul implementation (SESSION-029, completed)
 
-- **Suggested title:** `Define stable synth profile contracts`
-- **Objective:** Finalize profile names/constraints for PS1/PS2 and orchestral output modes.
-- **Why it matters:** Prevents profile naming drift across requests and remaster workflows.
-- **Likely files to change:** `docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md`, profile/schema docs
-- **Verification commands:** manual doc consistency + JSON parse checks where applicable
-- **Definition of done:** Stable documented profile contracts exist and match runtime terminology.
+- **Suggested title:** `Implement procedural phrase/SFX/voice quality overhaul`
+- **Objective:** Land executable PS2-era procedural quality upgrades across music/SFX/voice/sequencing and add a local studio launch surface.
+- **Why it matters:** Improves default offline output quality without requiring neural dependencies.
+- **Likely files to change:** `audio_engine/ai/generator.py`, `audio_engine/composer/phrase.py`, `audio_engine/ai/sfx_synth.py`, `audio_engine/ai/voice_synth.py`, `audio_engine/composer/sequencer.py`, `audio_engine/synthesizer/effects.py`, `audio_engine/ui/*`, tests/docs
+- **Verification commands:** targeted pytest slices for generator/sfx/voice/sequencer/CLI/studio + relevant regression slices
+- **Definition of done:** Structured deterministic procedural outputs and additive studio entrypoint are implemented and tested.
 
-## PR-13 — WAV sample folder ingestion contract (SESSION-030)
+## PR-13 — Studio creation-tooling follow-up (SESSION-029b)
+
+- **Suggested title:** `Expand studio creation tooling presets and workflow UX`
+- **Objective:** Add preset save/load, quick batch generation controls, and improved failure recovery to `audio-engine studio`.
+- **Why it matters:** Lowers iterative content-creation friction for non-CLI users.
+- **Likely files to change:** `audio_engine/ui/studio.py`, `audio_engine/cli.py`, docs, tests
+- **Verification commands:** `python -m pytest tests/test_engine_cli.py tests/test_procedural_overhaul.py -k studio`
+- **Definition of done:** Studio retains compatibility and offers repeatable creation tooling primitives for routine asset generation.
+
+## PR-14 — WAV sample folder ingestion contract (SESSION-030)
 
 - **Suggested title:** `Define strict WAV ingestion contract for sample folders`
 - **Objective:** Publish deterministic layout/naming/metadata/rejection rules.
@@ -65,7 +74,7 @@
 - **Verification commands:** manual doc review + JSON parse checks
 - **Definition of done:** Ingestion contract is explicit enough for no-ambiguity automation.
 
-## PR-14 — Batch remaster pipeline wiring (SESSION-031)
+## PR-15 — Batch remaster pipeline wiring (SESSION-031)
 
 - **Suggested title:** `Wire deterministic batch remaster execution`
 - **Objective:** Add batch remaster execution and machine-readable outcomes.
@@ -74,7 +83,7 @@
 - **Verification commands:** `python -m pytest tests/test_integration.py tests/test_engine_cli.py -k remaster`
 - **Definition of done:** Batch remaster pipeline runs deterministically with result manifests.
 
-## PR-15 — License compliance CI gate (SESSION-032/033/034)
+## PR-16 — License compliance CI gate (SESSION-032/033/034)
 
 - **Suggested title:** `Add license compliance gate and policy matrix`
 - **Objective:** Implement CI/license checks plus inventory and allow/conditional/block matrix.
@@ -83,7 +92,7 @@
 - **Verification commands:** targeted compliance tests + workflow dry-run checks
 - **Definition of done:** CI fails on unknown/disallowed licenses with machine-readable reports.
 
-## PR-16 — Mastering profile presets: game mix / OST / YouTube (SESSION-035)
+## PR-17 — Mastering profile presets: game mix / OST / YouTube (SESSION-035)
 
 - **Suggested title:** `Finalize mastering profile selection contracts`
 - **Objective:** Stabilize profile selection and parameter capture across generation/export paths.
@@ -92,7 +101,7 @@
 - **Verification commands:** `python -m pytest tests/test_render.py tests/test_engine_cli.py -k profile`
 - **Definition of done:** Profiles are selectable, deterministic, documented, and backward compatible.
 
-## PR-17 — Professional QA gates (SESSION-036)
+## PR-18 — Professional QA gates (SESSION-036)
 
 - **Suggested title:** `Expand professional release QA gates`
 - **Objective:** Add true-peak, spectral balance, and loop-integrity checks.
@@ -101,7 +110,7 @@
 - **Verification commands:** `python -m pytest tests/test_qa.py tests/test_engine_cli.py -k qa`
 - **Definition of done:** New QA checks are actionable, machine-readable, and integrated into existing gates.
 
-## PR-18 — Commercial WAV export contract (SESSION-037)
+## PR-19 — Commercial WAV export contract (SESSION-037)
 
 - **Suggested title:** `Add commercial WAV-first export contract`
 - **Objective:** Define deterministic naming/layout/manifests for commercial delivery.
@@ -110,7 +119,7 @@
 - **Verification commands:** `python -m pytest tests/test_exporter.py tests/test_integration.py -k export`
 - **Definition of done:** Export outputs follow stable contracts with manifest evidence.
 
-## PR-19 — Vocals + instrumental production path (SESSION-038)
+## PR-20 — Vocals + instrumental production path (SESSION-038)
 
 - **Suggested title:** `Complete dual-path vocal and instrumental workflow`
 - **Objective:** Support generation/export of instrumental and vocal-production-ready variants.
@@ -119,7 +128,7 @@
 - **Verification commands:** `python -m pytest tests/test_ai_pipeline.py tests/test_integration.py -k voice`
 - **Definition of done:** Deterministic dual-path outputs with clear provenance.
 
-## PR-20 — End-to-end vertical slice release gate automation (SESSION-041)
+## PR-21 — End-to-end vertical slice release gate automation (SESSION-041)
 
 - **Suggested title:** `Automate full vertical-slice release gate`
 - **Objective:** One deterministic command from requests → QA/compliance/export outputs.
@@ -128,7 +137,7 @@
 - **Verification commands:** deterministic `/tmp` end-to-end smoke run + targeted tests
 - **Definition of done:** Full vertical-slice automation runs with machine-readable gate artifacts.
 
-## PR-21 — Final commercial readiness audit + closure (SESSION-044/045)
+## PR-22 — Final commercial readiness audit + closure (SESSION-044/045)
 
 - **Suggested title:** `Run final readiness audit and publish closure handoff`
 - **Objective:** Audit all capability/quality/licensing/automation gates and close baseline factory scope.

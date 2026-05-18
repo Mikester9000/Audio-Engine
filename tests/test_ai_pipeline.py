@@ -18,6 +18,7 @@ from audio_engine.ai import (
 from audio_engine.ai.backends import _paths, musicgen_backend
 from audio_engine.ai.backends import audiogen_backend, kokoro_backend
 from audio_engine.ai.sfx_synth import synthesise_sfx, available_sfx_types
+from audio_engine.qa.loudness_meter import LoudnessMeter
 from audio_engine.ai.voice_synth import synthesise_voice, VOICE_PRESETS
 from audio_engine.ai.backends.audiogen_backend import AudioGenBackend
 from audio_engine.ai.backends.kokoro_backend import KokoroBackend
@@ -75,6 +76,10 @@ class TestPromptParser:
     def test_parse_sfx_duration(self):
         plan = self.parser.parse_sfx("whoosh 0.5 seconds")
         assert plan.duration == pytest.approx(0.5, abs=0.1)
+
+    def test_parse_sfx_prefers_parry_over_generic_impact(self):
+        plan = self.parser.parse_sfx("metallic parry ring with quick damping and clear impact")
+        assert plan.sfx_type == "parry"
 
     def test_parse_sfx_unknown_type(self):
         plan = self.parser.parse_sfx("weird alien sound")
@@ -468,6 +473,12 @@ class TestSFXSynth:
         a = synthesise_sfx("magic", duration=0.5, sample_rate=SR, seed=99)
         b = synthesise_sfx("magic", duration=0.5, sample_rate=SR, seed=99)
         np.testing.assert_array_equal(a, b)
+
+    def test_parry_sfx_meets_qa_loudness_floor(self):
+        # Use the committed combat-parry fixture seed so this stays aligned with QA Gate coverage.
+        audio = synthesise_sfx("parry", duration=1.0, sample_rate=44100, seed=305024)
+        result = LoudnessMeter(sample_rate=44100).measure(audio)
+        assert result.integrated_lufs > -30.0
 
 
 # ---------------------------------------------------------------------------

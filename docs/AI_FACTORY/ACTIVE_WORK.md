@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-only offline neural path, sample drop-in folder scaffolding, and upgraded synth/mastering/DSP quality surfaces for higher-quality procedural output.
+The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-only offline neural path, sample drop-in folder scaffolding, upgraded synth/mastering/DSP quality surfaces, and an implemented procedural quality-overhaul pass (structured composition + recipe-driven SFX + improved voice + studio UI).
 
 ## Now
 
@@ -50,15 +50,19 @@ The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-
 - [x] Add additive chorus/reverb/stereo DSP modules and loop crossfade baking
 - [x] Add additive mastering profile presets (`game`, `ost`, `youtube`, `procedural_neutral`)
 - [x] Upgrade procedural instrument voicing toward higher-quality standalone listening output
+- [x] Execute SESSION-029 implementation override — procedural quality overhaul + phrase planner + studio UI entrypoint
+- [ ] Execute SESSION-029b creation-tooling follow-up for studio workflow presets and batch UX
 
 ## Recommended next PRs
 
 1. **Execute SESSION-028 (`verify-backends`)**
-   - Add additive preflight verification/reporting before optional neural runs.
-2. **Execute SESSION-028b and SESSION-028c**
-   - Implement sample-library scanner/pitch-shift primitives and remaster CLI pipeline.
-3. **Follow ordered completion roadmap through SESSION-045**
-   - Continue through queued capability, licensing, QA, export, regression, and closure sessions.
+    - Add additive preflight verification/reporting before optional neural runs.
+2. **Execute SESSION-029b**
+   - Expand studio creation tooling (preset management + faster iterative generation UX).
+3. **Execute SESSION-028b and SESSION-028c**
+    - Implement sample-library scanner/pitch-shift primitives and remaster CLI pipeline.
+4. **Follow ordered completion roadmap through SESSION-045**
+    - Continue through queued capability, licensing, QA, export, regression, and closure sessions.
 
 ## Do not deprioritize
 

@@ -1,29 +1,20 @@
-"""
-Procedural voice / text-to-speech synthesiser.
+"""Deterministic procedural voice synthesis with phoneme-class shaping.
 
-Implements a basic formant-based speech synthesiser that maps phoneme-like
-units to sine-wave resonances.  While not as natural as a neural TTS model,
-it produces intelligible voice output with zero external dependencies.
+Public interface:
+    synthesise_voice(text, voice_preset=\"narrator\", speed=1.0, sample_rate=22050, seed=None)
+        -> mono float32 NumPy array
 
-The synthesiser supports multiple "voice presets" (narrator, hero, villain,
-announcer, npc) that differ in pitch, formant ratios, and prosody.
-
-Upgrading to a real TTS model
-------------------------------
-Replace the :func:`synthesise_voice` call in
-:class:`~audio_engine.ai.backend.ProceduralBackend` with an ONNX or
-Piper-based backend.  The interface stays the same:
-
-    synthesise_voice(text, voice_preset, speed, sample_rate) → np.ndarray
-
-Piper TTS (https://github.com/rhasspy/piper) is recommended for local,
-high-quality, permissively-licensed TTS.  It outputs 16 kHz WAV natively
-and can be wrapped trivially.
+The implementation stays fully offline and uses:
+- multi-stage glottal excitation (with jitter + sub-harmonics),
+- voiced/unvoiced phoneme segmentation,
+- plosive/fricative transient/noise layers,
+- sentence-level pitch arcs and per-segment envelopes.
 """
 
 from __future__ import annotations
 
 import re
+import zlib
 from typing import NamedTuple
 
 import numpy as np
@@ -31,25 +22,7 @@ import numpy as np
 __all__ = ["synthesise_voice", "VOICE_PRESETS"]
 
 
-# ---------------------------------------------------------------------------
-# Voice preset definitions
-# ---------------------------------------------------------------------------
-
 class _VoicePreset(NamedTuple):
-    """Acoustic parameters for a voice preset.
-
-    Attributes
-    ----------
-    f0:
-        Fundamental frequency (pitch) in Hz.
-    formant_shifts:
-        Multipliers for F1, F2, F3 relative to a neutral speaker.
-    jitter:
-        Pitch jitter factor (0 = steady, 0.02 = slight human wavering).
-    breathiness:
-        Amount of additive noise (0 = clean, 0.2 = breathy).
-    """
-
     f0: float
     formant_shifts: tuple[float, float, float]
     jitter: float
@@ -57,193 +30,207 @@ class _VoicePreset(NamedTuple):
 
 
 VOICE_PRESETS: dict[str, _VoicePreset] = {
-    "narrator":  _VoicePreset(f0=120.0, formant_shifts=(1.0, 1.0, 1.0),    jitter=0.01, breathiness=0.05),
-    "hero":      _VoicePreset(f0=110.0, formant_shifts=(1.05, 0.95, 0.98),  jitter=0.015, breathiness=0.04),
-    "villain":   _VoicePreset(f0=85.0,  formant_shifts=(0.9, 1.1, 1.05),    jitter=0.02, breathiness=0.08),
-    "announcer": _VoicePreset(f0=130.0, formant_shifts=(1.1, 1.0, 0.95),    jitter=0.005, breathiness=0.02),
-    "npc":       _VoicePreset(f0=150.0, formant_shifts=(1.15, 1.05, 1.0),   jitter=0.03, breathiness=0.1),
+    "narrator": _VoicePreset(f0=120.0, formant_shifts=(1.0, 1.0, 1.0), jitter=0.012, breathiness=0.05),
+    "hero": _VoicePreset(f0=112.0, formant_shifts=(1.05, 0.95, 0.98), jitter=0.015, breathiness=0.04),
+    "villain": _VoicePreset(f0=90.0, formant_shifts=(0.9, 1.08, 1.05), jitter=0.02, breathiness=0.08),
+    "announcer": _VoicePreset(f0=135.0, formant_shifts=(1.08, 1.0, 0.95), jitter=0.008, breathiness=0.025),
+    "npc": _VoicePreset(f0=150.0, formant_shifts=(1.15, 1.05, 1.0), jitter=0.028, breathiness=0.1),
 }
 
-# Approximate phoneme durations (seconds at speed=1.0)
-_PHONEME_DURATION = 0.07   # average phoneme duration
+_BASE_FORMANTS = np.array([700.0, 1220.0, 2600.0], dtype=np.float64)
+_SUBHARMONIC_PHASE_OFFSET = 0.33
+_NOISE_BAND_MIN = 0.001  # Avoid zero-width/zero-frequency band edges during normalization.
+_NOISE_BAND_MAX = 0.949  # Leave room for the minimum high-edge spacing below Nyquist.
+_NOISE_BAND_MIN_WIDTH = 0.05  # Keep a stable minimum normalized band-pass width for low sample rates.
 
-# Formant frequencies for a neutral male voice (Hz): [F1, F2, F3]
-_BASE_FORMANTS = [700.0, 1220.0, 2600.0]
-
-# Formant bandwidths (Hz)
-_FORMANT_BW = [80.0, 90.0, 120.0]
-
-
-# ---------------------------------------------------------------------------
-# Synthesis helpers
-# ---------------------------------------------------------------------------
-
-def _glottal_pulse(f0: float, duration: float, sr: int, jitter: float, rng: np.random.Generator) -> np.ndarray:
-    """Generate a voiced glottal excitation signal (buzz).
-
-    Produces a sawtooth-like waveform with slight pitch jitter.
-    """
-    n = int(duration * sr)
-    t = np.arange(n) / sr
-
-    # Add jitter by slightly modulating f0 over time
-    if jitter > 0:
-        lfo_rate = 5.0   # Hz (vibrato/jitter rate)
-        jitter_signal = 1.0 + jitter * np.sin(2.0 * np.pi * lfo_rate * t + rng.uniform(0, 2 * np.pi))
-        # Cumulative phase with jitter
-        phase = np.cumsum(2.0 * np.pi * f0 * jitter_signal / sr)
-    else:
-        phase = 2.0 * np.pi * f0 * t
-
-    # Sawtooth approximation using 6 harmonics (more natural than pure saw)
-    signal = np.zeros(n, dtype=np.float64)
-    for k in range(1, 7):
-        signal += (1.0 / k) * np.sin(k * phase)
-
-    return signal.astype(np.float32)
+_VOWELS = set("aeiouy")
+_PLOSIVES = set("pbtdkg")
+_FRICATIVES = set("sfzxv")
+_SH_SET = {"sh", "ch"}
 
 
-def _formant_filter(
-    signal: np.ndarray,
-    formant_freqs: list[float],
-    bandwidths: list[float],
-    sr: int,
-) -> np.ndarray:
-    """Apply resonant formant filters (bandpass) to a glottal signal.
-
-    Each formant is a resonant peak modelled as a second-order bandpass
-    filter (biquad).
-    """
-    from scipy.signal import sosfilt  # type: ignore[import]
-
-    result = np.zeros(len(signal), dtype=np.float64)
-    sig_f64 = signal.astype(np.float64)
-
-    for f, bw in zip(formant_freqs, bandwidths):
-        w0 = 2.0 * np.pi * f / sr
-        Q = f / max(bw, 1.0)
-        alpha = np.sin(w0) / (2.0 * Q)
-        b0 = alpha
-        b1 = 0.0
-        b2 = -alpha
-        a0 = 1.0 + alpha
-        a1 = -2.0 * np.cos(w0)
-        a2 = 1.0 - alpha
-        sos = np.array([[b0 / a0, b1 / a0, b2 / a0, 1.0, a1 / a0, a2 / a0]])
-        result += sosfilt(sos, sig_f64)
-
-    return result.astype(np.float32)
+def _stable_seed(text: str, seed: int | None) -> int:
+    crc = zlib.crc32(text.encode("utf-8"))
+    return ((seed or 0) & 0x7FFFFFFF) ^ (crc & 0x7FFFFFFF)
 
 
-def _text_to_phoneme_count(text: str) -> int:
-    """Estimate the number of phonemes in *text*.
+def _tokenise(text: str) -> list[str]:
+    raw = re.findall(r"[a-zA-Z]+|[?.!,;:]", text.lower())
+    tokens: list[str] = []
+    for token in raw:
+        if token in {"?", ".", "!", ",", ";", ":"}:
+            tokens.append(token)
+            continue
+        i = 0
+        while i < len(token):
+            if i + 1 < len(token) and token[i : i + 2] in _SH_SET:
+                tokens.append(token[i : i + 2])
+                i += 2
+            else:
+                tokens.append(token[i])
+                i += 1
+    return tokens
 
-    Uses a simple heuristic: count vowel clusters + consonant groups.
-    """
-    # Strip non-alphabetic characters
-    cleaned = re.sub(r"[^a-zA-Z ]", "", text)
-    words = cleaned.split()
-    total = 0
-    for word in words:
-        # Each word contributes ~1.5 phonemes per character (rough estimate)
-        total += max(1, len(word))
-    return max(1, total)
+
+def _segment_duration(token: str, speed: float) -> float:
+    speed = max(speed, 0.5)
+    if token in {".", "!", "?"}:
+        return 0.09 / speed
+    if token in {",", ";", ":"}:
+        return 0.05 / speed
+    if token in _VOWELS:
+        return 0.08 / speed
+    if token in _SH_SET:
+        return 0.07 / speed
+    return 0.045 / speed
 
 
-# ---------------------------------------------------------------------------
-# Main synthesis function
-# ---------------------------------------------------------------------------
+def _sentence_pitch_arc(tokens: list[str], question: bool) -> np.ndarray:
+    spoken = [t for t in tokens if t not in {".", "!", "?", ",", ";", ":"}]
+    if not spoken:
+        return np.array([1.0], dtype=np.float64)
+    n = len(spoken)
+    if question:
+        return np.linspace(0.95, 1.09, n, dtype=np.float64)
+    return np.linspace(1.06, 0.94, n, dtype=np.float64)
+
+
+def _glottal_excitation(f0: float, duration: float, sr: int, jitter: float, rng: np.random.Generator) -> np.ndarray:
+    n = max(1, int(duration * sr))
+    t = np.arange(n, dtype=np.float64) / sr
+    micro = 1.0 + 0.012 * np.sin(2.0 * np.pi * 6.1 * t + rng.uniform(0, 2 * np.pi))
+    irregular = 1.0 + jitter * rng.normal(0.0, 0.55, n)
+    f_track = np.clip(f0 * micro * irregular, 40.0, sr / 3.0)
+    phase = 2.0 * np.pi * np.cumsum(f_track / sr)
+
+    glottal = np.zeros(n, dtype=np.float64)
+    for k in range(1, 8):
+        glottal += (1.0 / k) * np.sin(k * phase)
+    glottal += 0.35 * np.sin(0.5 * phase + _SUBHARMONIC_PHASE_OFFSET)  # sub-harmonic layer
+    return glottal.astype(np.float32)
+
+
+def _formant_filter(signal: np.ndarray, shifts: tuple[float, float, float], sr: int) -> np.ndarray:
+    from scipy.signal import butter, sosfilt  # type: ignore[import]
+
+    sig = signal.astype(np.float64)
+    out = np.zeros_like(sig)
+    for base, shift, bw in zip(_BASE_FORMANTS, shifts, (95.0, 130.0, 170.0)):
+        center = float(base * shift)
+        lo = max(60.0, center - bw)
+        hi = min(sr / 2.0 - 10.0, center + bw)
+        if hi <= lo:
+            continue
+        sos = butter(2, [lo / (sr / 2.0), hi / (sr / 2.0)], btype="band", output="sos")
+        out += sosfilt(sos, sig)
+    return out.astype(np.float32)
+
+
+def _noise_layer(duration: float, sr: int, rng: np.random.Generator, lo: float, hi: float) -> np.ndarray:
+    from scipy.signal import butter, sosfilt  # type: ignore[import]
+
+    n = max(1, int(duration * sr))
+    raw = rng.standard_normal(n).astype(np.float64)
+    nyq = sr / 2.0
+    if nyq <= 0.0 or hi <= 0.0 or lo >= nyq:
+        return raw.astype(np.float32)
+    lo_n = float(np.clip(lo / nyq, _NOISE_BAND_MIN, _NOISE_BAND_MAX))
+    hi_n = float(np.clip(hi / nyq, lo_n + _NOISE_BAND_MIN_WIDTH, 0.999))
+    if hi_n <= lo_n:
+        return raw.astype(np.float32)
+    sos = butter(3, [lo_n, hi_n], btype="band", output="sos")
+    return sosfilt(sos, raw).astype(np.float32)
+
+
+def _segment_env(n: int) -> np.ndarray:
+    if n <= 1:
+        return np.ones(max(1, n), dtype=np.float32)
+    a = max(1, int(0.2 * n))
+    r = max(1, int(0.25 * n))
+    s = max(0, n - a - r)
+    return np.concatenate(
+        [
+            np.linspace(0.0, 1.0, a, dtype=np.float32),
+            np.ones(s, dtype=np.float32),
+            np.linspace(1.0, 0.0, r, dtype=np.float32),
+        ]
+    )[:n]
+
 
 def synthesise_voice(
     text: str,
     voice_preset: str = "narrator",
     speed: float = 1.0,
     sample_rate: int = 22050,
+    seed: int | None = None,
 ) -> np.ndarray:
-    """Synthesise speech from *text* using formant synthesis.
-
-    This is a lightweight offline TTS that produces robot-like but
-    intelligible voice output.  For natural-sounding voice, swap this
-    function with a Piper/ONNX TTS wrapper.
-
-    Parameters
-    ----------
-    text:
-        Text to synthesise.
-    voice_preset:
-        One of the preset names in :data:`VOICE_PRESETS`.
-    speed:
-        Speech rate multiplier (1.0 = normal, 1.5 = faster).
-    sample_rate:
-        Output sample rate in Hz (22050 is standard for TTS).
-
-    Returns
-    -------
-    np.ndarray
-        Mono float32 audio array.
-
-    Example
-    -------
-    >>> audio = synthesise_voice("Hello, hero!", voice_preset="narrator")
-    """
+    """Synthesize deterministic speech-like audio from text."""
     if not text:
-        return np.zeros(int(0.5 * sample_rate), dtype=np.float32)
+        return np.zeros(int(0.4 * sample_rate), dtype=np.float32)
 
     preset = VOICE_PRESETS.get(voice_preset, VOICE_PRESETS["narrator"])
-    rng = np.random.default_rng(abs(hash(text)) % (2 ** 31))
+    rng = np.random.default_rng(_stable_seed(text + voice_preset, seed))
 
-    # Estimate total duration from phoneme count
-    phoneme_count = _text_to_phoneme_count(text)
-    duration = phoneme_count * _PHONEME_DURATION / max(speed, 0.5)
+    tokens = _tokenise(text)
+    spoken_tokens = [t for t in tokens if t not in {".", "!", "?", ",", ";", ":"}]
+    question = text.strip().endswith("?")
+    pitch_arc = _sentence_pitch_arc(tokens, question)
 
-    # Compute formant frequencies for this preset
-    formant_freqs = [
-        _BASE_FORMANTS[i] * preset.formant_shifts[i]
-        for i in range(3)
-    ]
+    pieces: list[np.ndarray] = []
+    voiced_index = 0
+    for token in tokens:
+        duration = _segment_duration(token, speed)
+        n = max(1, int(duration * sample_rate))
 
-    # Generate glottal excitation
-    glottal = _glottal_pulse(preset.f0, duration, sample_rate, preset.jitter, rng)
-
-    # Apply formant filtering
-    voiced = _formant_filter(glottal, formant_freqs, _FORMANT_BW, sample_rate)
-
-    # Add breathiness (noise component)
-    if preset.breathiness > 0:
-        noise = rng.standard_normal(len(voiced)).astype(np.float32) * preset.breathiness
-        voiced = voiced + noise
-
-    # Apply word-level amplitude modulation (simulates syllable stress)
-    n = len(voiced)
-    words = text.split()
-    n_words = max(1, len(words))
-    # Simple piecewise amplitude: each word has a slight stress peak
-    amp_env = np.ones(n, dtype=np.float64)
-    word_samples = n // n_words
-    for i in range(n_words):
-        start = i * word_samples
-        end = min(start + word_samples, n)
-        local_n = end - start
-        if local_n < 2:
+        if token in {".", "!", "?", ",", ";", ":"}:
+            pieces.append(np.zeros(n, dtype=np.float32))
             continue
-        # Triangle amplitude per word: rise–sustain–fall
-        half = local_n // 2
-        stress = rng.uniform(0.7, 1.0)
-        amp_env[start : start + half] = np.linspace(0.4, stress, half)
-        amp_env[start + half : end] = np.linspace(stress, 0.4, local_n - half)
 
-    # Fade in/out
-    fade_samples = min(int(0.01 * sample_rate), n // 4)
-    if fade_samples > 0:
-        amp_env[:fade_samples] *= np.linspace(0.0, 1.0, fade_samples)
-        amp_env[-fade_samples:] *= np.linspace(1.0, 0.0, fade_samples)
+        arc_mul = pitch_arc[min(voiced_index, len(pitch_arc) - 1)]
+        voiced_index += 1
+        base_f0 = preset.f0 * arc_mul
 
-    voiced = (voiced * amp_env).astype(np.float32)
+        if token in _VOWELS:
+            voiced = _glottal_excitation(base_f0, duration, sample_rate, preset.jitter, rng)
+            segment = _formant_filter(voiced, preset.formant_shifts, sample_rate)
+            shimmer = 0.03 * np.sin(2.0 * np.pi * 12.0 * np.arange(n) / sample_rate + rng.uniform(0, 2 * np.pi))
+            segment = segment[:n] * (1.0 + shimmer.astype(np.float32))
+        else:
+            if token in _FRICATIVES or token in _SH_SET:
+                lo, hi = (2800.0, 11000.0) if token != "f" else (1800.0, 7000.0)
+                segment = _noise_layer(duration, sample_rate, rng, lo, hi)
+            else:
+                segment = _noise_layer(duration, sample_rate, rng, 300.0, 6000.0) * 0.45
 
-    # Normalise to -6 dBFS (leave headroom for mix)
-    peak = np.max(np.abs(voiced))
+            if token in _PLOSIVES:
+                click_n = max(1, int(0.004 * sample_rate))
+                click = np.zeros(n, dtype=np.float32)
+                click[:click_n] = np.linspace(1.0, 0.0, click_n, dtype=np.float32)
+                segment = segment + click
+
+            if token in {"r", "l", "m", "n"}:
+                voiced = _glottal_excitation(base_f0 * 0.9, duration, sample_rate, preset.jitter * 0.7, rng)
+                segment = segment + 0.3 * _formant_filter(voiced, preset.formant_shifts, sample_rate)[:n]
+
+        env = _segment_env(n)
+        stress = 0.75 + 0.25 * rng.random()
+        pieces.append((segment[:n] * env * stress).astype(np.float32))
+
+    if not pieces:
+        return np.zeros(int(0.4 * sample_rate), dtype=np.float32)
+
+    voice = np.concatenate(pieces).astype(np.float32)
+    breath = _noise_layer((len(voice) + 1) / sample_rate, sample_rate, rng, 250.0, 6000.0)[: len(voice)]
+    micro_amp = 1.0 + 0.025 * np.sin(2.0 * np.pi * 3.5 * np.arange(len(voice)) / sample_rate)
+    voice = (voice * micro_amp.astype(np.float32)) + preset.breathiness * 0.25 * breath
+
+    fade = min(int(0.01 * sample_rate), len(voice) // 4)
+    if fade > 0:
+        voice[:fade] *= np.linspace(0.0, 1.0, fade, dtype=np.float32)
+        voice[-fade:] *= np.linspace(1.0, 0.0, fade, dtype=np.float32)
+
+    peak = float(np.max(np.abs(voice)))
     if peak > 1e-9:
         target = 10.0 ** (-6.0 / 20.0)
-        voiced = (voiced / peak * target).astype(np.float32)
-
-    return voiced
+        voice = (voice / peak * target).astype(np.float32)
+    return voice

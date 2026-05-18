@@ -14,6 +14,7 @@ from typing import NamedTuple
 import numpy as np
 
 from audio_engine.synthesizer.instrument import Instrument
+from audio_engine.synthesizer.filter import Filter
 
 __all__ = ["Note", "Sequencer"]
 
@@ -45,6 +46,8 @@ class _Track:
     notes: list[Note] = field(default_factory=list)
     pan: float = 0.0   # -1 = full left, 0 = centre, 1 = full right
     volume: float = 1.0
+    priority: int = 50
+    role: str = "harmony"
 
 
 class Sequencer:
@@ -70,6 +73,7 @@ class Sequencer:
         self.time_signature = time_signature
         self.sample_rate = sample_rate
         self._tracks: dict[str, _Track] = {}
+        self._eq_filter = Filter(sample_rate)
 
     # ------------------------------------------------------------------
     # Track management
@@ -81,9 +85,17 @@ class Sequencer:
         instrument: Instrument,
         pan: float = 0.0,
         volume: float = 1.0,
+        priority: int = 50,
+        role: str = "harmony",
     ) -> None:
         """Add a named track with the given *instrument*."""
-        self._tracks[name] = _Track(instrument=instrument, pan=pan, volume=volume)
+        self._tracks[name] = _Track(
+            instrument=instrument,
+            pan=pan,
+            volume=volume,
+            priority=priority,
+            role=role,
+        )
 
     def add_note(
         self,
@@ -161,7 +173,10 @@ class Sequencer:
         total_samples = int(duration * self.sample_rate)
         mix_left = np.zeros(total_samples, dtype=np.float64)
         mix_right = np.zeros(total_samples, dtype=np.float64)
+        max_active = 8
 
+        events: list[dict[str, object]] = []
+        event_id = 0
         for track in self._tracks.values():
             for note in track.notes:
                 note_samples = int(note.duration * self.sample_rate)
@@ -169,20 +184,85 @@ class Sequencer:
                     continue
                 rendered = track.instrument.render(note.frequency, note.duration)
                 rendered = rendered * note.velocity * track.volume
-
+                rendered = self._apply_track_eq(rendered, track.role)
                 onset_sample = int(note.onset * self.sample_rate)
-                end_sample = onset_sample + len(rendered)
                 if onset_sample >= total_samples:
                     continue
-                end_sample = min(end_sample, total_samples)
+                end_sample = min(onset_sample + len(rendered), total_samples)
                 chunk = rendered[: end_sample - onset_sample]
-
-                # Pan law: constant power
-                pan = np.clip(track.pan, -1.0, 1.0)
+                pan = self._role_pan(track.pan, track.role)
                 left_gain = np.cos((pan + 1.0) * np.pi / 4.0)
                 right_gain = np.sin((pan + 1.0) * np.pi / 4.0)
-                mix_left[onset_sample:end_sample] += left_gain * chunk
-                mix_right[onset_sample:end_sample] += right_gain * chunk
+                events.append(
+                    {
+                        "id": event_id,
+                        "priority": int(track.priority),
+                        "onset": onset_sample,
+                        "end": end_sample,
+                        "chunk": chunk.astype(np.float64),
+                        "left_gain": left_gain,
+                        "right_gain": right_gain,
+                    }
+                )
+                event_id += 1
+
+        if not events:
+            return np.zeros((total_samples, 2), dtype=np.float32)
+
+        boundaries = sorted(
+            {
+                0,
+                total_samples,
+                *[int(ev["onset"]) for ev in events],
+                *[int(ev["end"]) for ev in events],
+            }
+        )
+        start_map: dict[int, list[int]] = {}
+        end_map: dict[int, list[int]] = {}
+        for idx, ev in enumerate(events):
+            start_map.setdefault(int(ev["onset"]), []).append(idx)
+            end_map.setdefault(int(ev["end"]), []).append(idx)
+        active: list[int] = []
+
+        for i in range(len(boundaries) - 1):
+            boundary = boundaries[i]
+            next_boundary = boundaries[i + 1]
+            for idx in end_map.get(boundary, []):
+                if idx in active:
+                    active.remove(idx)
+            for idx in start_map.get(boundary, []):
+                active.append(idx)
+
+            if len(active) > max_active:
+                dropping = sorted(
+                    active,
+                    key=lambda idx: (
+                        int(events[idx]["priority"]),
+                        int(events[idx]["onset"]),
+                    ),
+                )
+                while len(active) > max_active and dropping:
+                    remove_idx = dropping.pop(0)
+                    events[remove_idx]["end"] = boundary
+                    active.remove(remove_idx)
+
+            seg_len = next_boundary - boundary
+            if seg_len <= 0:
+                continue
+            for idx in list(active):
+                ev = events[idx]
+                ev_end = int(ev["end"])
+                if boundary >= ev_end:
+                    continue
+                seg_end = min(next_boundary, ev_end)
+                if seg_end <= boundary:
+                    continue
+                chunk = np.asarray(ev["chunk"], dtype=np.float64)
+                start_offset = boundary - int(ev["onset"])
+                end_offset = seg_end - int(ev["onset"])
+                section = chunk[start_offset:end_offset]
+                mix_left[boundary:seg_end] += float(ev["left_gain"]) * section
+                mix_right[boundary:seg_end] += float(ev["right_gain"]) * section
 
         # Stack stereo
         stereo = np.column_stack([mix_left, mix_right]).astype(np.float32)
@@ -202,3 +282,19 @@ class Sequencer:
             for note in track.notes:
                 max_end = max(max_end, note.onset + note.duration)
         return max_end
+
+    def _role_pan(self, pan: float, role: str) -> float:
+        if role == "bass":
+            return 0.0
+        if role in {"texture", "percussion"}:
+            return float(np.clip(pan * 1.35, -1.0, 1.0))
+        return float(np.clip(pan, -1.0, 1.0))
+
+    def _apply_track_eq(self, signal: np.ndarray, role: str) -> np.ndarray:
+        if role == "bass":
+            return self._eq_filter.low_pass(signal, 900.0)
+        if role in {"melody", "counter"}:
+            return self._eq_filter.high_pass(signal, 150.0)
+        if role in {"texture", "percussion"}:
+            return self._eq_filter.high_pass(signal, 350.0)
+        return signal
