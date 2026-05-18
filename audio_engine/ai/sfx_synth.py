@@ -1,4 +1,13 @@
-"""Procedural SFX synthesizer with distinct per-category recipes."""
+"""Procedural SFX synthesizer with distinct per-category recipes.
+
+Supported families include explosion, footstep, hit/impact, whoosh/swing,
+laser, coin/pickup, jump, magic + elemental spells, heal/cure, summon,
+save/level-up/game-over cues, sword/slash, and UI click/confirm/cancel.
+
+Extension pattern:
+1) add a `_sfx_<name>(duration, pitch_hz, sr, rng)` function,
+2) register aliases in `_SFX_FUNCTIONS`.
+"""
 
 from __future__ import annotations
 
@@ -108,7 +117,13 @@ def _sfx_explosion(duration: float, pitch_hz: float | None, sr: int, rng: np.ran
     high = _band_noise(n, 900.0, 3500.0, sr, rng)
     env = _exp_env(n, decay=4.0)
     dry = (0.5 * sweep + 0.25 * low + 0.18 * mid + 0.07 * high) * env
-    wet = _reverb(dry.astype(np.float32), sr, room_seconds=1.8, decay=5.5, seed=19)
+    wet = _reverb(
+        dry.astype(np.float32),
+        sr,
+        room_seconds=1.8,
+        decay=5.5,
+        seed=int(rng.integers(0, 2**31 - 1)),
+    )
     return (0.6 * dry + 0.4 * wet).astype(np.float32)
 
 
@@ -120,7 +135,13 @@ def _sfx_footstep(duration: float, pitch_hz: float | None, sr: int, rng: np.rand
     material = _band_noise(n, 180.0, 2400.0, sr, rng)
     noise_env = _adsr(n, sr, attack_ms=0.5, decay_ms=20.0, sustain=0.0, release_ms=35.0)
     dry = 0.7 * body[:n] * body_env + 0.45 * material * noise_env
-    rev = _reverb(dry.astype(np.float32), sr, room_seconds=0.18, decay=3.0, seed=27)
+    rev = _reverb(
+        dry.astype(np.float32),
+        sr,
+        room_seconds=0.18,
+        decay=3.0,
+        seed=int(rng.integers(0, 2**31 - 1)),
+    )
     return (0.88 * dry + 0.12 * rev).astype(np.float32)
 
 
@@ -138,7 +159,8 @@ def _sfx_hit(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Ge
     burst = np.zeros(n, dtype=np.float32)
     burst[:transient_n] = transient * _exp_env(transient_n, 15.0)
     env = _adsr(n, sr, attack_ms=1.0, decay_ms=60.0, sustain=0.0, release_ms=80.0)
-    return (tone + burst) * env
+    ring = _sine(2600.0, d, sr, amp=0.28) * _exp_env(n, 7.5)
+    return (tone + burst) * env + ring[:n]
 
 
 def _sfx_whoosh(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
@@ -203,7 +225,7 @@ def _sfx_magic(duration: float, pitch_hz: float | None, sr: int, rng: np.random.
     flutter = 1.0 + 0.12 * np.sin(2.0 * np.pi * 11.0 * t + rng.uniform(0, 2 * np.pi))
     env = _adsr(n, sr, attack_ms=20.0, decay_ms=180.0, sustain=0.42, release_ms=260.0)
     dry = (sig * flutter * env).astype(np.float32)
-    wet = _reverb(dry, sr, room_seconds=1.4, decay=4.8, seed=37)
+    wet = _reverb(dry, sr, room_seconds=1.4, decay=4.8, seed=int(rng.integers(0, 2**31 - 1)))
     return (0.6 * dry + 0.4 * wet).astype(np.float32)
 
 
@@ -231,7 +253,13 @@ def _sfx_spell_ice(duration: float, pitch_hz: float | None, sr: int, rng: np.ran
     crackle = _band_noise(n, 3500.0, 12000.0, sr, rng) * 0.22
     env = _adsr(n, sr, attack_ms=3.0, decay_ms=80.0, sustain=0.28, release_ms=180.0)
     dry = (partials + crackle) * env
-    cold = _reverb(dry.astype(np.float32), sr, room_seconds=0.9, decay=4.3, seed=41)
+    cold = _reverb(
+        dry.astype(np.float32),
+        sr,
+        room_seconds=0.9,
+        decay=4.3,
+        seed=int(rng.integers(0, 2**31 - 1)),
+    )
     return (0.72 * dry + 0.28 * cold).astype(np.float32)
 
 
@@ -271,7 +299,13 @@ def _sfx_cure(duration: float, pitch_hz: float | None, sr: int, rng: np.random.G
         env = _exp_env(seg, decay=6.5)
         out[delay:] += (bell * env * 0.4).astype(np.float32)
     shimmer = _band_noise(n, 4500.0, 11000.0, sr, rng) * 0.08
-    wet = _reverb(out + shimmer, sr, room_seconds=1.2, decay=4.4, seed=51)
+    wet = _reverb(
+        out + shimmer,
+        sr,
+        room_seconds=1.2,
+        decay=4.4,
+        seed=int(rng.integers(0, 2**31 - 1)),
+    )
     return (0.6 * out + 0.4 * wet).astype(np.float32)
 
 
@@ -453,7 +487,7 @@ def synthesise_sfx(
     audio = fn(duration, pitch_hz, sample_rate, rng).astype(np.float32)
     peak = float(np.max(np.abs(audio)))
     if peak > 1e-9:
-        target = 10.0 ** (-9.0 / 20.0)
+        target = 10.0 ** (-5.0 / 20.0)
         audio = (audio / peak * target).astype(np.float32)
     return audio
 

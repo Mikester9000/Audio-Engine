@@ -1321,6 +1321,7 @@ _MARKOV_TRANSITIONS: dict[int, list[tuple[int, float]]] = {
 _DEFAULT_TRANSITIONS: list[tuple[int, float]] = [
     (1, 0.3), (-1, 0.25), (2, 0.2), (-2, 0.15), (0, 0.1),
 ]
+_BARS_HASH_MULTIPLIER = 7919
 
 
 def _markov_melody(
@@ -1588,7 +1589,7 @@ class MusicGenerator:
 
     def _rng_for_call(self, style: str, bars: int) -> random.Random:
         style_hash = sum((idx + 1) * ord(ch) for idx, ch in enumerate(style))
-        return random.Random((self._seed or 0) + style_hash + bars * 7919)
+        return random.Random((self._seed or 0) + style_hash + bars * _BARS_HASH_MULTIPLIER)
 
     def _resolve_scale_name(self, style: str, default: str) -> str:
         family = style.lower()

@@ -1,4 +1,15 @@
-"""Deterministic procedural voice synthesis with basic phoneme classes."""
+"""Deterministic procedural voice synthesis with phoneme-class shaping.
+
+Public interface:
+    synthesise_voice(text, voice_preset=\"narrator\", speed=1.0, sample_rate=22050, seed=None)
+        -> mono float32 NumPy array
+
+The implementation stays fully offline and uses:
+- multi-stage glottal excitation (with jitter + sub-harmonics),
+- voiced/unvoiced phoneme segmentation,
+- plosive/fricative transient/noise layers,
+- sentence-level pitch arcs and per-segment envelopes.
+"""
 
 from __future__ import annotations
 
@@ -27,6 +38,7 @@ VOICE_PRESETS: dict[str, _VoicePreset] = {
 }
 
 _BASE_FORMANTS = np.array([700.0, 1220.0, 2600.0], dtype=np.float64)
+_SUBHARMONIC_PHASE_OFFSET = 0.33
 
 _VOWELS = set("aeiouy")
 _PLOSIVES = set("pbtdkg")
@@ -91,7 +103,7 @@ def _glottal_excitation(f0: float, duration: float, sr: int, jitter: float, rng:
     glottal = np.zeros(n, dtype=np.float64)
     for k in range(1, 8):
         glottal += (1.0 / k) * np.sin(k * phase)
-    glottal += 0.35 * np.sin(0.5 * phase + 0.33)  # sub-harmonic layer
+    glottal += 0.35 * np.sin(0.5 * phase + _SUBHARMONIC_PHASE_OFFSET)  # sub-harmonic layer
     return glottal.astype(np.float32)
 
 

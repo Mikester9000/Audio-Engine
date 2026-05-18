@@ -256,7 +256,7 @@ class Sequencer:
                 seg_end = min(next_boundary, ev_end)
                 if seg_end <= boundary:
                     continue
-                chunk = ev["chunk"]  # type: ignore[assignment]
+                chunk = np.asarray(ev["chunk"], dtype=np.float64)
                 start_offset = boundary - int(ev["onset"])
                 end_offset = seg_end - int(ev["onset"])
                 section = chunk[start_offset:end_offset]

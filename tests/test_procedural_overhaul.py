@@ -86,7 +86,7 @@ def test_voice_synth_non_silent_and_deterministic():
     np.testing.assert_array_equal(a, b)
 
 
-class _ConstInstrument:
+class _ConstantInstrument:
     def __init__(self, value: float = 0.1, sample_rate: int = 22050) -> None:
         self.value = value
         self.sample_rate = sample_rate
@@ -99,7 +99,7 @@ def test_sequencer_limits_to_eight_active_layers():
     sr = 22050
     seq = Sequencer(sample_rate=sr)
     for i in range(9):
-        seq.add_track(f"t{i}", _ConstInstrument(sample_rate=sr), pan=0.0, volume=1.0, priority=i + 1, role="harmony")
+        seq.add_track(f"t{i}", _ConstantInstrument(sample_rate=sr), pan=0.0, volume=1.0, priority=i + 1, role="harmony")
         seq.add_note(f"t{i}", 440.0, 0.0, 0.25, velocity=1.0)
 
     audio = seq.render(duration=0.25)

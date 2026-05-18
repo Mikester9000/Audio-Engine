@@ -8,6 +8,8 @@ import random
 
 __all__ = ["PhraseRole", "PhraseBlock", "SectionPlanner", "MotifBank"]
 
+_BAR_HASH_MULTIPLIER = 97
+
 
 class PhraseRole(Enum):
     INTRO = auto()
@@ -36,7 +38,8 @@ class SectionPlanner:
         self.style = style
         self.total_bars = max(4, total_bars)
         style_hash = sum((idx + 1) * ord(ch) for idx, ch in enumerate(style))
-        self._rng = random.Random((seed or 0) + style_hash + self.total_bars * 97)
+        # Mix style and bar count into the seed to keep repeatable section plans per request shape.
+        self._rng = random.Random((seed or 0) + style_hash + self.total_bars * _BAR_HASH_MULTIPLIER)
 
     def plan(self) -> list[PhraseBlock]:
         names = [

@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Protocol
 
 from audio_engine.ai.generator import MusicGenerator, _STYLE_DEFS
 from audio_engine.ai.sfx_gen import SFXGen
 from audio_engine.ai.sfx_synth import available_sfx_types
 from audio_engine.ai.voice_gen import VoiceGen
 from audio_engine.ai.voice_synth import VOICE_PRESETS
+
+
+class _StatusLabel(Protocol):
+    def configure(self, **kwargs: object) -> object: ...
+    def update_idletasks(self) -> object: ...
 
 
 def _safe_int(value: str, fallback: int) -> int:
@@ -18,7 +24,7 @@ def _safe_int(value: str, fallback: int) -> int:
         return fallback
 
 
-def _set_status(label: object, text: str) -> None:
+def _set_status(label: _StatusLabel, text: str) -> None:
     label.configure(text=text)
     label.update_idletasks()
 
