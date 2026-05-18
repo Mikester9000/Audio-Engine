@@ -27,6 +27,23 @@ def test_section_planner_is_deterministic_and_covers_bars():
         assert prev.bar_start + prev.bar_length == nxt.bar_start
 
 
+def test_section_planner_short_forms_still_cover_requested_bars():
+    plan = SectionPlanner(style="battle", total_bars=4, seed=17).plan()
+    assert sum(block.bar_length for block in plan) == 4
+    assert [block.role.name for block in plan] == ["INTRO", "A_PHRASE", "CLIMAX", "CADENCE"]
+
+
+def test_section_planner_seed_none_does_not_collide_with_zero(monkeypatch):
+    class _StubSystemRandom:
+        def randrange(self, start: int, stop: int | None = None) -> int:
+            return 12345
+
+    monkeypatch.setattr("audio_engine.composer.phrase.random.SystemRandom", lambda: _StubSystemRandom())
+    none_seed = SectionPlanner(style="battle", total_bars=16, seed=None).plan()
+    zero_seed = SectionPlanner(style="battle", total_bars=16, seed=0).plan()
+    assert none_seed != zero_seed
+
+
 def test_motif_bank_variations_change_sequence():
     bank = MotifBank(scale_degree_count=7, seed=5)
     motif = bank.seed_motif()
@@ -73,6 +90,17 @@ def test_music_generator_structured_and_deterministic():
     np.testing.assert_array_equal(a1, a2)
 
 
+def test_music_generator_seed_none_does_not_collide_with_zero(monkeypatch):
+    class _StubSystemRandom:
+        def randrange(self, start: int, stop: int | None = None) -> int:
+            return 54321
+
+    monkeypatch.setattr("audio_engine.ai.generator.random.SystemRandom", lambda: _StubSystemRandom())
+    none_seed = MusicGenerator(sample_rate=22050, seed=None).generate_audio(style="battle", bars=4)
+    zero_seed = MusicGenerator(sample_rate=22050, seed=0).generate_audio(style="battle", bars=4)
+    assert not np.array_equal(none_seed, zero_seed)
+
+
 def test_voice_synth_non_silent_and_deterministic():
     text = "Will we reach the crystal?"
     for preset in sorted(VOICE_PRESETS):
@@ -84,6 +112,15 @@ def test_voice_synth_non_silent_and_deterministic():
     a = synthesise_voice("The gate is open.", voice_preset="narrator", seed=7)
     b = synthesise_voice("The gate is open.", voice_preset="narrator", seed=7)
     np.testing.assert_array_equal(a, b)
+
+
+def test_low_sample_rate_sfx_and_voice_paths_stay_valid():
+    sfx = synthesise_sfx("ui_click", duration=0.05, sample_rate=1000, seed=1)
+    voice = synthesise_voice("s", sample_rate=4000, seed=2)
+    assert sfx.dtype == np.float32
+    assert sfx.size > 0
+    assert voice.dtype == np.float32
+    assert voice.size > 0
 
 
 class _ConstantInstrument:

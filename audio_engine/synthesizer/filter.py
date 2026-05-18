@@ -27,6 +27,7 @@ class Filter:
     def __init__(self, sample_rate: int = 44100, order: int = 4) -> None:
         self.sample_rate = sample_rate
         self.order = order
+        self._design_cache: dict[tuple[str, float], np.ndarray] = {}
 
     # ------------------------------------------------------------------
     # Public filter methods
@@ -61,6 +62,12 @@ class Filter:
     # ------------------------------------------------------------------
 
     def _design(self, btype: str, cutoff: float) -> np.ndarray:
+        key = (btype, float(cutoff))
+        cached = self._design_cache.get(key)
+        if cached is not None:
+            return cached
         nyq = self.sample_rate / 2.0
         normalised = np.clip(cutoff / nyq, 1e-6, 1.0 - 1e-6)
-        return butter(self.order, normalised, btype=btype, output="sos")
+        sos = butter(self.order, normalised, btype=btype, output="sos")
+        self._design_cache[key] = sos
+        return sos

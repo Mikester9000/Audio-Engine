@@ -73,6 +73,7 @@ class Sequencer:
         self.time_signature = time_signature
         self.sample_rate = sample_rate
         self._tracks: dict[str, _Track] = {}
+        self._eq_filter = Filter(sample_rate)
 
     # ------------------------------------------------------------------
     # Track management
@@ -290,11 +291,10 @@ class Sequencer:
         return float(np.clip(pan, -1.0, 1.0))
 
     def _apply_track_eq(self, signal: np.ndarray, role: str) -> np.ndarray:
-        flt = Filter(self.sample_rate)
         if role == "bass":
-            return flt.low_pass(signal, 900.0)
+            return self._eq_filter.low_pass(signal, 900.0)
         if role in {"melody", "counter"}:
-            return flt.high_pass(signal, 150.0)
+            return self._eq_filter.high_pass(signal, 150.0)
         if role in {"texture", "percussion"}:
-            return flt.high_pass(signal, 350.0)
+            return self._eq_filter.high_pass(signal, 350.0)
         return signal

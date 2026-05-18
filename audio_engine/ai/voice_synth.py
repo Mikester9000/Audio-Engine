@@ -128,10 +128,13 @@ def _noise_layer(duration: float, sr: int, rng: np.random.Generator, lo: float, 
 
     n = max(1, int(duration * sr))
     raw = rng.standard_normal(n).astype(np.float64)
-    lo_n = max(0.001, lo / (sr / 2.0))
-    hi_n = min(0.999, hi / (sr / 2.0))
+    nyq = sr / 2.0
+    if nyq <= 0.0 or hi <= 0.0 or lo >= nyq:
+        return raw.astype(np.float32)
+    lo_n = float(np.clip(lo / nyq, 0.001, 0.949))
+    hi_n = float(np.clip(hi / nyq, lo_n + 0.05, 0.999))
     if hi_n <= lo_n:
-        hi_n = min(0.999, lo_n + 0.05)
+        return raw.astype(np.float32)
     sos = butter(3, [lo_n, hi_n], btype="band", output="sos")
     return sosfilt(sos, raw).astype(np.float32)
 

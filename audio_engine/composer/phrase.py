@@ -37,19 +37,36 @@ class SectionPlanner:
     def __init__(self, style: str, total_bars: int, seed: int | None = None) -> None:
         self.style = style
         self.total_bars = max(4, total_bars)
+        self._seed = seed if seed is not None else random.SystemRandom().randrange(0, 2**31)
         style_hash = sum((idx + 1) * ord(ch) for idx, ch in enumerate(style))
         # Mix style and bar count into the seed to keep repeatable section plans per request shape.
-        self._rng = random.Random((seed or 0) + style_hash + self.total_bars * _BAR_HASH_MULTIPLIER)
+        self._rng = random.Random(self._seed + style_hash + self.total_bars * _BAR_HASH_MULTIPLIER)
 
     def plan(self) -> list[PhraseBlock]:
-        names = [
-            PhraseRole.INTRO,
-            PhraseRole.A_PHRASE,
-            PhraseRole.A_VAR,
-            PhraseRole.B_PHRASE,
-            PhraseRole.CLIMAX,
-            PhraseRole.CADENCE,
-        ]
+        if self.total_bars <= 4:
+            names = [
+                PhraseRole.INTRO,
+                PhraseRole.A_PHRASE,
+                PhraseRole.CLIMAX,
+                PhraseRole.CADENCE,
+            ]
+        elif self.total_bars == 5:
+            names = [
+                PhraseRole.INTRO,
+                PhraseRole.A_PHRASE,
+                PhraseRole.B_PHRASE,
+                PhraseRole.CLIMAX,
+                PhraseRole.CADENCE,
+            ]
+        else:
+            names = [
+                PhraseRole.INTRO,
+                PhraseRole.A_PHRASE,
+                PhraseRole.A_VAR,
+                PhraseRole.B_PHRASE,
+                PhraseRole.CLIMAX,
+                PhraseRole.CADENCE,
+            ]
         if self.total_bars >= 20:
             names.append(PhraseRole.OUTRO)
 

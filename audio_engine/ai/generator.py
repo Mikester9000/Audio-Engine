@@ -1387,7 +1387,7 @@ class MusicGenerator:
 
     def __init__(self, sample_rate: int = 44100, seed: int | None = None) -> None:
         self.sample_rate = sample_rate
-        self._seed = seed
+        self._seed = seed if seed is not None else random.SystemRandom().randrange(0, 2**31)
 
     # ------------------------------------------------------------------
     # Public API
@@ -1587,9 +1587,22 @@ class MusicGenerator:
         """Return sorted list of available style names."""
         return sorted(_STYLE_DEFS.keys())
 
+    @staticmethod
+    def available_style_metadata() -> dict[str, dict[str, object]]:
+        """Return public style metadata for UI and CLI consumers."""
+        return {
+            name: {
+                "bpm": style.bpm,
+                "scale_name": style.scale_name,
+                "root": style.root,
+                "bars": style.bars,
+            }
+            for name, style in _STYLE_DEFS.items()
+        }
+
     def _rng_for_call(self, style: str, bars: int) -> random.Random:
         style_hash = sum((idx + 1) * ord(ch) for idx, ch in enumerate(style))
-        return random.Random((self._seed or 0) + style_hash + bars * _BARS_HASH_MULTIPLIER)
+        return random.Random(self._seed + style_hash + bars * _BARS_HASH_MULTIPLIER)
 
     def _resolve_scale_name(self, style: str, default: str) -> str:
         family = style.lower()

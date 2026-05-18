@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from audio_engine.ai.generator import MusicGenerator, _STYLE_DEFS
+from audio_engine.ai.generator import MusicGenerator
 from audio_engine.ai.sfx_gen import SFXGen
 from audio_engine.ai.sfx_synth import available_sfx_types
 from audio_engine.ai.voice_gen import VoiceGen
@@ -36,6 +36,7 @@ def launch_studio() -> None:
     root = tk.Tk()
     root.title("Audio Engine Studio")
     root.geometry("760x520")
+    style_metadata = MusicGenerator.available_style_metadata()
 
     notebook = ttk.Notebook(root)
     notebook.pack(fill="both", expand=True)
@@ -53,40 +54,30 @@ def launch_studio() -> None:
     style_box = ttk.Combobox(music_tab, textvariable=music_style, values=MusicGenerator.available_styles(), state="readonly")
     style_box.grid(row=0, column=1, sticky="ew", padx=8, pady=6)
 
-    ttk.Label(music_tab, text="Key").grid(row=1, column=0, sticky="w", padx=8, pady=6)
-    key_var = tk.StringVar(value="C")
-    key_box = ttk.Combobox(music_tab, textvariable=key_var, values=["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"], state="readonly")
-    key_box.grid(row=1, column=1, sticky="ew", padx=8, pady=6)
-
-    ttk.Label(music_tab, text="Scale").grid(row=2, column=0, sticky="w", padx=8, pady=6)
-    scale_var = tk.StringVar(value="major")
-    scale_box = ttk.Combobox(music_tab, textvariable=scale_var, values=["major", "harmonic_minor", "dorian", "phrygian"], state="readonly")
-    scale_box.grid(row=2, column=1, sticky="ew", padx=8, pady=6)
-
-    ttk.Label(music_tab, text="BPM").grid(row=3, column=0, sticky="w", padx=8, pady=6)
-    bpm_var = tk.StringVar(value=str(int(_STYLE_DEFS[music_style.get()].bpm)))
+    ttk.Label(music_tab, text="BPM").grid(row=1, column=0, sticky="w", padx=8, pady=6)
+    bpm_var = tk.StringVar(value=str(int(style_metadata[music_style.get()]["bpm"])))
     bpm_label = ttk.Label(music_tab, textvariable=bpm_var)
-    bpm_label.grid(row=3, column=1, sticky="w", padx=8, pady=6)
+    bpm_label.grid(row=1, column=1, sticky="w", padx=8, pady=6)
 
-    ttk.Label(music_tab, text="Bars").grid(row=4, column=0, sticky="w", padx=8, pady=6)
+    ttk.Label(music_tab, text="Bars").grid(row=2, column=0, sticky="w", padx=8, pady=6)
     bars_var = tk.IntVar(value=16)
     bars_spin = ttk.Spinbox(music_tab, from_=4, to=128, textvariable=bars_var)
-    bars_spin.grid(row=4, column=1, sticky="ew", padx=8, pady=6)
+    bars_spin.grid(row=2, column=1, sticky="ew", padx=8, pady=6)
 
-    ttk.Label(music_tab, text="Seed").grid(row=5, column=0, sticky="w", padx=8, pady=6)
+    ttk.Label(music_tab, text="Seed").grid(row=3, column=0, sticky="w", padx=8, pady=6)
     music_seed = tk.StringVar(value="0")
-    ttk.Entry(music_tab, textvariable=music_seed).grid(row=5, column=1, sticky="ew", padx=8, pady=6)
+    ttk.Entry(music_tab, textvariable=music_seed).grid(row=3, column=1, sticky="ew", padx=8, pady=6)
 
-    ttk.Label(music_tab, text="Output path").grid(row=6, column=0, sticky="w", padx=8, pady=6)
+    ttk.Label(music_tab, text="Output path").grid(row=4, column=0, sticky="w", padx=8, pady=6)
     music_out = tk.StringVar(value="music.wav")
-    ttk.Entry(music_tab, textvariable=music_out).grid(row=6, column=1, sticky="ew", padx=8, pady=6)
+    ttk.Entry(music_tab, textvariable=music_out).grid(row=4, column=1, sticky="ew", padx=8, pady=6)
 
     music_status = ttk.Label(music_tab, text="")
-    music_status.grid(row=8, column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    music_status.grid(row=6, column=0, columnspan=2, sticky="w", padx=8, pady=8)
 
     def _refresh_bpm(*_args: object) -> None:
         style = music_style.get()
-        bpm_var.set(str(int(_STYLE_DEFS.get(style, _STYLE_DEFS["battle"]).bpm)))
+        bpm_var.set(str(int(style_metadata.get(style, style_metadata["battle"])["bpm"])))
 
     style_box.bind("<<ComboboxSelected>>", _refresh_bpm)
 
@@ -97,7 +88,7 @@ def launch_studio() -> None:
             bars = max(4, _safe_int(str(bars_var.get()), 16))
             bpm = max(40, _safe_int(bpm_var.get(), 120))
             duration = bars * (60.0 / bpm) * 4.0
-            prompt = f"{style} {key_var.get()} {scale_var.get()}"
+            prompt = style
             out_path = Path(music_out.get())
             out_path.parent.mkdir(parents=True, exist_ok=True)
             _set_status(music_status, "Generating music...")
@@ -113,7 +104,7 @@ def launch_studio() -> None:
         except Exception as exc:  # pragma: no cover - UI path
             _set_status(music_status, f"Error: {exc}")
 
-    ttk.Button(music_tab, text="Generate", command=_generate_music).grid(row=7, column=0, columnspan=2, pady=8)
+    ttk.Button(music_tab, text="Generate", command=_generate_music).grid(row=5, column=0, columnspan=2, pady=8)
 
     # SFX tab
     ttk.Label(sfx_tab, text="Category").grid(row=0, column=0, sticky="w", padx=8, pady=6)

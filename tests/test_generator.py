@@ -19,6 +19,12 @@ def test_available_styles_non_empty(gen):
     assert len(styles) > 0
 
 
+def test_available_style_metadata_exposes_bpm():
+    metadata = MusicGenerator.available_style_metadata()
+    assert "battle" in metadata
+    assert metadata["battle"]["bpm"] == 140
+
+
 @pytest.mark.parametrize("style", ["battle", "ambient", "menu"])
 def test_generate_returns_sequencer(gen, style):
     seq = gen.generate(style=style, bars=2)
