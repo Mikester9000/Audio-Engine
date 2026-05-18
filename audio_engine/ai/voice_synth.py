@@ -39,6 +39,9 @@ VOICE_PRESETS: dict[str, _VoicePreset] = {
 
 _BASE_FORMANTS = np.array([700.0, 1220.0, 2600.0], dtype=np.float64)
 _SUBHARMONIC_PHASE_OFFSET = 0.33
+_NOISE_BAND_MIN = 0.001
+_NOISE_BAND_MAX = 0.949
+_NOISE_BAND_MIN_WIDTH = 0.05
 
 _VOWELS = set("aeiouy")
 _PLOSIVES = set("pbtdkg")
@@ -131,8 +134,8 @@ def _noise_layer(duration: float, sr: int, rng: np.random.Generator, lo: float, 
     nyq = sr / 2.0
     if nyq <= 0.0 or hi <= 0.0 or lo >= nyq:
         return raw.astype(np.float32)
-    lo_n = float(np.clip(lo / nyq, 0.001, 0.949))
-    hi_n = float(np.clip(hi / nyq, lo_n + 0.05, 0.999))
+    lo_n = float(np.clip(lo / nyq, _NOISE_BAND_MIN, _NOISE_BAND_MAX))
+    hi_n = float(np.clip(hi / nyq, lo_n + _NOISE_BAND_MIN_WIDTH, 0.999))
     if hi_n <= lo_n:
         return raw.astype(np.float32)
     sos = butter(3, [lo_n, hi_n], btype="band", output="sos")

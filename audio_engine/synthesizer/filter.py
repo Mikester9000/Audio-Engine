@@ -12,6 +12,8 @@ from scipy.signal import butter, sosfilt  # type: ignore[import]
 
 __all__ = ["Filter"]
 
+_MAX_DESIGN_CACHE_SIZE = 16
+
 
 class Filter:
     """Stateless biquad-style filter bank.
@@ -69,5 +71,7 @@ class Filter:
         nyq = self.sample_rate / 2.0
         normalised = np.clip(cutoff / nyq, 1e-6, 1.0 - 1e-6)
         sos = butter(self.order, normalised, btype=btype, output="sos")
+        if len(self._design_cache) >= _MAX_DESIGN_CACHE_SIZE:
+            self._design_cache.pop(next(iter(self._design_cache)))
         self._design_cache[key] = sos
         return sos

@@ -29,8 +29,11 @@ def test_section_planner_is_deterministic_and_covers_bars():
 
 def test_section_planner_short_forms_still_cover_requested_bars():
     plan = SectionPlanner(style="battle", total_bars=4, seed=17).plan()
+    five_bar_plan = SectionPlanner(style="battle", total_bars=5, seed=17).plan()
     assert sum(block.bar_length for block in plan) == 4
+    assert sum(block.bar_length for block in five_bar_plan) == 5
     assert [block.role.name for block in plan] == ["INTRO", "A_PHRASE", "CLIMAX", "CADENCE"]
+    assert [block.role.name for block in five_bar_plan] == ["INTRO", "A_PHRASE", "CLIMAX", "CADENCE"]
 
 
 def test_section_planner_seed_none_differs_from_zero(monkeypatch):

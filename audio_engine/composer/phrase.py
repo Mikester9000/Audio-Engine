@@ -46,18 +46,10 @@ class SectionPlanner:
         self._rng = random.Random(self._seed + style_hash + self.total_bars * _BAR_HASH_MULTIPLIER)
 
     def plan(self) -> list[PhraseBlock]:
-        if self.total_bars <= 4:
+        if self.total_bars <= 5:
             names = [
                 PhraseRole.INTRO,
                 PhraseRole.A_PHRASE,
-                PhraseRole.CLIMAX,
-                PhraseRole.CADENCE,
-            ]
-        elif self.total_bars == 5:
-            names = [
-                PhraseRole.INTRO,
-                PhraseRole.A_PHRASE,
-                PhraseRole.B_PHRASE,
                 PhraseRole.CLIMAX,
                 PhraseRole.CADENCE,
             ]

@@ -17,13 +17,16 @@ import numpy as np
 
 __all__ = ["synthesise_sfx", "available_sfx_types"]
 
+_NORMALIZED_MIN_EDGE = 1e-4
+_NORMALIZED_MAX_EDGE = 0.999
+
 
 def _normalized_band(lo: float, hi: float, sr: int, min_width: float = 0.02) -> tuple[float, float] | None:
     nyq = sr / 2.0
     if nyq <= 0.0 or hi <= 0.0 or lo >= nyq:
         return None
-    low = float(np.clip(lo / nyq, 1e-4, 0.999 - min_width))
-    high = float(np.clip(hi / nyq, low + min_width, 0.999))
+    low = float(np.clip(lo / nyq, _NORMALIZED_MIN_EDGE, _NORMALIZED_MAX_EDGE - min_width))
+    high = float(np.clip(hi / nyq, low + min_width, _NORMALIZED_MAX_EDGE))
     if high <= low:
         return None
     return low, high
