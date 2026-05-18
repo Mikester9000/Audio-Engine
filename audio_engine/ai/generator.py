@@ -75,6 +75,18 @@ TrackStyle = Literal[
     "orchestral_epic", "choral_fantasy", "celtic_adventure",
     "jazz_lounge", "electronic_ambient", "rock_battle",
     "piano_ballad", "folk_tavern", "horror_ambient", "triumph_fanfare",
+    # Multi-genre styles — various genres with Final Fantasy epic quality
+    "jazz_epic", "jazz_ballad", "jazz_swing",
+    "blues_epic", "blues_ballad",
+    "pop_epic", "pop_ballad_epic",
+    "rock_epic", "rock_ballad_epic",
+    "electronic_epic", "synthwave_epic",
+    "metal_epic",
+    "world_epic", "latin_epic",
+    "acoustic_epic", "country_epic",
+    "rnb_ballad",
+    "ambient_nature", "ambient_space",
+    "cinematic_orchestral",
 ]
 
 
@@ -940,6 +952,352 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         melody_pattern="four_on_the_floor",
         chord_pattern="half_notes",
         bars=4,
+    ),
+
+    # -----------------------------------------------------------------------
+    # Multi-genre styles — various genres with Final Fantasy epic quality
+    # Each style blends its source genre with the orchestral grandeur,
+    # emotional depth, and melodic expressiveness of the FF series.
+    # -----------------------------------------------------------------------
+
+    "jazz_epic": _StyleDef(
+        # Big-band jazz fused with orchestral grandeur — think Uematsu meets Ellington.
+        # G major, 104 BPM, piano + brass + strings + choir.
+        bpm=104,
+        scale_name="major",
+        root="G",
+        octave=4,
+        progression_name="ii_V_I_VI",
+        instruments=["piano", "brass"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="syncopated",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "jazz_ballad": _StyleDef(
+        # Slow jazz ballad with emotional depth — Tifa's Theme reimagined as late-night jazz.
+        # E minor, 72 BPM, solo piano leading into strings.
+        bpm=72,
+        scale_name="natural_minor",
+        root="E",
+        octave=4,
+        progression_name="ii_V_I_VI",
+        instruments=["piano"],
+        accompaniment=["strings", "synth_pad"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "jazz_swing": _StyleDef(
+        # Upbeat swing jazz with epic orchestral weight — playful yet grand.
+        # C major, 126 BPM, piano + brass, lively swing feel.
+        bpm=126,
+        scale_name="major",
+        root="C",
+        octave=4,
+        progression_name="ii_V_I_VI",
+        instruments=["piano", "brass"],
+        accompaniment=["ff7_strings"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="eighth_notes",
+        chord_pattern="syncopated",
+        bars=8,
+    ),
+
+    "blues_epic": _StyleDef(
+        # Blues with cinematic orchestral weight — gritty guitar over sweeping strings and brass.
+        # A blues scale, 88 BPM, electric guitar + piano leading strings and brass.
+        bpm=88,
+        scale_name="blues",
+        root="A",
+        octave=3,
+        progression_name="I_IV_V_I",
+        instruments=["electric_guitar", "piano"],
+        accompaniment=["ff7_strings", "brass"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="syncopated",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "blues_ballad": _StyleDef(
+        # Slow emotional blues ballad — intimate piano over warm strings.
+        # A blues scale, 60 BPM, soulful and melancholic.
+        bpm=60,
+        scale_name="blues",
+        root="A",
+        octave=3,
+        progression_name="I_IV_V_I",
+        instruments=["piano", "electric_guitar"],
+        accompaniment=["strings"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "pop_epic": _StyleDef(
+        # Modern pop with FF orchestral grandeur — anthemic and emotionally sweeping.
+        # D major, 100 BPM, piano + synth pad over full orchestra.
+        bpm=100,
+        scale_name="major",
+        root="D",
+        octave=4,
+        progression_name="I_V_vi_IV",
+        instruments=["piano", "synth_pad"],
+        accompaniment=["ff7_strings", "choir", "brass"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="syncopated",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "pop_ballad_epic": _StyleDef(
+        # Epic pop ballad — the energy of Stand By Me and Eyes on Me.
+        # A major, 80 BPM, solo piano building to full orchestral swell.
+        bpm=80,
+        scale_name="major",
+        root="A",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "rock_epic": _StyleDef(
+        # Full orchestral rock — electric guitar fury with choral grandeur, One-Winged Angel energy.
+        # E harmonic minor, 132 BPM, electric guitar + brass, choir + strings.
+        bpm=132,
+        scale_name="harmonic_minor",
+        root="E",
+        octave=3,
+        progression_name="i_bVII_bVI_V",
+        instruments=["ff8_electric_guitar", "brass"],
+        accompaniment=["choir", "ff7_strings"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "rock_ballad_epic": _StyleDef(
+        # Emotional rock ballad with orchestral strings — Noctis's Theme meets rock.
+        # D natural minor, 76 BPM, guitar + piano over sweeping strings.
+        bpm=76,
+        scale_name="natural_minor",
+        root="D",
+        octave=4,
+        progression_name="i_bVI_bVII_i",
+        instruments=["ff8_electric_guitar", "piano"],
+        accompaniment=["ff7_strings"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "electronic_epic": _StyleDef(
+        # Electronic / EDM fused with orchestral depth — synth leads over strings and choir.
+        # F natural minor, 128 BPM, driving electronic energy with FF emotion.
+        bpm=128,
+        scale_name="natural_minor",
+        root="F",
+        octave=3,
+        progression_name="i_bVI_bVII_i",
+        instruments=["synth_pad", "ff7_lead"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="synth_pad",
+        percussion_instrument="percussion",
+        melody_pattern="eighth_notes",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "synthwave_epic": _StyleDef(
+        # Retrowave / synthwave with nostalgic FF energy — crystal synths over warm strings.
+        # A natural minor, 110 BPM, shimmering retro atmosphere.
+        bpm=110,
+        scale_name="natural_minor",
+        root="A",
+        octave=3,
+        progression_name="i_bVI_bVII_i",
+        instruments=["synth_pad", "crystal_synth"],
+        accompaniment=["synth_pad", "ff7_strings"],
+        bass_instrument="synth_pad",
+        percussion_instrument="percussion",
+        melody_pattern="syncopated",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "metal_epic": _StyleDef(
+        # Heavy metal with choral orchestral backing — the rage and majesty of FF16.
+        # E Phrygian, 160 BPM, brutal guitar fury underpinned by choir and brass grandeur.
+        bpm=160,
+        scale_name="phrygian",
+        root="E",
+        octave=3,
+        progression_name="i_bII_i_bVII",
+        instruments=["ff8_electric_guitar", "brass"],
+        accompaniment=["choir", "ff7_strings"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "world_epic": _StyleDef(
+        # World music with epic orchestral treatment — global flavours with FF grandeur.
+        # D Dorian, 96 BPM, flute lead over choir + strings + brass.
+        bpm=96,
+        scale_name="dorian",
+        root="D",
+        octave=3,
+        progression_name="i_bVII_bVI_bVII",
+        instruments=["flute", "strings"],
+        accompaniment=["choir", "ff7_strings", "brass"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="syncopated",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "latin_epic": _StyleDef(
+        # Latin rhythms with FF cinematic grandeur — piano + brass over flowing strings.
+        # A Dorian, 116 BPM, syncopated Latin energy with orchestral sweep.
+        bpm=116,
+        scale_name="dorian",
+        root="A",
+        octave=3,
+        progression_name="i_bVII_bVI_bVII",
+        instruments=["piano", "brass"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="syncopated",
+        chord_pattern="four_on_the_floor",
+        bars=8,
+    ),
+
+    "acoustic_epic": _StyleDef(
+        # Acoustic / folk with emotional FF depth — intimate piano + flute over warm strings.
+        # G major, 84 BPM, organic textures with cinematic emotional arc.
+        bpm=84,
+        scale_name="major",
+        root="G",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano", "flute"],
+        accompaniment=["strings"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "country_epic": _StyleDef(
+        # Country with cinematic orchestral backing — heartland simplicity meets FF scale.
+        # G pentatonic major, 100 BPM, piano + guitar over lush strings.
+        bpm=100,
+        scale_name="pentatonic_major",
+        root="G",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["piano", "electric_guitar"],
+        accompaniment=["ff7_strings"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="syncopated",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "rnb_ballad": _StyleDef(
+        # R&B / soul ballad — smooth piano over strings and choir, soulful and epic.
+        # F natural minor, 70 BPM, lush and emotionally rich.
+        bpm=70,
+        scale_name="natural_minor",
+        root="F",
+        octave=4,
+        progression_name="i_bVI_bVII_i",
+        instruments=["piano", "synth_pad"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="syncopated",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "ambient_nature": _StyleDef(
+        # Nature-inspired ambient with FF crystalline texture — like the Prelude reimagined outdoors.
+        # F major, 60 BPM, flute + crystal synth over strings and pad.
+        bpm=60,
+        scale_name="major",
+        root="F",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["flute", "crystal_synth"],
+        accompaniment=["strings", "synth_pad"],
+        bass_instrument="synth_pad",
+        percussion_instrument=None,
+        melody_pattern="ambient",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "ambient_space": _StyleDef(
+        # Space ambient — vast, crystalline, timeless.  Crystal synths + choir pads.
+        # D major, 55 BPM, shimmering and ethereal like looking at stars.
+        bpm=55,
+        scale_name="major",
+        root="D",
+        octave=3,
+        progression_name="I_vi_IV_V",
+        instruments=["crystal_synth", "synth_pad"],
+        accompaniment=["choir", "synth_pad"],
+        bass_instrument="synth_pad",
+        percussion_instrument=None,
+        melody_pattern="ambient",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "cinematic_orchestral": _StyleDef(
+        # Pure cinematic orchestral — Hans Zimmer grandeur meets Uematsu emotional depth.
+        # C harmonic minor, 96 BPM, full orchestra: brass + choir + strings + percussion.
+        bpm=96,
+        scale_name="harmonic_minor",
+        root="C",
+        octave=3,
+        progression_name="i_bVII_bVI_V",
+        instruments=["brass", "ff7_strings"],
+        accompaniment=["choir", "strings", "brass"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
     ),
 }
 

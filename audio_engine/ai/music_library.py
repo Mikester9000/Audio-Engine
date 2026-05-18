@@ -164,6 +164,39 @@ FF_RADIO_CATALOG: list[TrackEntry] = [
     TrackEntry("folk_tavern",      "Folk Tavern",          "generic","Generic",              "theme",     130, "lively",    False, "Unknown",         "folk-tavern",       ["folk","tavern","lively","drinking"]),
     TrackEntry("horror_ambient",   "Horror Ambient",       "generic","Generic",              "ambient",    55, "unsettling",False, "Unknown",         "horror-ambient",    ["horror","dark","ambient","dissonant"]),
     TrackEntry("triumph_fanfare",  "Triumph Fanfare",      "generic","Generic",              "fanfare",   120, "triumphant",False, "Unknown",         "triumph-fanfare",   ["fanfare","victory","brass","short"]),
+
+    # ---- Multi-genre — various genres with Final Fantasy epic quality -------
+    # Jazz
+    TrackEntry("jazz_epic",        "Epic Jazz",            "generic","Generic",              "theme",     104, "grand",     False, "Unknown",         "jazz-epic",         ["jazz","orchestral","big-band","epic","brass","piano"]),
+    TrackEntry("jazz_ballad",      "Jazz Ballad",          "generic","Generic",              "ballad",     72, "emotional", False, "Unknown",         "jazz-ballad",       ["jazz","ballad","piano","strings","late-night","melancholy"]),
+    TrackEntry("jazz_swing",       "Swing Jazz",           "generic","Generic",              "theme",     126, "lively",    False, "Unknown",         "jazz-swing",        ["jazz","swing","piano","brass","lively","upbeat"]),
+    # Blues
+    TrackEntry("blues_epic",       "Epic Blues",           "generic","Generic",              "theme",      88, "soulful",   False, "Unknown",         "blues-epic",        ["blues","orchestral","electric-guitar","strings","cinematic"]),
+    TrackEntry("blues_ballad",     "Blues Ballad",         "generic","Generic",              "ballad",     60, "sad",       False, "Unknown",         "blues-ballad",      ["blues","ballad","piano","guitar","slow","emotional"]),
+    # Pop
+    TrackEntry("pop_epic",         "Epic Pop",             "generic","Generic",              "theme",     100, "anthemic",  False, "Unknown",         "pop-epic",          ["pop","orchestral","epic","anthemic","choir","strings"]),
+    TrackEntry("pop_ballad_epic",  "Epic Pop Ballad",      "generic","Generic",              "ballad",     80, "romantic",  True,  "Unknown",         "pop-ballad-epic",   ["pop","ballad","orchestral","piano","choir","romantic","emotional"]),
+    # Rock
+    TrackEntry("rock_epic",        "Orchestral Rock",      "generic","Generic",              "battle",    132, "powerful",  False, "Unknown",         "rock-epic",         ["rock","orchestral","electric-guitar","choir","brass","powerful"]),
+    TrackEntry("rock_ballad_epic", "Epic Rock Ballad",     "generic","Generic",              "ballad",     76, "emotional", False, "Unknown",         "rock-ballad-epic",  ["rock","ballad","guitar","piano","strings","emotional","cinematic"]),
+    # Electronic
+    TrackEntry("electronic_epic",  "Epic Electronic",      "generic","Generic",              "theme",     128, "driving",   False, "Unknown",         "electronic-epic",   ["electronic","edm","orchestral","synth","choir","strings","driving"]),
+    TrackEntry("synthwave_epic",   "Synthwave Epic",       "generic","Generic",              "theme",     110, "nostalgic", False, "Unknown",         "synthwave-epic",    ["synthwave","retrowave","synth","nostalgic","electronic","atmospheric"]),
+    # Metal
+    TrackEntry("metal_epic",       "Orchestral Metal",     "generic","Generic",              "battle",    160, "brutal",    False, "Unknown",         "metal-epic",        ["metal","orchestral","electric-guitar","choir","brass","brutal","epic"]),
+    # World
+    TrackEntry("world_epic",       "World Epic",           "generic","Generic",              "theme",      96, "vast",      False, "Unknown",         "world-epic",        ["world","orchestral","flute","strings","choir","ethnic","epic"]),
+    TrackEntry("latin_epic",       "Latin Epic",           "generic","Generic",              "theme",     116, "passionate",False, "Unknown",         "latin-epic",        ["latin","orchestral","piano","brass","strings","passionate","cinematic"]),
+    # Acoustic / Country
+    TrackEntry("acoustic_epic",    "Acoustic Epic",        "generic","Generic",              "ballad",     84, "warm",      False, "Unknown",         "acoustic-epic",     ["acoustic","folk","piano","flute","strings","warm","intimate"]),
+    TrackEntry("country_epic",     "Country Epic",         "generic","Generic",              "theme",     100, "heartfelt", False, "Unknown",         "country-epic",      ["country","orchestral","guitar","piano","strings","heartfelt"]),
+    # R&B / Soul
+    TrackEntry("rnb_ballad",       "R&B Ballad",           "generic","Generic",              "ballad",     70, "soulful",   True,  "Unknown",         "rnb-ballad",        ["rnb","soul","ballad","piano","strings","choir","soulful","smooth"]),
+    # Ambient
+    TrackEntry("ambient_nature",   "Nature Ambient",       "generic","Generic",              "ambient",    60, "serene",    False, "Unknown",         "ambient-nature",    ["ambient","nature","flute","crystal","strings","serene","peaceful"]),
+    TrackEntry("ambient_space",    "Space Ambient",        "generic","Generic",              "ambient",    55, "vast",      False, "Unknown",         "ambient-space",     ["ambient","space","crystal","synth","choir","ethereal","vast"]),
+    # Cinematic
+    TrackEntry("cinematic_orchestral","Cinematic Orchestral","generic","Generic",            "theme",      96, "epic",      False, "Unknown",         "cinematic-orchestral",["cinematic","orchestral","brass","choir","strings","epic","dramatic"]),
 ]
 
 # Index for fast lookup
@@ -231,7 +264,54 @@ _ALIAS_MAP: dict[str, str] = {
     "tavern":                  "folk_tavern",
     "horror":                  "horror_ambient",
     "fanfare":                 "triumph_fanfare",
+    # Multi-genre with FF epicness
+    "jazz epic":               "jazz_epic",
+    "epic jazz":               "jazz_epic",
+    "big band":                "jazz_epic",
+    "jazz ballad":             "jazz_ballad",
+    "jazz swing":              "jazz_swing",
+    "swing jazz":              "jazz_swing",
+    "blues ballad":            "blues_ballad",
+    "blues":                   "blues_epic",
+    "blues epic":              "blues_epic",
+    "pop epic":                "pop_epic",
+    "epic pop":                "pop_epic",
+    "pop ballad":              "pop_ballad_epic",
+    "stand by me":             "pop_ballad_epic",
+    "rock epic":               "rock_epic",
+    "orchestral rock":         "rock_epic",
+    "rock ballad":             "rock_ballad_epic",
+    "noctis":                  "rock_ballad_epic",
+    "electronic epic":         "electronic_epic",
+    "epic electronic":         "electronic_epic",
+    "edm":                     "electronic_epic",
+    "synthwave":               "synthwave_epic",
+    "retrowave":               "synthwave_epic",
+    "metal":                   "metal_epic",
+    "orchestral metal":        "metal_epic",
+    "world music":             "world_epic",
+    "world epic":              "world_epic",
+    "latin":                   "latin_epic",
+    "latin epic":              "latin_epic",
+    "acoustic":                "acoustic_epic",
+    "acoustic epic":           "acoustic_epic",
+    "country":                 "country_epic",
+    "country epic":            "country_epic",
+    "rnb":                     "rnb_ballad",
+    "r&b":                     "rnb_ballad",
+    "soul":                    "rnb_ballad",
+    "nature":                  "ambient_nature",
+    "nature ambient":          "ambient_nature",
+    "space":                   "ambient_space",
+    "space ambient":           "ambient_space",
+    "cinematic":               "cinematic_orchestral",
+    "cinematic orchestral":    "cinematic_orchestral",
 }
+_ALIASES_BY_LENGTH: list[tuple[str, str]] = sorted(
+    _ALIAS_MAP.items(),
+    key=lambda item: len(item[0]),
+    reverse=True,
+)
 
 # Mood/keyword → style fallback map
 _MOOD_STYLE_MAP: list[tuple[list[str], str]] = [
@@ -262,6 +342,27 @@ _MOOD_STYLE_MAP: list[tuple[list[str], str]] = [
     (["ff1", "nes", "8-bit", "retro"],                                     "ff1_battle"),
     (["ff7", "cloud", "sephiroth", "midgar"],                              "ff7_battle"),
     (["ff8", "squall", "rinoa", "balamb"],                                 "ff8_battle"),
+    # Multi-genre with FF epicness
+    (["big band", "jazz epic", "epic jazz"],                               "jazz_epic"),
+    (["jazz ballad", "late night jazz", "slow jazz"],                      "jazz_ballad"),
+    (["jazz swing", "swing jazz", "upbeat jazz"],                          "jazz_swing"),
+    (["blues epic", "orchestral blues", "cinematic blues"],                "blues_epic"),
+    (["blues ballad", "slow blues", "blues slow"],                         "blues_ballad"),
+    (["pop epic", "anthemic pop", "epic pop"],                             "pop_epic"),
+    (["pop ballad", "stand by me", "love ballad", "pop emotional"],        "pop_ballad_epic"),
+    (["orchestral rock", "rock epic", "epic rock", "rock choir"],          "rock_epic"),
+    (["rock ballad", "noctis", "emotional rock", "soft rock"],             "rock_ballad_epic"),
+    (["edm", "electronic epic", "epic electronic", "club"],                "electronic_epic"),
+    (["synthwave", "retrowave", "chillwave", "80s synth"],                 "synthwave_epic"),
+    (["metal", "heavy metal", "orchestral metal", "metalcore"],            "metal_epic"),
+    (["world music", "world epic", "ethnic", "global"],                    "world_epic"),
+    (["latin", "latin epic", "bossa", "samba", "flamenco", "tango"],       "latin_epic"),
+    (["acoustic", "acoustic epic", "fingerpicking", "unplugged"],          "acoustic_epic"),
+    (["country", "country epic", "western", "americana"],                  "country_epic"),
+    (["rnb", "r&b", "soul ballad", "neo soul", "soulful"],                 "rnb_ballad"),
+    (["nature ambient", "forest", "rain", "water", "organic"],             "ambient_nature"),
+    (["space ambient", "space music", "cosmos", "universe", "galaxy"],     "ambient_space"),
+    (["cinematic orchestral", "film score", "soundtrack", "zimmer"],       "cinematic_orchestral"),
 ]
 
 
@@ -366,7 +467,7 @@ def style_for_request(request: str) -> str:
     r = request.lower().strip()
 
     # 1. Direct alias match (exact song title)
-    for alias, style_key in _ALIAS_MAP.items():
+    for alias, style_key in _ALIASES_BY_LENGTH:
         if alias in r:
             return style_key
 

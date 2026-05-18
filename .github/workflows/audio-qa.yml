@@ -6,15 +6,18 @@
 # --------------------------------------------
 # In a professional audio pipeline, generated audio assets should be validated
 # automatically on every change to ensure they meet loudness, clipping, and
-# loop-quality targets before they can be promoted.  This workflow is the
-# lightweight CI equivalent of that gate.
+# loop-quality targets before they can be promoted.
 #
 # What this workflow does:
-#   1. Installs the audio-engine Python package.
-#   2. Generates a small SFX batch to /tmp using the committed example fixture.
-#   3. Runs the `qa-batch` command over the generated outputs.
-#   4. Fails the CI step if any generated file does not meet the QA thresholds
-#      (loudness target: -30 to -9 LUFS, peak: ≤ -0.1 dBFS, no clipping).
+#   1. Installs the audio-engine Python package (with OGG support).
+#   2. Generates SFX, full-length music, and voice batches from committed
+#      fixtures into /tmp.
+#   3. Runs `qa-batch` over each generated batch and fails CI when any file
+#      misses QA thresholds.
+#   4. Uploads generated audio and QA reports as workflow artifacts so
+#      developers can listen to results directly from the Actions run.
+#   5. Uses `if: always()` on artifact uploads so failed QA runs still provide
+#      downloadable audio for diagnosis. Artifact retention is 14 days.
 #
 # Trigger: any push or pull-request that touches audio engine source, tests,
 #           generation request fixtures, or this workflow file itself.
@@ -51,7 +54,7 @@ permissions:
 
 jobs:
   audio-qa:
-    name: Generate sample assets and run QA gate
+    name: Generate and QA-gate music, SFX, and voice assets
     runs-on: ubuntu-latest
 
     steps:
@@ -73,7 +76,7 @@ jobs:
       # 3. Install the audio-engine package in editable mode with dev extras
       # -----------------------------------------------------------------------
       - name: Install audio-engine
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev,ogg]"
 
       # -----------------------------------------------------------------------
       # 4. Run the full test suite (includes unit and integration tests)
@@ -107,3 +110,89 @@ jobs:
             || (echo "QA gate failed — see report below:" && \
                 python -m json.tool /tmp/ci_qa_batch/qa_report.json && \
                 exit 1)
+
+      # -----------------------------------------------------------------------
+      # 7. Generate a full-length music batch from the committed fixture
+      #    Do not cap duration: this fixture intentionally validates complete
+      #    compositions at natural durations.
+      # -----------------------------------------------------------------------
+      - name: Generate music batch (full length)
+        run: |
+          audio-engine generate-request-batch \
+            --batch-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json \
+            --output-dir /tmp/ci_qa_music \
+            --quiet
+
+      # -----------------------------------------------------------------------
+      # 8. Run the QA gate over generated music files
+      # -----------------------------------------------------------------------
+      - name: Run QA gate on generated music
+        run: |
+          audio-engine qa-batch \
+            --input-dir /tmp/ci_qa_music/drafts/music \
+            --output-report /tmp/ci_qa_music/qa_report.json \
+            --recursive \
+            || (echo "QA gate failed — see report below:" && \
+                python -m json.tool /tmp/ci_qa_music/qa_report.json && \
+                exit 1)
+
+      # -----------------------------------------------------------------------
+      # 9. Generate a voice batch from the committed fixture
+      # -----------------------------------------------------------------------
+      - name: Generate voice batch
+        run: |
+          audio-engine generate-request-batch \
+            --batch-file docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.voice.v1.json \
+            --output-dir /tmp/ci_qa_voice \
+            --quiet
+
+      # -----------------------------------------------------------------------
+      # 10. Run the QA gate over generated voice files
+      # -----------------------------------------------------------------------
+      - name: Run QA gate on generated voice
+        run: |
+          audio-engine qa-batch \
+            --input-dir /tmp/ci_qa_voice/drafts/voice \
+            --output-report /tmp/ci_qa_voice/qa_report.json \
+            --recursive \
+            || (echo "QA gate failed — see report below:" && \
+                python -m json.tool /tmp/ci_qa_voice/qa_report.json && \
+                exit 1)
+
+      # -----------------------------------------------------------------------
+      # 11-14. Upload generated audio + QA reports as retained artifacts
+      # -----------------------------------------------------------------------
+      - name: Upload SFX audio artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-qa-sfx
+          path: /tmp/ci_qa_batch/drafts/sfx/**
+          retention-days: 14
+
+      - name: Upload music audio artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-qa-music
+          path: /tmp/ci_qa_music/drafts/music/**
+          retention-days: 14
+
+      - name: Upload voice audio artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-qa-voice
+          path: /tmp/ci_qa_voice/drafts/voice/**
+          retention-days: 14
+
+      - name: Upload QA reports artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-qa-reports
+          path: |
+            /tmp/ci_qa_batch/qa_report.json
+            /tmp/ci_qa_music/qa_report.json
+            /tmp/ci_qa_voice/qa_report.json
+          retention-days: 14

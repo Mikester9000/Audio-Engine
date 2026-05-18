@@ -708,11 +708,14 @@ def _cmd_generate_radio_playlist(args: argparse.Namespace) -> None:
     else:
         backend = "synth_orchestral"
 
+    backend_kwargs = {"samples_dir": args.samples_dir} if getattr(args, "samples_dir", None) else None
+
     gen = RadioPlaylistGenerator(
         sample_rate=args.sample_rate,
         seed=args.seed,
         backend=backend,
         vocal_preset=args.vocal_preset,
+        backend_kwargs=backend_kwargs,
     )
 
     if args.styles:
@@ -723,6 +726,40 @@ def _cmd_generate_radio_playlist(args: argparse.Namespace) -> None:
     gen.generate_playlist(
         preset_or_styles=playlist_input,
         output_dir=args.output_dir,
+        track_duration=args.track_duration,
+        fmt=args.format,
+        with_vocals=args.with_vocals,
+        force=args.force,
+        quiet=args.quiet,
+    )
+
+
+def _cmd_generate_album(args: argparse.Namespace) -> None:
+    """Generate a full multi-track album for a given music genre with FF epicness."""
+    from audio_engine.ai.radio_playlist import RadioPlaylistGenerator
+
+    # Backend
+    if getattr(args, "samples_dir", None):
+        backend = "sample"
+    elif getattr(args, "ps1", False):
+        backend = "ps1"
+    else:
+        backend = "synth_orchestral"
+
+    backend_kwargs = {"samples_dir": args.samples_dir} if getattr(args, "samples_dir", None) else None
+
+    gen = RadioPlaylistGenerator(
+        sample_rate=args.sample_rate,
+        seed=args.seed,
+        backend=backend,
+        vocal_preset=args.vocal_preset,
+        backend_kwargs=backend_kwargs,
+    )
+
+    gen.generate_album(
+        genre=args.genre,
+        output_dir=args.output_dir,
+        title=args.title,
         track_duration=args.track_duration,
         fmt=args.format,
         with_vocals=args.with_vocals,
@@ -1362,8 +1399,11 @@ def build_parser() -> argparse.ArgumentParser:
                                 fromlist=["PLAYLIST_PRESETS"]).PLAYLIST_PRESETS.keys()),
         help=(
             "Playlist preset name (default: ff_radio).  "
-            "Presets: ff_radio, ff7_album, ff8_album, battle_mix, emotional_mix, "
-            "boss_mix, overworld_mix, vocal_album, modern_ff, classic_ff."
+            "FF presets: ff_radio, ff7_album, ff8_album, battle_mix, emotional_mix, "
+            "boss_mix, overworld_mix, vocal_album, modern_ff, classic_ff.  "
+            "Genre album presets (all with FF epicness): jazz_album, blues_album, "
+            "pop_album, rock_album, electronic_album, metal_album, world_music_album, "
+            "ambient_album, acoustic_album, cinematic_album."
         ),
     )
     grpl.add_argument(
@@ -1417,6 +1457,70 @@ def build_parser() -> argparse.ArgumentParser:
         help="Re-generate tracks even if the output files already exist.",
     )
     grpl.add_argument(
+        "--quiet", action="store_true",
+        help="Suppress progress messages.",
+    )
+
+    # --- generate-album ---
+    galb = sub.add_parser(
+        "generate-album",
+        help=(
+            "Generate a complete multi-track album for a given music genre, "
+            "each track rendered with Final Fantasy-style orchestral epicness."
+        ),
+    )
+    galb.add_argument(
+        "--genre", "-g", required=True,
+        help=(
+            "Music genre for the album.  Supported: jazz, blues, pop, rock, "
+            "electronic, edm, synthwave, metal, world, latin, ambient, acoustic, "
+            "folk, country, rnb, soul, cinematic, orchestral."
+        ),
+    )
+    galb.add_argument(
+        "--title", default=None,
+        help="Album title (default: auto-generated from genre).",
+    )
+    galb.add_argument(
+        "--output-dir", "-o", default="output/album",
+        help="Output directory for track files and album.json (default: output/album).",
+    )
+    galb.add_argument(
+        "--track-duration", type=float, default=60.0,
+        help="Target duration per track in seconds (default: 60).",
+    )
+    galb.add_argument(
+        "--format", choices=["wav", "ogg"], default="wav",
+        help="Output format for each track (default: wav).",
+    )
+    galb.add_argument(
+        "--with-vocals", action="store_true", default=None,
+        help="Force vocal overlay on all tracks.",
+    )
+    galb.add_argument(
+        "--no-vocals", dest="with_vocals", action="store_false",
+        help="Disable vocals on all tracks (instrumental only).",
+    )
+    galb.add_argument(
+        "--vocal-preset", default="soprano",
+        choices=["soprano", "alto", "tenor", "choir_ah"],
+        help="Vocal timbre preset (default: soprano).",
+    )
+    galb.add_argument("--sample-rate", type=int, default=44100, help="Sample rate in Hz.")
+    galb.add_argument("--seed", type=int, default=None, help="Random seed.")
+    galb.add_argument(
+        "--ps1", action="store_true",
+        help="Use PS1 SPU backend for all tracks.",
+    )
+    galb.add_argument(
+        "--samples-dir", default=None, metavar="DIR",
+        help="Path to samples directory for sample-augmented generation.",
+    )
+    galb.add_argument(
+        "--force", action="store_true",
+        help="Re-generate tracks even if output files already exist.",
+    )
+    galb.add_argument(
         "--quiet", action="store_true",
         help="Suppress progress messages.",
     )
@@ -1702,6 +1806,7 @@ def main(argv: list[str] | None = None) -> int:
         "list-music-library": _cmd_list_music_library,
         "generate-track": _cmd_generate_track,
         "generate-radio-playlist": _cmd_generate_radio_playlist,
+        "generate-album": _cmd_generate_album,
         "qa": _cmd_qa,
         "qa-batch": _cmd_qa_batch,
         "approve-draft": _cmd_approve_draft,
