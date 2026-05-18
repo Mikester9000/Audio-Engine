@@ -58,9 +58,11 @@ class MusicGen:
         backend: str | InferenceBackend = "procedural",
         seed: int | None = None,
         apply_mastering: bool = True,
+        mastering_profile: str = "game",
     ) -> None:
         self.sample_rate = sample_rate
         self.apply_mastering = apply_mastering
+        self.mastering_profile = mastering_profile
         self._parser = PromptParser()
         self._exporter = AudioExporter(sample_rate=sample_rate)
 
@@ -171,9 +173,8 @@ class MusicGen:
 
         bounce = OfflineBounce(
             sample_rate=self.sample_rate,
-            target_lufs=-16.0,
-            ceiling_db=-0.3,
             apply_master_eq=True,
             apply_compression=True,
+            profile=self.mastering_profile,
         )
         return bounce.process(audio)

@@ -2,6 +2,16 @@
 
 > Append a short entry for every substantial PR. Keep entries brief and factual.
 
+## 2026-05-18 — Complete SESSION-028, SESSION-035, SESSION-030, SESSION-033, SESSION-034, SESSION-039
+
+- SESSION-028 (`verify-backends`): added `_cmd_verify_backends` in `audio_engine/cli.py` with `verify-backends` subcommand; emits structured JSON report with per-backend availability, modality list, dependency summary, and optional smoke-run results; exits 0 when all available or 2 when any unavailable. Added 6 targeted tests.
+- SESSION-035 (mastering profiles): added `vocal_mix` profile to `OfflineBounce` (`audio_engine/render/offline_bounce.py`); exported `VALID_PROFILES` constant; added `mastering_profile` parameter to `MusicGen`; exposed `--profile` flag on `generate-music` CLI command. Added `vocal_mix` to existing parametrize matrix and 3 CLI profile tests.
+- SESSION-030 (WAV ingestion contract): created `docs/AI_FACTORY/SCHEMAS/WAV_INGESTION_CONTRACT.md` with explicit folder layout, file format requirements, naming rules, pitch-shift behavior, rejection rules, and CLI integration reference.
+- SESSION-033 (license inventory): created `docs/AI_FACTORY/LICENSE_INVENTORY.md` with machine-readable per-package license table and commercial policy category for all core, optional neural, and model-weight dependencies.
+- SESSION-034 (commercial eligibility matrix): created `docs/AI_FACTORY/COMMERCIAL_ELIGIBILITY_MATRIX.md` with allow/conditional/block per backend×model combination table, output eligibility by workflow, and safe commercial-use default workflow.
+- SESSION-039 (autopilot contracts): created `docs/AI_FACTORY/AUTOPILOT_COMMAND_CONTRACTS.md` with ordered no-choice step sequences for all 11 production workflow types, failure handling table, and command reference summary.
+- Full pytest: 928 passed → 928+ passed (no regressions).
+
 ## 2026-05-18 — Implement SESSION-029 override (procedural quality overhaul + studio)
 
 - Added `audio_engine/composer/phrase.py` with `PhraseRole`, `PhraseBlock`, deterministic `SectionPlanner`, and `MotifBank`.

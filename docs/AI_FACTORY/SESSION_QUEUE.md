@@ -175,10 +175,10 @@
 
 ### SESSION-028 — Add backend preflight verification command for optional neural workflows
 
-- **Status:** `ready`
+- **Status:** `completed`
 - **Task type:** `cli`
 - **Objective:** Add an additive `audio-engine verify-backends` command that runs deterministic backend availability/preflight checks, optionally executes bounded fixture smoke runs when local models are present, and emits a machine-readable report to support neural-readiness handoff decisions.
-- **Notes:** Preserve default generation behavior, keep the command additive/non-breaking, prefer committed vertical-slice fixtures, and avoid claiming model-quality guarantees when dependencies/models are absent.
+- **Notes:** Implemented `_cmd_verify_backends` in `audio_engine/cli.py`; exits 0 (all available) or 2 (some unavailable); smoke run produces per-modality pass/fail entries; 6 focused tests added.
 
 ### SESSION-028b — Sample library scanner and pitch-shift engine
 
@@ -210,10 +210,10 @@
 
 ### SESSION-030 — Add strict WAV sample-folder ingestion contract
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `docs_only`
 - **Objective:** Define deterministic folder/layout, naming, metadata, and rejection rules for user-provided WAV sample folders consumed by remaster workflows.
-- **Notes:** Keep schema/path requirements explicit for low-reasoning agent execution.
+- **Notes:** Published `docs/AI_FACTORY/SCHEMAS/WAV_INGESTION_CONTRACT.md` with explicit layout, file format, naming, pitch-shift behavior, and rejection rules.
 
 ### SESSION-031 — Complete batch remaster pipeline wiring
 
@@ -231,28 +231,30 @@
 
 ### SESSION-033 — Build dependency/model license inventory baseline
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `docs_only`
 - **Objective:** Capture machine-readable dependency/model license inventory and map each entry to commercial-eligibility policy categories.
-- **Notes:** Keep inventory synchronized with compliance CI inputs.
+- **Notes:** Published `docs/AI_FACTORY/LICENSE_INVENTORY.md` with all core, optional neural, and model-weight entries mapped to allow/conditional/block/unknown policy.
 
 ### SESSION-034 — Define commercial eligibility matrix by backend/model combination
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `docs_only`
 - **Objective:** Publish explicit allow/conditional/block commercial-use matrix for backend + model combinations used by generation commands.
-- **Notes:** Do not claim commercial eligibility where license terms are unknown.
+- **Notes:** Published `docs/AI_FACTORY/COMMERCIAL_ELIGIBILITY_MATRIX.md` with allow/conditional/block rows for all registered backends and safe commercial-use workflow.
 
 ### SESSION-035 — Finalize mastering profile presets (game mix / OST / vocal mix)
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `cli`
 - **Objective:** Add stable mastering profile selection for game mix, OST, and vocal-centric workflows with deterministic parameter capture.
-- **Notes:** Keep profiles additive and default-compatible with existing rendering commands.
+- **Notes:** Added `vocal_mix` profile to `OfflineBounce`; exported `VALID_PROFILES` constant; added `mastering_profile` parameter to `MusicGen`; exposed `--profile` flag on `generate-music` CLI command; 3 new CLI profile tests and 1 new render test.
+
+## Current next session
 
 ### SESSION-036 — Expand QA gates for professional WAV release quality
 
-- **Status:** `planned`
+- **Status:** `ready`
 - **Task type:** `qa`
 - **Objective:** Add enforceable QA checks for loudness, true peak, clipping, loop integrity, spectral balance, and intelligibility expectations.
 - **Notes:** Keep failure output actionable and machine-readable.

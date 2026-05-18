@@ -44,19 +44,25 @@ The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-
 - [x] Execute `SESSION-025` — define and queue the next executable implementation session
 - [x] Execute `SESSION-026` — add legacy request-file batch-manifest parity
 - [x] Execute `SESSION-027` — define and queue the next executable implementation session
-- [ ] Execute `SESSION-028` — add backend preflight verification command for optional neural workflows
+- [x] Execute `SESSION-028` — add backend preflight verification command for optional neural workflows
 - [x] Consolidate optional model download/registration to MusicGen Medium only
 - [x] Add committed sample folder scaffold for orchestral remaster drop-ins
 - [x] Add additive chorus/reverb/stereo DSP modules and loop crossfade baking
-- [x] Add additive mastering profile presets (`game`, `ost`, `youtube`, `procedural_neutral`)
+- [x] Add additive mastering profile presets (`game`, `ost`, `youtube`, `vocal_mix`, `procedural_neutral`)
 - [x] Upgrade procedural instrument voicing toward higher-quality standalone listening output
 - [x] Execute SESSION-029 implementation override — procedural quality overhaul + phrase planner + studio UI entrypoint
+- [x] Execute SESSION-030 — WAV sample-folder ingestion contract (docs)
+- [x] Execute SESSION-033 — license inventory (docs)
+- [x] Execute SESSION-034 — commercial eligibility matrix (docs)
+- [x] Execute SESSION-035 — vocal_mix mastering profile + `--profile` flag on `generate-music`
+- [x] Execute SESSION-039 — autopilot command contracts (docs)
+- [ ] Execute SESSION-036 — expand QA gates for professional WAV release quality
 - [ ] Execute SESSION-029b creation-tooling follow-up for studio workflow presets and batch UX
 
 ## Recommended next PRs
 
-1. **Execute SESSION-028 (`verify-backends`)**
-    - Add additive preflight verification/reporting before optional neural runs.
+1. **Execute SESSION-036 (expand QA gates)**
+    - Add enforceable loudness/peak/clipping/loop checks and machine-readable failure output.
 2. **Execute SESSION-029b**
    - Expand studio creation tooling (preset management + faster iterative generation UX).
 3. **Execute SESSION-028b and SESSION-028c**

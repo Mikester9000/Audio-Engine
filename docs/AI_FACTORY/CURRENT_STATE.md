@@ -4,7 +4,73 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, review logs now have executable writer paths integrated with approval/export handoff and request-batch result JSON ingestion, and both the newer request-batch pipeline and the backward-compatible legacy request-file path now support explicit per-request duration control for music/SFX. Procedural generation quality is now substantially upgraded with structured phrase planning, motif-bank reuse/variation, cadence-aware sectioning, 8-layer arrangement/voice management, distinct per-category SFX recipes, and richer deterministic voice synthesis. Windows one-click bootstrap files now exist (`setup.bat`, `run.bat`) with an idempotent model downloader (`tools/download_models.py`) and optional local-files-only neural backend adapters under `audio_engine/ai/backends/`.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice, and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, review logs now have executable writer paths integrated with approval/export handoff and request-batch result JSON ingestion, and both the newer request-batch pipeline and the backward-compatible legacy request-file path now support explicit per-request duration control for music/SFX. Procedural generation quality is now substantially upgraded with structured phrase planning, motif-bank reuse/variation, cadence-aware sectioning, 8-layer arrangement/voice management, distinct per-category SFX recipes, and richer deterministic voice synthesis. Windows one-click bootstrap files now exist (`setup.bat`, `run.bat`) with an idempotent model downloader (`tools/download_models.py`) and optional local-files-only neural backend adapters under `audio_engine/ai/backends/`. Backend preflight verification (`audio-engine verify-backends`) is now implemented. A `vocal_mix` mastering profile is now available in `OfflineBounce` and selectable via `--profile` on `generate-music`. WAV sample-folder ingestion contract, license inventory, commercial eligibility matrix, and autopilot command contracts are now documented.
+
+## What is implemented today
+
+### Confirmed working subsystems
+
+| Subsystem | Status | Evidence |
+|---|---|---|
+| Python package install | Implemented | `pyproject.toml` |
+| Top-level `AudioEngine` façade | Implemented | `audio_engine/engine.py` |
+| CLI for music/SFX/voice/QA | Implemented | `audio_engine/cli.py` |
+| Procedural music generation (structured phrases + motif reuse) | Implemented | `audio_engine/ai/generator.py`, `audio_engine/composer/phrase.py`, `audio_engine/ai/music_gen.py` |
+| Procedural SFX generation (distinct recipe families) | Implemented | `audio_engine/ai/sfx_gen.py`, `audio_engine/ai/sfx_synth.py` |
+| Local voice synthesis (phoneme-aware voiced/unvoiced + prosody) | Implemented | `audio_engine/ai/voice_gen.py`, `audio_engine/ai/voice_synth.py` |
+| Local Tkinter studio UI (`audio-engine studio`) | Implemented | `audio_engine/ui/studio.py`, `audio_engine/cli.py` |
+| DSP/mastering/QA | Implemented | `audio_engine/dsp/*`, `audio_engine/render/*`, `audio_engine/qa/*` |
+| Export to WAV / optional OGG | Implemented | `audio_engine/export/audio_exporter.py` |
+| Batch game asset generation | Implemented | `audio_engine/integration/asset_pipeline.py` |
+| Typed audio plan + generation request loading | Implemented | `audio_engine/integration/factory_inputs.py`, `tests/test_integration.py` |
+| Request-batch generation pipeline | Implemented | `audio_engine/integration/asset_pipeline.py` (`RequestBatchPipeline`, `AssetPipeline.execute_request_batch`), `audio_engine/cli.py` (`generate-request-batch`) |
+| Plan-driven batch orchestration | Implemented | `audio_engine/integration/asset_pipeline.py` (`PlanBatchOrchestrator`), `audio_engine/cli.py` (`generate-plan-batch`) |
+| Per-request provenance sidecar files | Implemented | `audio_engine/integration/asset_pipeline.py` (`_write_provenance`) |
+| Batch QA gate command | Implemented | `audio_engine/cli.py` (`qa-batch`) |
+| GameRewritten export profile | Implemented | `audio_engine/integration/asset_pipeline.py` (`DraftExportPipeline`), `audio_engine/cli.py` (`export-drafts`) |
+| Approval workflow (draft → approved) | Implemented | `audio_engine/integration/asset_pipeline.py` (`ApprovalWorkflow`), `audio_engine/cli.py` (`approve-draft`) |
+| QA gate wired into CI | Implemented | `.github/workflows/audio-qa.yml` |
+| Music duration policy documented | Implemented (docs) | `docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md` |
+| Manifest validation docs + CI | Implemented | `docs/asset-manifest.md`, `.github/workflows/validate-assets.yml` |
+| Implementation matrix / codebase map / next PR sequence | Implemented (docs layer) | `docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md`, `docs/AI_FACTORY/CODEBASE_MAP.md`, `docs/AI_FACTORY/NEXT_PR_SEQUENCE.md` |
+| Example plan/request/review artifacts | Implemented (docs contracts) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/*` |
+| Session queue / autopilot control docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_QUEUE.md`, `docs/AI_FACTORY/SESSION_STATE.json`, `docs/AI_FACTORY/CURRENT_SESSION.json` |
+| Final execution-safety hardening docs | Implemented (docs layer) | `docs/AI_FACTORY/SESSION_GATE_RULES.md`, `docs/AI_FACTORY/BLOCKER_PROTOCOL.md`, `docs/AI_FACTORY/VERIFICATION_PROFILES.md`, `docs/AI_FACTORY/MINIMUM_TEST_EXPANSION_RULES.md` |
+| Full-game taxonomy fixture coverage | Implemented (docs fixtures) | `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/` |
+| Backend discoverability, selection, and preflight verification | Implemented | `audio_engine/ai/backend.py` (`BackendRegistry.evaluate_backends`), `audio_engine/cli.py` (`list-backends`, `verify-backends`, `--backend` flags) |
+| MusicGen Medium backend (single AI model) | Implemented | `audio_engine/ai/backends/musicgen_backend.py` |
+| Optional neural backend adapters (local files only) | Implemented (optional runtime) | `audio_engine/ai/backends/*`, `tests/test_ai_pipeline.py` |
+| Windows offline bootstrap workflow | Implemented | `setup.bat`, `run.bat`, `tools/download_models.py`, `WINDOWS_QUICKSTART.md` |
+| Orchestral sample drop-in folder structure | Implemented (folder) | `samples/orchestral/*`, `samples/README.md` |
+| Synth chorus/reverb/stereo DSP modules | Implemented | `audio_engine/dsp/chorus.py`, `audio_engine/dsp/reverb.py`, `audio_engine/dsp/stereo.py` |
+| Mastering profile presets (game, ost, youtube, vocal_mix, procedural_neutral) | Implemented | `audio_engine/render/offline_bounce.py` (`OfflineBounce`, `VALID_PROFILES`) |
+| Mastering profile CLI flag (`--profile` on `generate-music`) | Implemented | `audio_engine/cli.py`, `audio_engine/ai/music_gen.py` (`mastering_profile` param) |
+| Crossfade loop baking | Implemented | `audio_engine/render/loop_exporter.py` |
+| Machine-readable review-log writer + handoff integration | Implemented | `audio_engine/integration/asset_pipeline.py` (`ReviewLogWriter`), `audio_engine/cli.py` (`write-review-log`) |
+| Optional request-level duration field for both request-batch entrypoints | Implemented | `audio_engine/integration/factory_inputs.py`, `audio_engine/integration/asset_pipeline.py` |
+| Legacy request-file provenance sidecars + result-driven review-log sourcing + manifest parity | Implemented | `audio_engine/integration/asset_pipeline.py`, `audio_engine/cli.py` |
+| WAV sample-folder ingestion contract (docs) | Implemented | `docs/AI_FACTORY/SCHEMAS/WAV_INGESTION_CONTRACT.md` |
+| License inventory (docs) | Implemented | `docs/AI_FACTORY/LICENSE_INVENTORY.md` |
+| Commercial eligibility matrix (docs) | Implemented | `docs/AI_FACTORY/COMMERCIAL_ELIGIBILITY_MATRIX.md` |
+| Autopilot command contracts (docs) | Implemented | `docs/AI_FACTORY/AUTOPILOT_COMMAND_CONTRACTS.md` |
+| Automated test suite | Implemented | `tests/` |
+
+### Commands verified in this session
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
+python tools/validate-assets.py assets/examples/ --verbose
+audio-engine verify-backends --smoke --output-report /tmp/backend_preflight.json
+audio-engine generate-music --prompt "battle theme" --duration 0.5 --output /tmp/test.wav --profile vocal_mix
+```
+
+Observed result in this session:
+
+- baseline repo verification passed (full `pytest` 928 passed + asset-manifest validation)
+- `verify-backends` command exits 0 and emits valid JSON report with procedural backend marked available
+- `--profile vocal_mix` accepted and produces valid WAV output
+
 
 ## What is implemented today
 
