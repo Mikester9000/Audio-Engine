@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from enum import Enum, auto
 import random
 
+from audio_engine._seed import resolve_base_seed
+
 __all__ = ["PhraseRole", "PhraseBlock", "SectionPlanner", "MotifBank"]
 
 _BAR_HASH_MULTIPLIER = 97
@@ -38,7 +40,7 @@ class SectionPlanner:
         self.style = style
         self.total_bars = max(4, total_bars)
         # Keep seed=None distinct from seed=0 by capturing a random base seed per planner instance.
-        self._seed = seed if seed is not None else random.SystemRandom().randrange(0, 2**31)
+        self._seed = resolve_base_seed(seed)
         style_hash = sum((idx + 1) * ord(ch) for idx, ch in enumerate(style))
         # Mix style and bar count into the seed to keep repeatable section plans per request shape.
         self._rng = random.Random(self._seed + style_hash + self.total_bars * _BAR_HASH_MULTIPLIER)

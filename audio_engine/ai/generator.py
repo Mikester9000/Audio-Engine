@@ -45,6 +45,7 @@ from typing import Literal
 
 import numpy as np
 
+from audio_engine._seed import resolve_base_seed
 from audio_engine.composer.scale import Scale, ScaleLibrary
 from audio_engine.composer.chord import ChordProgression
 from audio_engine.composer.pattern import RhythmPattern
@@ -1388,7 +1389,7 @@ class MusicGenerator:
     def __init__(self, sample_rate: int = 44100, seed: int | None = None) -> None:
         self.sample_rate = sample_rate
         # Keep seed=None distinct from seed=0 by capturing a random base seed per generator instance.
-        self._seed = seed if seed is not None else random.SystemRandom().randrange(0, 2**31)
+        self._seed = resolve_base_seed(seed)
 
     # ------------------------------------------------------------------
     # Public API
