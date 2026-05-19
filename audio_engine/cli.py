@@ -1155,7 +1155,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "Enable spectral balance as a hard gate: fail if any single frequency band "
-            "(low/mid/high) carries more than 90%% of total energy. "
+            "(low/mid/high) carries more than 90% of total energy. "
             "Spectral data is always recorded in the report regardless of this flag."
         ),
     )

@@ -241,12 +241,13 @@ class TestSpectralAnalyzer:
         report = sa.analyze(audio)
         assert report.high_ratio > 0.5
 
-    def test_spectral_balance_ok_for_normal_signal(self):
-        """A mid-frequency tone should pass the balance gate."""
-        sa = SpectralAnalyzer(sample_rate=SR)
+    def test_spectral_balance_fails_for_single_tone(self):
+        """A pure 1 kHz tone concentrates nearly all energy in the mid band → imbalanced."""
+        sa = SpectralAnalyzer(sample_rate=SR, max_band_ratio=0.90)
         audio = _sine(1000.0, duration=1.0)
         report = sa.analyze(audio)
-        assert report.spectral_balance_ok is False  # single tone is dominant
+        # A single-frequency tone is spectrally dominant in one band
+        assert not report.spectral_balance_ok
 
     def test_spectral_balance_fails_for_all_bass(self):
         """A pure 80 Hz tone concentrates all energy in lows → imbalanced."""
@@ -274,6 +275,7 @@ class TestSpectralAnalyzer:
         silent = np.zeros(SR, dtype=np.float32)
         report = sa.analyze(silent)
         assert report.spectral_balance_ok  # silence is not imbalanced
+        assert not report.intelligibility_ok  # silence has no HF content
 
     def test_stereo_input_accepted(self):
         sa = SpectralAnalyzer(sample_rate=SR)

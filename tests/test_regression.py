@@ -89,7 +89,7 @@ class TestQAMetricStability:
         assert r1.high_ratio == r2.high_ratio
         assert r1.spectral_centroid_hz == r2.spectral_centroid_hz
 
-    def test_loudness_different_seeds_produce_different_lufs(self):
+    def test_loudness_different_amplitudes_produce_different_lufs(self):
         """Different amplitude signals must produce different LUFS readings."""
         meter = LoudnessMeter(sample_rate=SR)
         quiet = _sine(440.0, duration=3.0, amp=0.05)
