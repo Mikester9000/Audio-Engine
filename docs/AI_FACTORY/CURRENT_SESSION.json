@@ -1,29 +1,26 @@
 {
-  "version": "1.10.0",
-  "lastUpdated": "2026-05-18",
+  "version": "1.11.0",
+  "lastUpdated": "2026-05-19",
   "currentSession": {
-    "id": "SESSION-036",
-    "title": "Expand QA gates for professional WAV release quality",
-    "status": "ready",
-    "taskType": "qa",
-    "objective": "Add enforceable QA checks for loudness, true peak, clipping, loop integrity, spectral balance, and intelligibility expectations. Keep failure output actionable and machine-readable.",
+    "id": "SESSION-028b",
+    "title": "Sample library scanner and pitch-shift engine",
+    "status": "planned",
+    "taskType": "integration_export",
+    "objective": "Add executable sample-library scanning and deterministic pitch-shift primitives for orchestral remaster workflows.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",
       "docs/AI_FACTORY/CURRENT_STATE.md",
-      "docs/AI_FACTORY/ACTIVE_WORK.md",
-      "docs/AI_FACTORY/QA/QUALITY_BARS.md",
-      "docs/AI_FACTORY/VERIFICATION_PROFILES.md",
-      "docs/AI_FACTORY/NO_DECISION_ZONES.md",
-      "docs/AI_FACTORY/SESSION_STATE.json"
+      "docs/AI_FACTORY/SCHEMAS/WAV_INGESTION_CONTRACT.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
+      "docs/AI_FACTORY/CODEBASE_MAP.md"
     ],
     "likelyModify": [
-      "audio_engine/cli.py",
-      "audio_engine/qa/loudness_meter.py",
-      "audio_engine/qa/clipping_detector.py",
-      "audio_engine/qa/loop_analyzer.py",
-      "tests/test_engine_cli.py",
-      "docs/AI_FACTORY/QA/QUALITY_BARS.md",
+      "audio_engine/integration/sample_library.py",
+      "audio_engine/dsp/pitch_shift.py",
+      "tests/test_sample_library.py",
+      "tests/test_pitch_shift.py",
+      "docs/AI_FACTORY/ACTIVE_WORK.md",
       "docs/AI_FACTORY/HANDOFF.md"
     ]
   }

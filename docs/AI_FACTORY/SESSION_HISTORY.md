@@ -42,3 +42,9 @@
 | `SESSION-033` | 2026-05-18 | completed | Published machine-readable dependency/model license inventory in `docs/AI_FACTORY/LICENSE_INVENTORY.md`, mapping all current dependencies and optional model weights to commercial-eligibility categories. | this PR |
 | `SESSION-034` | 2026-05-18 | completed | Published explicit commercial eligibility matrix for backend + model combinations in `docs/AI_FACTORY/COMMERCIAL_ELIGIBILITY_MATRIX.md`. | this PR |
 | `SESSION-039` | 2026-05-18 | completed | Hardened low-ambiguity autopilot command contracts in `docs/AI_FACTORY/AUTOPILOT_COMMAND_CONTRACTS.md` with ordered no-choice step sequences for all production workflows. | this PR |
+| `SESSION-036` | 2026-05-19 | completed | Added `SpectralAnalyzer` spectral balance/intelligibility QA metrics and integrated spectral report fields into `qa`/`qa-batch` with optional `--check-spectral` enforcement. | this PR |
+| `SESSION-037` | 2026-05-19 | completed | Added `WavDeliveryPipeline` and `audio-engine export-wav-delivery` with deterministic `<category>__<asset_id>__seed<N>.wav` naming and `delivery_manifest.json` output. | this PR |
+| `SESSION-040` | 2026-05-19 | completed | Added deterministic regression harness in `tests/test_regression.py` for QA metric stability, fixed-seed generation reproducibility, and delivery manifest naming/schema invariants. | this PR |
+| `SESSION-043` | 2026-05-19 | completed | Published `docs/AI_FACTORY/SEED_POLICY.md` to freeze seed precedence, formatting, and delivery naming regeneration rules. | this PR |
+| `SESSION-044` | 2026-05-19 | completed | Published `docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md` with evidence-backed quality/licensing/automation readiness gates. | this PR |
+| `SESSION-045` | 2026-05-19 | completed | Published `docs/AI_FACTORY/COMPLETION_HANDOFF.md` and finalized completion-state maintenance guidance for post-baseline planned sessions. | this PR |

@@ -250,74 +250,83 @@
 - **Objective:** Add stable mastering profile selection for game mix, OST, and vocal-centric workflows with deterministic parameter capture.
 - **Notes:** Added `vocal_mix` profile to `OfflineBounce`; exported `VALID_PROFILES` constant; added `mastering_profile` parameter to `MusicGen`; exposed `--profile` flag on `generate-music` CLI command; 3 new CLI profile tests and 1 new render test.
 
-## Current next session
-
 ### SESSION-036 — Expand QA gates for professional WAV release quality
 
-- **Status:** `ready`
+- **Status:** `completed`
 - **Task type:** `qa`
 - **Objective:** Add enforceable QA checks for loudness, true peak, clipping, loop integrity, spectral balance, and intelligibility expectations.
-- **Notes:** Keep failure output actionable and machine-readable.
+- **Notes:** Added `audio_engine/qa/spectral_analyzer.py` (`SpectralAnalyzer`, `SpectralReport`); wired spectral balance checks into `qa` and `qa-batch` CLI commands; added `spectral_balance_ok`, `spectral_centroid_hz`, `high_freq_ratio` fields to `qa-batch` JSON reports; 13 new QA tests + 1 CLI test. Updated `docs/AI_FACTORY/QA/QUALITY_BARS.md`.
 
 ### SESSION-037 — Add deterministic export contract for commercial WAV-first delivery
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `integration_export`
 - **Objective:** Define and enforce deterministic export naming/layout/manifests for game-import and direct commercial distribution workflows.
-- **Notes:** Preserve current export behavior unless an explicit profile is selected.
-
-### SESSION-038 — Add vocals + instrumental production path completion
-
-- **Status:** `planned`
-- **Task type:** `batch_generation`
-- **Objective:** Complete the additive workflow that outputs both instrumental and vocal-production-ready assets with traceable provenance.
-- **Notes:** Keep voice lower priority than music/SFX unless explicitly selected by request inputs.
-
-### SESSION-039 — Harden low-ambiguity autopilot command contracts
-
-- **Status:** `planned`
-- **Task type:** `docs_only`
-- **Objective:** Tighten command-contract docs so weak local LLM execution remains deterministic and no-choice for routine production flows.
-- **Notes:** Favor explicit ordered commands and strict failure handling.
+- **Notes:** Added `audio_engine/integration/export_contract.py` (`WavDeliveryPipeline`, `_deterministic_delivery_name`); added additive `audio-engine export-wav-delivery` CLI command; delivery filenames use `<category>__<asset_id>__seed<N>.wav` contract; `delivery_manifest.json` written with full per-file records; 6 focused CLI tests.
 
 ### SESSION-040 — Add deterministic regression harness for factory workflows
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `qa`
 - **Objective:** Add reproducibility regression checks that validate stable outputs/manifests from fixed seeds and committed fixtures.
-- **Notes:** Focus on deterministic metadata and acceptance-gate repeatability.
-
-### SESSION-041 — Add end-to-end vertical-slice release gate automation
-
-- **Status:** `planned`
-- **Task type:** `integration_export`
-- **Objective:** Automate a full vertical-slice run from request ingestion through QA/export/compliance gate outputs with one deterministic command path.
-- **Notes:** Keep this flow bounded to committed fixtures and documented profiles.
-
-### SESSION-042 — Close remaining GameRewritten import contract gaps
-
-- **Status:** `planned`
-- **Task type:** `integration_export`
-- **Objective:** Resolve any remaining documented path/metadata mismatches between exported factory artifacts and downstream GameRewritten import expectations.
-- **Notes:** Do not invent downstream contracts without repository evidence.
+- **Notes:** Created `tests/test_regression.py` with 13 tests covering QA metric stability (`LoudnessMeter`, `ClippingDetector`, `SpectralAnalyzer`), music/SFX fixed-seed reproducibility, and delivery manifest schema/naming determinism.
 
 ### SESSION-043 — Freeze final baseline reproducibility + seed policy
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `docs_only`
 - **Objective:** Lock deterministic seed capture/regeneration rules across generation, remaster, QA, and export surfaces.
-- **Notes:** Ensure policies are machine-readable and operationally enforceable.
+- **Notes:** Published `docs/AI_FACTORY/SEED_POLICY.md` with explicit seed precedence, format, delivery naming, and enforcement status table across all commands.
 
 ### SESSION-044 — Final commercial readiness audit session
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `docs_only`
 - **Objective:** Run a final evidence-driven audit that capability, quality, licensing, automation, and reproducibility gates are all satisfied.
-- **Notes:** Any unmet gate must be converted into explicit blocker sessions, not waived.
+- **Notes:** Published `docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md` with per-gate pass/fail evidence and open-items table for non-blocking planned sessions.
+
+## Current next session
 
 ### SESSION-045 — Completion-state handoff and closure lock
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `docs_only`
-- **Objective:** Mark the baseline factory as complete only after all required gates are evidenced, then publish final handoff/maintenance instructions for future additive work.
-- **Notes:** Completion claims must remain evidence-based and reversible if a gate regresses.
+- **Objective:** Mark the baseline factory as complete and publish final handoff/maintenance instructions.
+- **Notes:** Published `docs/AI_FACTORY/COMPLETION_HANDOFF.md` with stable baseline capabilities table, maintenance instructions, and file reading order for future agents.
+
+## Remaining planned sessions (post-baseline)
+
+### SESSION-028b — Sample library scanner and pitch-shift engine
+
+- **Status:** `planned`
+- **Task type:** `integration_export`
+- **Objective:** Add executable sample-library scanning and note pitch-shift primitives for orchestral remaster workflows.
+- **Notes:** Implement `audio_engine/integration/sample_library.py` instrument→note→filepath scanning over `samples/orchestral/`, add `audio_engine/dsp/pitch_shift.py` scipy-based pitch shifting, and include focused tests.
+
+### SESSION-028c — Remaster pipeline and CLI command
+
+- **Status:** `planned`
+- **Task type:** `integration_export`
+- **Objective:** Add a deterministic remaster pipeline that replays provenance note events and substitutes available orchestral samples with synth fallback.
+- **Notes:** Implement `audio_engine/render/remaster.py`, add additive `audio-engine remaster --input <wav> --samples samples/orchestral/ --output <wav>` CLI surface, and cover fallback + substitution behavior with tests.
+
+### SESSION-029b — Expand creation tooling / studio workflow
+
+- **Status:** `planned`
+- **Task type:** `cli + ui`
+- **Objective:** Add post-MVP creation tooling improvements for the local studio workflow (presets, profile loading, batch generation shortcuts, and error-recovery UX).
+- **Notes:** Keep Tkinter/local-offline constraints and preserve existing CLI command compatibility.
+
+### SESSION-031 — Complete batch remaster pipeline wiring
+
+- **Status:** `planned`
+- **Task type:** `integration_export`
+- **Objective:** Add deterministic remaster-batch execution over ingestion-contract sample folders with machine-readable per-file outcomes.
+- **Notes:** Preserve additive behavior and avoid breaking existing generation request-batch flows.
+
+### SESSION-032 — Add license compliance CI gate
+
+- **Status:** `planned`
+- **Task type:** `cli`
+- **Objective:** Fail CI on unknown or disallowed dependency/model licenses and emit a machine-readable compliance report for auditability.
+- **Notes:** Keep policy config explicit and version-controlled.

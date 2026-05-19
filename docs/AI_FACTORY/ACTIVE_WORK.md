@@ -56,19 +56,23 @@ The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-
 - [x] Execute SESSION-034 — commercial eligibility matrix (docs)
 - [x] Execute SESSION-035 — vocal_mix mastering profile + `--profile` flag on `generate-music`
 - [x] Execute SESSION-039 — autopilot command contracts (docs)
-- [ ] Execute SESSION-036 — expand QA gates for professional WAV release quality
-- [ ] Execute SESSION-029b creation-tooling follow-up for studio workflow presets and batch UX
+- [x] Execute SESSION-036 — expand QA gates for professional WAV release quality (`SpectralAnalyzer`, spectral balance/intelligibility in `qa-batch` JSON)
+- [x] Execute SESSION-037 — deterministic commercial WAV delivery contract (`WavDeliveryPipeline`, `export-wav-delivery` CLI)
+- [x] Execute SESSION-040 — deterministic regression harness (`tests/test_regression.py`)
+- [x] Execute SESSION-043 — freeze seed policy (`docs/AI_FACTORY/SEED_POLICY.md`)
+- [x] Execute SESSION-044 — final commercial readiness audit (`docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md`)
+- [x] Execute SESSION-045 — completion-state handoff (`docs/AI_FACTORY/COMPLETION_HANDOFF.md`)
 
 ## Recommended next PRs
 
-1. **Execute SESSION-036 (expand QA gates)**
-    - Add enforceable loudness/peak/clipping/loop checks and machine-readable failure output.
+1. **Execute SESSION-028b + SESSION-028c**
+   - Sample-library scanner/pitch-shift primitives and remaster CLI pipeline.
 2. **Execute SESSION-029b**
-   - Expand studio creation tooling (preset management + faster iterative generation UX).
-3. **Execute SESSION-028b and SESSION-028c**
-    - Implement sample-library scanner/pitch-shift primitives and remaster CLI pipeline.
-4. **Follow ordered completion roadmap through SESSION-045**
-    - Continue through queued capability, licensing, QA, export, regression, and closure sessions.
+   - Studio creation tooling UX (preset management + faster iterative generation).
+3. **Execute SESSION-031**
+   - Batch remaster pipeline wiring over ingestion-contract sample folders.
+4. **Execute SESSION-032**
+   - License compliance CI gate (inventory is already complete).
 
 ## Do not deprioritize
 

@@ -2,6 +2,20 @@
 
 > Append a short entry for every substantial PR. Keep entries brief and factual.
 
+## 2026-05-19 — Complete SESSION-036, SESSION-037, SESSION-040, SESSION-043, SESSION-044, SESSION-045 + review follow-ups
+
+- SESSION-036 (`qa`): added `audio_engine/qa/spectral_analyzer.py` with `SpectralAnalyzer`/`SpectralReport`; integrated spectral metrics into `qa` and `qa-batch` output surfaces.
+- SESSION-037 (`integration_export`): added `audio_engine/integration/export_contract.py` with `WavDeliveryPipeline` and additive `audio-engine export-wav-delivery`.
+- SESSION-040 (`qa`): added `tests/test_regression.py` deterministic regression harness covering QA metric stability and delivery manifest determinism.
+- SESSION-043/044/045 (docs): published `SEED_POLICY.md`, `COMMERCIAL_READINESS_AUDIT.md`, and `COMPLETION_HANDOFF.md`.
+- Review fixes:
+  - corrected `SpectralReport` docstring default (`min_hf_ratio` 0.02) and short-input spectral ratios (all 0.0 for `n < 2`);
+  - constrained WAV delivery input scanning to `.wav` files only;
+  - normalized invalid/null provenance seeds to `0` so delivery naming remains `seed0000` fallback-safe;
+  - pruned `HANDOFF.md` to one authoritative current block and synchronized continuity/session-control records.
+- Added focused regression tests for short-input spectral ratios, `.ogg` exclusion in WAV delivery, and invalid-seed normalization behavior.
+- Full pytest: 963 passed. Asset manifest validation: PASS.
+
 ## 2026-05-18 — Complete SESSION-028, SESSION-035, SESSION-030, SESSION-033, SESSION-034, SESSION-039
 
 - SESSION-028 (`verify-backends`): added `_cmd_verify_backends` in `audio_engine/cli.py` with `verify-backends` subcommand; emits structured JSON report with per-backend availability, modality list, dependency summary, and optional smoke-run results; exits 0 when all available or 2 when any unavailable. Added 6 targeted tests.

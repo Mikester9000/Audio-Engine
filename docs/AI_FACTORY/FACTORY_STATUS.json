@@ -1,6 +1,6 @@
 {
   "statusVersion": "1.2.0",
-  "lastUpdated": "2026-05-17",
+  "lastUpdated": "2026-05-19",
   "repositoryRole": "GitHub-native audio asset factory for downstream game import",
   "coverageGoal": [
     "music",
@@ -47,10 +47,10 @@
     "sessionState": "docs/AI_FACTORY/SESSION_STATE.json"
   },
   "currentSession": {
-    "id": "SESSION-028",
-    "status": "ready",
-    "title": "Add backend preflight verification command for optional neural workflows",
+    "id": "SESSION-028b",
+    "status": "planned",
+    "title": "Sample library scanner and pitch-shift engine",
     "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
-    "next": "SESSION-029"
+    "next": "SESSION-028c"
   }
 }
