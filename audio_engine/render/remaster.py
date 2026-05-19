@@ -53,8 +53,13 @@ class RemasterPipeline:
     ) -> np.ndarray:
         """Remaster an audio array with sample overlays and synth fallback."""
         samples_root = Path(samples_dir)
+        # SampleLibrary treats immediate subdirs as categories (strings/, brass/, …).
+        # With the orchestral scaffold the instrument dirs live under samples/orchestral/,
+        # so we must point SampleBackend there instead of at the parent root.
+        orchestral_sub = samples_root / "orchestral"
+        backend_dir = orchestral_sub if orchestral_sub.is_dir() else samples_root
         backend = SampleBackend(
-            samples_dir=samples_root,
+            samples_dir=backend_dir,
             sample_rate=self.sample_rate,
             seed=self.seed,
             base_backend=self.base_backend,
@@ -73,8 +78,8 @@ class RemasterPipeline:
         if not scanner.available_instruments():
             return base
 
-        mono = base.mean(axis=1) if base.ndim == 2 else base.copy()
-        overlay = np.zeros_like(mono, dtype=np.float32)
+        n_frames = base.shape[0] if base.ndim == 2 else len(base)
+        overlay = np.zeros(n_frames, dtype=np.float32)
 
         for event in events:
             if event.duration_seconds <= 0.0 or event.start_seconds < 0.0:
@@ -100,13 +105,21 @@ class RemasterPipeline:
         if not np.any(np.abs(overlay) > 0.0):
             return base
 
-        combined = (0.8 * mono + 0.2 * overlay).astype(np.float32)
+        if base.ndim == 2:
+            # Apply overlay to each channel independently to preserve the stereo image.
+            result = np.empty_like(base)
+            for ch in range(base.shape[1]):
+                mixed = (0.8 * base[:, ch] + 0.2 * overlay).astype(np.float32)
+                peak = float(np.max(np.abs(mixed))) if mixed.size else 0.0
+                if peak > 1.0:
+                    mixed = mixed / peak
+                result[:, ch] = mixed
+            return result.astype(np.float32)
+
+        combined = (0.8 * base + 0.2 * overlay).astype(np.float32)
         peak = float(np.max(np.abs(combined))) if combined.size else 0.0
         if peak > 1.0:
             combined = combined / peak
-
-        if base.ndim == 2:
-            return np.column_stack([combined, combined]).astype(np.float32)
         return combined.astype(np.float32)
 
     def remaster_file(
@@ -178,11 +191,20 @@ class RemasterPipeline:
             raw = wf.readframes(n_frames)
 
         if sampwidth == 1:
-            arr = np.frombuffer(raw, dtype=np.int8).astype(np.float32) / 128.0
+            # 8-bit WAV PCM is unsigned (0-255), centred at 128.
+            arr = (np.frombuffer(raw, dtype=np.uint8).astype(np.float32) - 128.0) / 128.0
         elif sampwidth == 2:
             arr = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
-        else:
+        elif sampwidth == 3:
+            # 24-bit little-endian: sign-extend each 3-byte sample to int32.
+            raw_bytes = np.frombuffer(raw, dtype=np.uint8).reshape(-1, 3)
+            sign = np.where(raw_bytes[:, 2] >= 0x80, np.uint8(0xFF), np.uint8(0x00))
+            padded = np.column_stack([raw_bytes, sign]).view(np.int32).reshape(-1)
+            arr = padded.astype(np.float32) / 8388608.0
+        elif sampwidth == 4:
             arr = np.frombuffer(raw, dtype=np.int32).astype(np.float32) / 2147483648.0
+        else:
+            raise ValueError(f"Unsupported WAV sample width: {sampwidth} bytes")
 
         if n_channels > 1:
             arr = arr.reshape(-1, n_channels)

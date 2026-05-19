@@ -93,7 +93,7 @@ class OrchestralSampleLibrary:
             return
         for instrument_dir in sorted(p for p in self.root.iterdir() if p.is_dir()):
             notes: list[SampleNote] = []
-            for wav in sorted(instrument_dir.rglob("*.wav")) + sorted(instrument_dir.rglob("*.WAV")):
+            for wav in sorted(p for p in instrument_dir.rglob("*") if p.suffix.lower() == ".wav"):
                 parsed = self._parse_note_from_filename(wav.stem)
                 if parsed is None:
                     continue

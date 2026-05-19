@@ -1739,7 +1739,9 @@ class RemasterBatchPipeline:
         samples_dir = Path(samples_dir)
         events_dir = Path(events_dir) if events_dir is not None else None
 
-        wav_files = sorted(p for p in input_dir.rglob("*.wav") if p.is_file())
+        wav_files = sorted(
+            p for p in input_dir.rglob("*") if p.is_file() and p.suffix.lower() == ".wav"
+        )
         if not wav_files:
             raise ValueError(f"No WAV files found under {input_dir}")
 
@@ -1756,7 +1758,7 @@ class RemasterBatchPipeline:
             rel = source.relative_to(input_dir)
             target = output_dir / rel
             target.parent.mkdir(parents=True, exist_ok=True)
-            events_json = self._resolve_events_json(source, events_dir)
+            events_json = self._resolve_events_json(source, events_dir, input_dir=input_dir)
             try:
                 pipeline.remaster_file(
                     source,
@@ -1798,9 +1800,22 @@ class RemasterBatchPipeline:
         return result
 
     @staticmethod
-    def _resolve_events_json(source_path: Path, events_dir: Path | None) -> Path | None:
+    def _resolve_events_json(
+        source_path: Path,
+        events_dir: Path | None,
+        *,
+        input_dir: Path | None = None,
+    ) -> Path | None:
         if events_dir is not None:
-            candidate = events_dir / f"{source_path.stem}.events.json"
+            # Mirror the input subdirectory structure under events_dir so that
+            # WAVs with identical stems in different subdirectories (e.g.
+            # music/track.wav and sfx/track.wav) resolve to different event
+            # files and don't silently collide.
+            if input_dir is not None and source_path.is_relative_to(input_dir):
+                rel = source_path.relative_to(input_dir)
+                candidate = events_dir / rel.parent / f"{rel.stem}.events.json"
+            else:
+                candidate = events_dir / f"{source_path.stem}.events.json"
         else:
             candidate = source_path.with_name(f"{source_path.stem}.events.json")
         return candidate if candidate.exists() else None
