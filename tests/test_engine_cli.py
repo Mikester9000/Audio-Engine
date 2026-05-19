@@ -364,14 +364,32 @@ def test_cli_qa_batch_report_has_spectral_check_keys(tmp_path, capsys):
         "spectral_high_ratio",
         "spectral_centroid_hz",
         "high_freq_ratio",
-        "spectral_balance_ok",
     }
     for result in data["results"]:
         missing = spectral_keys - result["checks"].keys()
         assert not missing, f"Missing spectral check keys: {missing}"
 
 
+def test_cli_qa_batch_check_spectral_flag_adds_gate(tmp_path, capsys):
+    """--check-spectral should add spectral_balance_ok as a hard gate field."""
+    import json
 
+    _write_loud_wav(tmp_path / "loud.wav")
+    report_path = tmp_path / "qa_spectral_gate.json"
+
+    main([
+        "qa-batch",
+        "--input-dir", str(tmp_path),
+        "--output-report", str(report_path),
+        "--check-spectral",
+    ])
+
+    data = json.loads(report_path.read_text())
+    for result in data["results"]:
+        assert "spectral_balance_ok" in result["checks"]
+
+
+def test_cli_qa_batch_missing_directory(tmp_path, capsys):
     """qa-batch with a nonexistent directory should return non-zero."""
     rc = main([
         "qa-batch",

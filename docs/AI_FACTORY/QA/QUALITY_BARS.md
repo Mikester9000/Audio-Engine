@@ -115,8 +115,8 @@ Regenerate an asset when any of these change:
 - True peak check is **≤ -0.1 dBFS** (`peak_ok`).
 - Clipping must be absent (`clipping_ok`).
 - Loop seam checks are optional and only evaluated when `--check-loop` is requested (`loop_ok`).
-- Spectral balance check: no single frequency band (low < 250 Hz, mid 250–4000 Hz, high > 4000 Hz) may carry more than **90%** of total energy (`spectral_balance_ok`). Added in SESSION-036.
-- Spectral centroid and high-frequency ratio are always recorded in `qa-batch` JSON reports for review reference (fields: `spectral_low_ratio`, `spectral_mid_ratio`, `spectral_high_ratio`, `spectral_centroid_hz`, `high_freq_ratio`). Added in SESSION-036.
+- Spectral balance check: enabled with `--check-spectral` on `qa-batch`. When enabled, fails the gate if any single frequency band (low < 250 Hz, mid 250–4000 Hz, high > 4000 Hz) carries more than **90%** of total energy (`spectral_balance_ok`). Not a default hard gate because procedural synthesis with narrow-band tones is acceptable in many gameplay contexts. Added in SESSION-036.
+- Spectral centroid and high-frequency ratio are always recorded in `qa-batch` JSON reports for review reference regardless of `--check-spectral` (fields: `spectral_low_ratio`, `spectral_mid_ratio`, `spectral_high_ratio`, `spectral_centroid_hz`, `high_freq_ratio`). Added in SESSION-036.
 
 ### Category-specific SFX/ambience guidance (SESSION-013)
 

@@ -119,6 +119,12 @@ Observed result in this session:
 | Machine-readable review-log writer + handoff integration | Implemented | `audio_engine/integration/asset_pipeline.py` (`ReviewLogWriter`), `audio_engine/cli.py` (`write-review-log`, review-log flags on `approve-draft`/`export-drafts`) |
 | Optional request-level duration field for both request-batch entrypoints | Implemented | `audio_engine/integration/factory_inputs.py` (`durationSeconds` parsing), `audio_engine/integration/asset_pipeline.py` (`RequestBatchPipeline` and `AssetPipeline.execute_request_batch` duration resolution), `tests/test_integration.py`, `tests/test_engine_cli.py` |
 | Legacy request-file provenance sidecars + result-driven review-log sourcing + manifest parity | Implemented | `audio_engine/integration/asset_pipeline.py` (`AssetPipeline.execute_request_batch(write_provenance)` legacy `batch_manifest.json` writer, `ReviewLogWriter.append_from_result_json`), `audio_engine/cli.py` (`generate-request-batch --write-provenance`, `write-review-log --from-result`), `tests/test_integration.py`, `tests/test_engine_cli.py` |
+| Spectral balance + intelligibility QA gate | Implemented | `audio_engine/qa/spectral_analyzer.py` (`SpectralAnalyzer`), `audio_engine/cli.py` (`qa`, `qa-batch`) |
+| Deterministic commercial WAV delivery | Implemented | `audio_engine/integration/export_contract.py` (`WavDeliveryPipeline`), `audio_engine/cli.py` (`export-wav-delivery`) |
+| Deterministic regression harness | Implemented | `tests/test_regression.py` |
+| Seed policy (docs) | Implemented | `docs/AI_FACTORY/SEED_POLICY.md` |
+| Commercial readiness audit (docs) | Implemented | `docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md` |
+| Completion-state handoff (docs) | Implemented | `docs/AI_FACTORY/COMPLETION_HANDOFF.md` |
 | Automated test suite | Implemented | `tests/` |
 
 ### Commands verified in this session

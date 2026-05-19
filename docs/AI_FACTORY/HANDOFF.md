@@ -4,7 +4,59 @@
 
 ## Last completed change
 
-Completed SESSION-028, SESSION-035, SESSION-030, SESSION-033, SESSION-034, and SESSION-039 in a single PR:
+Completed SESSION-036, SESSION-037, SESSION-040, SESSION-043, SESSION-044, and SESSION-045 in a single PR:
+
+- **SESSION-036** (expand QA gates): Added `audio_engine/qa/spectral_analyzer.py` (`SpectralAnalyzer`, `SpectralReport`) providing spectral balance and intelligibility checks. Wired into `qa` and `qa-batch` CLI commands. Added `spectral_balance_ok`, `spectral_centroid_hz`, `high_freq_ratio` fields to `qa-batch` JSON reports. Updated `docs/AI_FACTORY/QA/QUALITY_BARS.md`. 13 new QA tests + 1 CLI test.
+- **SESSION-037** (WAV delivery contract): Added `audio_engine/integration/export_contract.py` (`WavDeliveryPipeline`) that reads from `approved/` and writes deterministically-named copies plus `delivery_manifest.json` to a delivery directory. Naming contract: `<category>__<asset_id>__seed<N>.wav`. Added `audio-engine export-wav-delivery` CLI command with `--factory-root`, `--delivery-dir`, `--categories`, `--quiet` flags. 6 focused CLI tests.
+- **SESSION-040** (regression harness): Created `tests/test_regression.py` with 13 tests covering QA metric stability (`LoudnessMeter`, `ClippingDetector`, `SpectralAnalyzer`), fixed-seed music/SFX reproducibility, and delivery manifest schema/naming determinism.
+- **SESSION-043** (seed policy): Published `docs/AI_FACTORY/SEED_POLICY.md` with explicit seed precedence rules, format, delivery naming convention, and per-command enforcement status table.
+- **SESSION-044** (commercial readiness audit): Published `docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md` with per-gate pass/fail evidence table and open-items for non-blocking planned sessions.
+- **SESSION-045** (completion-state handoff): Published `docs/AI_FACTORY/COMPLETION_HANDOFF.md` with stable baseline capabilities table, maintenance instructions, and reading order for future agents.
+
+## Verified in this session
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest tests/test_qa.py -k "Spectral"          # 12 passed
+python -m pytest tests/test_engine_cli.py -k "spectral"  # 1 passed
+python -m pytest tests/test_engine_cli.py -k "export_wav_delivery"  # 6 passed
+python -m pytest tests/test_regression.py                # 13 passed
+python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
+python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
+```
+
+Observed result:
+- All targeted tests pass (32 new tests total)
+- SESSION_STATE.json and CURRENT_SESSION.json parse cleanly
+
+## Immediate next best task
+
+Execute **SESSION-028b** (sample library scanner + pitch-shift primitives), then SESSION-028c (remaster pipeline), then SESSION-031 (batch remaster wiring).
+
+## Files future agents should read first
+
+1. `docs/AI_FACTORY/README.md`
+2. `docs/AI_FACTORY/CURRENT_STATE.md`
+3. `docs/AI_FACTORY/SESSION_QUEUE.md`
+4. `docs/AI_FACTORY/COMPLETION_HANDOFF.md`
+5. `docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md`
+6. `docs/AI_FACTORY/SEED_POLICY.md`
+
+## Handoff checklist
+
+- [x] Request-batch generation command (`generate-request-batch`)
+- [x] Per-request provenance sidecar files (`.provenance.json`)
+- [x] Batch QA gate command (`qa-batch` with JSON report)
+- [x] Spectral balance + intelligibility QA gates (`SpectralAnalyzer`, SESSION-036)
+- [x] GameRewritten export profile (`export-drafts` to `Content/Audio/`)
+- [x] Commercial WAV delivery (`export-wav-delivery` with deterministic naming, SESSION-037)
+- [x] Approval workflow (`approve-draft` → `approved/<type>/`, updates provenance)
+- [x] QA gate wired into CI (`.github/workflows/audio-qa.yml`)
+- [x] Deterministic regression harness (`tests/test_regression.py`, SESSION-040)
+- [x] Seed policy locked (`docs/AI_FACTORY/SEED_POLICY.md`, SESSION-043)
+- [x] Commercial readiness audit evidence (`docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md`, SESSION-044)
+- [x] Completion-state handoff (`docs/AI_FACTORY/COMPLETION_HANDOFF.md`, SESSION-045)
+- [x] Session control docs synchronized (SESSION_QUEUE, SESSION_STATE, CURRENT_SESSION, ACTIVE_WORK)
 
 - **SESSION-028** (`verify-backends`): Added `audio-engine verify-backends` CLI command with deterministic per-backend availability checks, optional 0.25 s smoke runs per modality, and a structured JSON report. Exits 0 when all backends are available; exits 2 when any are unavailable. 6 targeted tests added.
 - **SESSION-035** (mastering profiles): Added `vocal_mix` profile to `OfflineBounce` (low-mid tighten + air boost + 0.12 reverb mix; reverb preset `medium_hall`). Exported `VALID_PROFILES` constant. Added `mastering_profile` parameter to `MusicGen` so CLI `--profile` wires directly to the bounce pipeline. Exposed `--profile` flag on `generate-music`. 4 new tests.

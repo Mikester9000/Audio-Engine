@@ -392,13 +392,17 @@ def _cmd_qa_batch(args: argparse.Namespace) -> None:
             "loudness_ok": bool(-30.0 <= loudness_result.integrated_lufs <= -9.0),
             "peak_ok": bool(loudness_result.true_peak_dbfs <= -0.1),
             "clipping_ok": bool(not clip_report.has_clipping),
+            # Spectral data is always recorded for review reference (not a hard gate by default)
             "spectral_low_ratio": round(float(spectral_report.low_ratio), 4),
             "spectral_mid_ratio": round(float(spectral_report.mid_ratio), 4),
             "spectral_high_ratio": round(float(spectral_report.high_ratio), 4),
             "spectral_centroid_hz": round(float(spectral_report.spectral_centroid_hz), 2),
             "high_freq_ratio": round(float(spectral_report.high_freq_ratio), 4),
-            "spectral_balance_ok": bool(spectral_report.spectral_balance_ok),
         }
+
+        # Spectral balance gate: only enforced when --check-spectral is set
+        if args.check_spectral:
+            checks["spectral_balance_ok"] = bool(spectral_report.spectral_balance_ok)
 
         if args.check_loop:
             analyzer = LoopAnalyzer(sample_rate=sr)
@@ -1145,6 +1149,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--check-loop",
         action="store_true",
         help="Also check for loop boundary click artefacts.",
+    )
+    qab.add_argument(
+        "--check-spectral",
+        action="store_true",
+        help=(
+            "Enable spectral balance as a hard gate: fail if any single frequency band "
+            "(low/mid/high) carries more than 90%% of total energy. "
+            "Spectral data is always recorded in the report regardless of this flag."
+        ),
     )
     qab.add_argument(
         "--recursive", "-r",
