@@ -203,3 +203,95 @@ class TestLoopAnalyzer:
         analyzer = LoopAnalyzer(SR)
         report = analyzer.analyze(stereo)
         assert isinstance(report, LoopReport)
+
+
+# ---------------------------------------------------------------------------
+# SpectralAnalyzer
+# ---------------------------------------------------------------------------
+
+from audio_engine.qa import SpectralAnalyzer
+from audio_engine.qa.spectral_analyzer import SpectralReport
+
+
+class TestSpectralAnalyzer:
+    def test_returns_spectral_report(self):
+        sa = SpectralAnalyzer(sample_rate=SR)
+        audio = _sine(1000.0, duration=1.0)
+        report = sa.analyze(audio)
+        assert isinstance(report, SpectralReport)
+
+    def test_band_ratios_sum_to_one(self):
+        sa = SpectralAnalyzer(sample_rate=SR)
+        audio = _sine(440.0, duration=1.0)
+        report = sa.analyze(audio)
+        total = report.low_ratio + report.mid_ratio + report.high_ratio
+        assert abs(total - 1.0) < 0.01
+
+    def test_low_freq_dominant_in_bass_signal(self):
+        """A 60 Hz sine should have majority energy in the low band."""
+        sa = SpectralAnalyzer(sample_rate=SR, low_cutoff=250.0)
+        audio = _sine(60.0, duration=1.0)
+        report = sa.analyze(audio)
+        assert report.low_ratio > 0.5
+
+    def test_high_freq_dominant_in_treble_signal(self):
+        """A 8 kHz sine should have majority energy in the high band."""
+        sa = SpectralAnalyzer(sample_rate=SR, high_cutoff=4000.0)
+        audio = _sine(8000.0, duration=1.0)
+        report = sa.analyze(audio)
+        assert report.high_ratio > 0.5
+
+    def test_spectral_balance_ok_for_normal_signal(self):
+        """A mid-frequency tone should pass the balance gate."""
+        sa = SpectralAnalyzer(sample_rate=SR)
+        audio = _sine(1000.0, duration=1.0)
+        report = sa.analyze(audio)
+        assert report.spectral_balance_ok is False  # single tone is dominant
+
+    def test_spectral_balance_fails_for_all_bass(self):
+        """A pure 80 Hz tone concentrates all energy in lows → imbalanced."""
+        sa = SpectralAnalyzer(sample_rate=SR, max_band_ratio=0.90)
+        audio = _sine(80.0, duration=1.0)
+        report = sa.analyze(audio)
+        assert not report.spectral_balance_ok
+
+    def test_intelligibility_ok_with_high_freq(self):
+        """High-frequency content above 2 kHz passes intelligibility check."""
+        sa = SpectralAnalyzer(sample_rate=SR, min_hf_ratio=0.01)
+        audio = _sine(5000.0, duration=1.0)
+        report = sa.analyze(audio)
+        assert report.intelligibility_ok
+
+    def test_intelligibility_fails_for_pure_low_freq(self):
+        """A 40 Hz tone has no high-frequency content → fails intelligibility."""
+        sa = SpectralAnalyzer(sample_rate=SR, min_hf_ratio=0.05)
+        audio = _sine(40.0, duration=1.0)
+        report = sa.analyze(audio)
+        assert not report.intelligibility_ok
+
+    def test_silence_handled_gracefully(self):
+        sa = SpectralAnalyzer(sample_rate=SR)
+        silent = np.zeros(SR, dtype=np.float32)
+        report = sa.analyze(silent)
+        assert report.spectral_balance_ok  # silence is not imbalanced
+
+    def test_stereo_input_accepted(self):
+        sa = SpectralAnalyzer(sample_rate=SR)
+        stereo = _stereo(_sine(440.0, duration=1.0))
+        report = sa.analyze(stereo)
+        assert isinstance(report, SpectralReport)
+
+    def test_summary_string(self):
+        sa = SpectralAnalyzer(sample_rate=SR)
+        audio = _sine(1000.0, duration=1.0)
+        report = sa.analyze(audio)
+        summary = report.summary()
+        assert isinstance(summary, str)
+        assert "Spectral" in summary
+
+    def test_centroid_in_expected_range(self):
+        """Spectral centroid for a 1 kHz tone should be near 1 kHz."""
+        sa = SpectralAnalyzer(sample_rate=SR)
+        audio = _sine(1000.0, duration=1.0)
+        report = sa.analyze(audio)
+        assert 800.0 < report.spectral_centroid_hz < 1200.0

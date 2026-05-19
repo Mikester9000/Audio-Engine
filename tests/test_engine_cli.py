@@ -344,7 +344,34 @@ def test_cli_qa_batch_report_has_required_check_keys(tmp_path, capsys):
         assert not missing, f"Missing check keys: {missing}"
 
 
-def test_cli_qa_batch_missing_directory(tmp_path, capsys):
+def test_cli_qa_batch_report_has_spectral_check_keys(tmp_path, capsys):
+    """qa-batch JSON report must include spectral balance fields."""
+    import json
+
+    _write_loud_wav(tmp_path / "loud.wav")
+    report_path = tmp_path / "qa_spectral.json"
+
+    main([
+        "qa-batch",
+        "--input-dir", str(tmp_path),
+        "--output-report", str(report_path),
+    ])
+
+    data = json.loads(report_path.read_text())
+    spectral_keys = {
+        "spectral_low_ratio",
+        "spectral_mid_ratio",
+        "spectral_high_ratio",
+        "spectral_centroid_hz",
+        "high_freq_ratio",
+        "spectral_balance_ok",
+    }
+    for result in data["results"]:
+        missing = spectral_keys - result["checks"].keys()
+        assert not missing, f"Missing spectral check keys: {missing}"
+
+
+
     """qa-batch with a nonexistent directory should return non-zero."""
     rc = main([
         "qa-batch",
@@ -1099,3 +1126,133 @@ def test_cli_generate_music_profile_choices_match_offline_bounce():
         action for action in gm_parser._actions if action.dest == "profile"
     )
     assert list(profile_action.choices) == list(VALID_PROFILES)
+
+
+# ---------------------------------------------------------------------------
+# export-wav-delivery CLI tests (SESSION-037)
+# ---------------------------------------------------------------------------
+
+def _make_approved_wav(factory_root: Path, category: str, stem: str) -> Path:
+    """Write a minimal WAV into <factory_root>/approved/<category>/."""
+    import struct, wave
+    approved_dir = factory_root / "approved" / category
+    approved_dir.mkdir(parents=True, exist_ok=True)
+    wav_path = approved_dir / f"{stem}.wav"
+    with wave.open(str(wav_path), "w") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(22050)
+        wf.writeframes(struct.pack("<100h", *([0] * 100)))
+    return wav_path
+
+
+def test_cli_export_wav_delivery_subcommand_registered():
+    """export-wav-delivery must be registered in the CLI parser."""
+    import argparse
+    parser = build_parser()
+    sub_action = next(
+        a for a in parser._actions if isinstance(a, argparse._SubParsersAction)
+    )
+    assert "export-wav-delivery" in sub_action.choices
+
+
+def test_cli_export_wav_delivery_basic(tmp_path):
+    """export-wav-delivery should copy WAVs and write delivery_manifest.json."""
+    import json
+    factory_root = tmp_path / "factory"
+    delivery_dir = tmp_path / "delivery"
+    _make_approved_wav(factory_root, "sfx", "laser_shot")
+
+    rc = main([
+        "export-wav-delivery",
+        "--factory-root", str(factory_root),
+        "--delivery-dir", str(delivery_dir),
+        "--quiet",
+    ])
+    assert rc == 0
+    manifest_path = delivery_dir / "delivery_manifest.json"
+    assert manifest_path.exists()
+    data = json.loads(manifest_path.read_text())
+    assert data["summary"]["copied"] == 1
+    assert len(data["entries"]) == 1
+
+
+def test_cli_export_wav_delivery_deterministic_naming(tmp_path):
+    """Delivery filenames must follow the deterministic naming contract."""
+    import json
+    factory_root = tmp_path / "factory"
+    delivery_dir = tmp_path / "delivery"
+    _make_approved_wav(factory_root, "music", "bgm_field")
+
+    rc = main([
+        "export-wav-delivery",
+        "--factory-root", str(factory_root),
+        "--delivery-dir", str(delivery_dir),
+        "--quiet",
+    ])
+    assert rc == 0
+    manifest_path = delivery_dir / "delivery_manifest.json"
+    data = json.loads(manifest_path.read_text())
+    entry = data["entries"][0]
+    # Deterministic name must include category and stem
+    assert entry["category"] == "music"
+    assert "music__" in entry["deliveryName"]
+    assert entry["deliveryName"].endswith(".wav")
+    # File must actually exist
+    assert Path(entry["deliveryPath"]).exists()
+
+
+def test_cli_export_wav_delivery_category_filter(tmp_path):
+    """--categories should limit which approved categories are packaged."""
+    import json
+    factory_root = tmp_path / "factory"
+    delivery_dir = tmp_path / "delivery"
+    _make_approved_wav(factory_root, "music", "bgm_boss")
+    _make_approved_wav(factory_root, "sfx", "explosion")
+
+    rc = main([
+        "export-wav-delivery",
+        "--factory-root", str(factory_root),
+        "--delivery-dir", str(delivery_dir),
+        "--categories", "sfx",
+        "--quiet",
+    ])
+    assert rc == 0
+    data = json.loads((delivery_dir / "delivery_manifest.json").read_text())
+    assert data["summary"]["total"] == 1
+    assert data["entries"][0]["category"] == "sfx"
+
+
+def test_cli_export_wav_delivery_missing_approved(tmp_path):
+    """export-wav-delivery must return non-zero when approved/ is absent."""
+    factory_root = tmp_path / "empty_factory"
+    factory_root.mkdir()
+    rc = main([
+        "export-wav-delivery",
+        "--factory-root", str(factory_root),
+        "--delivery-dir", str(tmp_path / "delivery"),
+        "--quiet",
+    ])
+    assert rc != 0
+
+
+def test_cli_export_wav_delivery_manifest_schema(tmp_path):
+    """delivery_manifest.json must have required top-level keys."""
+    import json
+    factory_root = tmp_path / "factory"
+    delivery_dir = tmp_path / "delivery"
+    _make_approved_wav(factory_root, "voice", "narrator_intro")
+
+    main([
+        "export-wav-delivery",
+        "--factory-root", str(factory_root),
+        "--delivery-dir", str(delivery_dir),
+        "--quiet",
+    ])
+    data = json.loads((delivery_dir / "delivery_manifest.json").read_text())
+    assert "deliveryManifestVersion" in data
+    assert "factoryRoot" in data
+    assert "deliveryDir" in data
+    assert "generatedAt" in data
+    assert "summary" in data
+    assert "entries" in data

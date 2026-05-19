@@ -272,7 +272,7 @@ def _cmd_qa(args: argparse.Namespace) -> None:
     """Run quality-assurance checks on a WAV file."""
     import numpy as np
 
-    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer
+    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer, SpectralAnalyzer
 
     input_path = Path(args.input)
     if not input_path.exists():
@@ -300,6 +300,11 @@ def _cmd_qa(args: argparse.Namespace) -> None:
     clip_report = detector.detect(audio)
     print(f"  Clipping            : {clip_report.summary()}")
 
+    # Spectral balance + intelligibility
+    sa = SpectralAnalyzer(sample_rate=sr)
+    spectral_report = sa.analyze(audio)
+    print(f"  Spectral balance    : {spectral_report.summary()}")
+
     # Loop analysis
     if args.check_loop:
         analyzer = LoopAnalyzer(sample_rate=sr)
@@ -316,6 +321,12 @@ def _cmd_qa(args: argparse.Namespace) -> None:
         issues.append(f"True peak too high ({result.true_peak_dbfs:.1f} dBFS; should be ≤ -0.1 dBFS)")
     if clip_report.has_clipping:
         issues.append(clip_report.summary())
+    if not spectral_report.spectral_balance_ok:
+        issues.append(
+            f"Spectral imbalance detected (dominant band ≥ 90% of energy; "
+            f"L:{spectral_report.low_ratio:.2f} M:{spectral_report.mid_ratio:.2f} "
+            f"H:{spectral_report.high_ratio:.2f})"
+        )
 
     if issues:
         print("  ⚠  Issues found:")
@@ -332,7 +343,7 @@ def _cmd_qa_batch(args: argparse.Namespace) -> None:
 
     import numpy as np
 
-    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer
+    from audio_engine.qa import LoudnessMeter, ClippingDetector, LoopAnalyzer, SpectralAnalyzer
 
     input_dir = Path(args.input_dir)
     if not input_dir.exists():
@@ -369,6 +380,9 @@ def _cmd_qa_batch(args: argparse.Namespace) -> None:
         detector = ClippingDetector()
         clip_report = detector.detect(audio)
 
+        sa = SpectralAnalyzer(sample_rate=sr)
+        spectral_report = sa.analyze(audio)
+
         checks: dict = {
             "loudness_lufs": round(float(loudness_result.integrated_lufs), 2),
             "true_peak_dbfs": round(float(loudness_result.true_peak_dbfs), 2),
@@ -378,6 +392,12 @@ def _cmd_qa_batch(args: argparse.Namespace) -> None:
             "loudness_ok": bool(-30.0 <= loudness_result.integrated_lufs <= -9.0),
             "peak_ok": bool(loudness_result.true_peak_dbfs <= -0.1),
             "clipping_ok": bool(not clip_report.has_clipping),
+            "spectral_low_ratio": round(float(spectral_report.low_ratio), 4),
+            "spectral_mid_ratio": round(float(spectral_report.mid_ratio), 4),
+            "spectral_high_ratio": round(float(spectral_report.high_ratio), 4),
+            "spectral_centroid_hz": round(float(spectral_report.spectral_centroid_hz), 2),
+            "high_freq_ratio": round(float(spectral_report.high_freq_ratio), 4),
+            "spectral_balance_ok": bool(spectral_report.spectral_balance_ok),
         }
 
         if args.check_loop:
@@ -1794,6 +1814,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="Root audio assets directory to verify (default: assets/audio).",
     )
 
+    # --- export-wav-delivery ---
+    ewdp = sub.add_parser(
+        "export-wav-delivery",
+        help=(
+            "Package approved assets into a deterministic commercial WAV delivery. "
+            "Reads from <factory-root>/approved/ and writes renamed copies plus "
+            "a delivery_manifest.json to <delivery-dir>."
+        ),
+    )
+    ewdp.add_argument(
+        "--factory-root", "-f", required=True,
+        help="Factory output root directory (must contain an approved/ sub-directory).",
+    )
+    ewdp.add_argument(
+        "--delivery-dir", "-o", required=True,
+        help="Destination directory for the delivery package.",
+    )
+    ewdp.add_argument(
+        "--categories", "-c", nargs="+",
+        metavar="CATEGORY",
+        help="Optional list of category sub-directories to include (e.g. music sfx). "
+             "Includes all categories when omitted.",
+    )
+    ewdp.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress per-file progress messages.",
+    )
+
     return parser
 
 
@@ -1956,6 +2005,35 @@ def _cmd_verify_game_assets(args: argparse.Namespace) -> None:
         print("  ✓  All assets present.")
 
 
+def _cmd_export_wav_delivery(args: argparse.Namespace) -> None:
+    """Package approved assets into a deterministic commercial WAV delivery."""
+    from audio_engine.integration.export_contract import WavDeliveryPipeline
+
+    quiet = getattr(args, "quiet", False)
+
+    def _progress(msg: str) -> None:
+        if not quiet:
+            print(f"  {msg}")
+
+    pipeline = WavDeliveryPipeline(progress_callback=_progress)
+
+    categories = args.categories if args.categories else None
+
+    report = pipeline.deliver(
+        factory_root=args.factory_root,
+        delivery_dir=args.delivery_dir,
+        categories=categories,
+    )
+
+    s = report["summary"]
+    print(
+        f"\nWAV delivery: {s['copied']}/{s['total']} files copied"
+        f" → {report['deliveryDir']}"
+    )
+    if not quiet:
+        print(f"  Manifest: {report['deliveryDir']}/delivery_manifest.json")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1986,6 +2064,7 @@ def main(argv: list[str] | None = None) -> int:
         "generate-plan-batch": _cmd_generate_plan_batch,
         "generate-game-assets": _cmd_generate_game_assets,
         "verify-game-assets": _cmd_verify_game_assets,
+        "export-wav-delivery": _cmd_export_wav_delivery,
     }
 
     handler = dispatch.get(args.command)
