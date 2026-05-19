@@ -191,7 +191,7 @@ class RemasterPipeline:
             raw = wf.readframes(n_frames)
 
         if sampwidth == 1:
-            # 8-bit WAV PCM is unsigned (0-255), centred at 128.
+            # 8-bit WAV PCM is unsigned (0-255), centered at 128.
             arr = (np.frombuffer(raw, dtype=np.uint8).astype(np.float32) - 128.0) / 128.0
         elif sampwidth == 2:
             arr = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
