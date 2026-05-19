@@ -52,7 +52,7 @@ class SpectralReport:
         ``True`` if none of the bands are severely dominant (no single band
         carries > *max_band_ratio* of total energy, default 0.90).
     intelligibility_ok:
-        ``True`` if ``high_freq_ratio`` is above *min_hf_ratio* (default 0.05),
+        ``True`` if ``high_freq_ratio`` is above *min_hf_ratio* (default 0.02),
         indicating sufficient high-frequency content for voice/SFX clarity.
     """
 
@@ -136,7 +136,7 @@ class SpectralAnalyzer:
             return SpectralReport(
                 low_ratio=0.0,
                 mid_ratio=0.0,
-                high_ratio=1.0,
+                high_ratio=0.0,
                 spectral_centroid_hz=0.0,
                 high_freq_ratio=0.0,
                 spectral_balance_ok=True,

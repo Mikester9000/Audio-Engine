@@ -44,7 +44,7 @@ from typing import Callable
 
 __all__ = ["WavDeliveryPipeline"]
 
-_AUDIO_EXTS = {".wav", ".ogg"}
+_AUDIO_EXTS = {".wav"}
 
 
 def _deterministic_delivery_name(
@@ -80,6 +80,16 @@ def _deterministic_delivery_name(
     safe_category = str(category).replace("/", "_").replace("\\", "_").replace(" ", "_")
     safe_asset_id = str(asset_id).replace("/", "_").replace("\\", "_").replace(" ", "_")
     return f"{safe_category}__{safe_asset_id}__seed{seed_str}{ext}"
+
+
+def _normalize_seed(seed: object) -> int:
+    """Coerce seed-like values to int, defaulting to 0 for invalid values."""
+    if seed is None:
+        return 0
+    try:
+        return int(seed)
+    except (TypeError, ValueError):
+        return 0
 
 
 class WavDeliveryPipeline:
@@ -250,8 +260,8 @@ class WavDeliveryPipeline:
             prov = {}
 
         asset_id: str = prov.get("assetId") or src_path.stem
-        seed = prov.get("seed", 0)
-        ext = src_path.suffix.lower() if src_path.suffix.lower() in _AUDIO_EXTS else ".wav"
+        seed = _normalize_seed(prov.get("seed", 0))
+        ext = ".wav"
 
         delivery_name = _deterministic_delivery_name(category, asset_id, seed, ext)
         dest_path = delivery_dir / delivery_name

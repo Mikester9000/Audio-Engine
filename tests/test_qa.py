@@ -283,6 +283,13 @@ class TestSpectralAnalyzer:
         report = sa.analyze(stereo)
         assert isinstance(report, SpectralReport)
 
+    def test_short_input_returns_zero_band_ratios(self):
+        sa = SpectralAnalyzer(sample_rate=SR)
+        report = sa.analyze(np.array([0.0], dtype=np.float32))
+        assert report.low_ratio == 0.0
+        assert report.mid_ratio == 0.0
+        assert report.high_ratio == 0.0
+
     def test_summary_string(self):
         sa = SpectralAnalyzer(sample_rate=SR)
         audio = _sine(1000.0, duration=1.0)

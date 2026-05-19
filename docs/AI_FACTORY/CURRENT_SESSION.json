@@ -2,19 +2,26 @@
   "version": "1.11.0",
   "lastUpdated": "2026-05-19",
   "currentSession": {
-    "id": "SESSION-045",
-    "title": "Completion-state handoff and closure lock",
-    "status": "completed",
-    "taskType": "docs_only",
-    "objective": "Mark the baseline factory as complete after all required gates are evidenced and publish final handoff/maintenance instructions.",
+    "id": "SESSION-028b",
+    "title": "Sample library scanner and pitch-shift engine",
+    "status": "planned",
+    "taskType": "integration_export",
+    "objective": "Add executable sample-library scanning and deterministic pitch-shift primitives for orchestral remaster workflows.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",
       "docs/AI_FACTORY/CURRENT_STATE.md",
-      "docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md",
-      "docs/AI_FACTORY/SEED_POLICY.md",
-      "docs/AI_FACTORY/COMPLETION_HANDOFF.md"
+      "docs/AI_FACTORY/SCHEMAS/WAV_INGESTION_CONTRACT.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
+      "docs/AI_FACTORY/CODEBASE_MAP.md"
     ],
-    "likelyModify": []
+    "likelyModify": [
+      "audio_engine/integration/sample_library.py",
+      "audio_engine/dsp/pitch_shift.py",
+      "tests/test_sample_library.py",
+      "tests/test_pitch_shift.py",
+      "docs/AI_FACTORY/ACTIVE_WORK.md",
+      "docs/AI_FACTORY/HANDOFF.md"
+    ]
   }
 }

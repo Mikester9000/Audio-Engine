@@ -1274,3 +1274,50 @@ def test_cli_export_wav_delivery_manifest_schema(tmp_path):
     assert "generatedAt" in data
     assert "summary" in data
     assert "entries" in data
+
+
+def test_cli_export_wav_delivery_ignores_ogg_inputs(tmp_path):
+    """WAV delivery should package only WAV files from approved/."""
+    import json
+    factory_root = tmp_path / "factory"
+    delivery_dir = tmp_path / "delivery"
+    approved_sfx = factory_root / "approved" / "sfx"
+    approved_sfx.mkdir(parents=True, exist_ok=True)
+    _make_approved_wav(factory_root, "sfx", "laser_shot")
+    (approved_sfx / "legacy.ogg").write_bytes(b"OggS")
+
+    rc = main([
+        "export-wav-delivery",
+        "--factory-root", str(factory_root),
+        "--delivery-dir", str(delivery_dir),
+        "--quiet",
+    ])
+    assert rc == 0
+    data = json.loads((delivery_dir / "delivery_manifest.json").read_text())
+    assert data["summary"]["total"] == 1
+    assert data["entries"][0]["sourcePath"].endswith(".wav")
+
+
+def test_cli_export_wav_delivery_normalizes_invalid_seed_to_zero(tmp_path):
+    """Invalid provenance seed values should fall back to seed0000."""
+    import json
+    factory_root = tmp_path / "factory"
+    delivery_dir = tmp_path / "delivery"
+    wav_path = _make_approved_wav(factory_root, "voice", "line_a")
+    prov_path = wav_path.with_name(f"{wav_path.stem}.provenance.json")
+    prov_path.write_text(
+        json.dumps({"assetId": "voice_line_a", "seed": None}),
+        encoding="utf-8",
+    )
+
+    rc = main([
+        "export-wav-delivery",
+        "--factory-root", str(factory_root),
+        "--delivery-dir", str(delivery_dir),
+        "--quiet",
+    ])
+    assert rc == 0
+    data = json.loads((delivery_dir / "delivery_manifest.json").read_text())
+    entry = data["entries"][0]
+    assert "__seed0000.wav" in entry["deliveryName"]
+    assert entry["seed"] == 0
