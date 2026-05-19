@@ -124,7 +124,8 @@ The `--samples-dir` flag is supported by the following commands:
 | `generate-music`        | Enables sample-augmented music generation           |
 | `generate-sfx`          | Enables sample-augmented SFX generation             |
 | `generate-voice`        | Selects SampleBackend base (no voice blending)      |
-| `remaster`              | Blends samples into an existing WAV file            |
+| `remaster`              | Blends samples into an existing WAV file; optional note-event substitution via `--events-json` |
+| `remaster-batch`        | Deterministically remasters every WAV in an input directory tree and writes `remaster_batch_result.json` |
 | `generate-request-batch`| Forwarded via `--samples-dir` for sample backend    |
 | `compose-piece`         | Enables sample-augmented piece composition          |
 | `generate-track`        | Enables sample-augmented track generation           |
@@ -135,7 +136,9 @@ The `--samples-dir` flag is supported by the following commands:
 
 ## 8. Related files
 
-- `audio_engine/samples/sample_library.py` — scanner implementation
+- `audio_engine/integration/sample_library.py` — deterministic note-aware orchestral scanner implementation (`samples/orchestral`)
+- `audio_engine/samples/sample_library.py` — category-level runtime sample blending support
+- `audio_engine/render/remaster.py` — deterministic remaster pipeline (`RemasterPipeline`)
 - `audio_engine/ai/sample_backend.py` — SampleBackend that uses this library
 - `samples/README.md` — operator quick-start guide
 - `docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md` — music generation subsystem docs

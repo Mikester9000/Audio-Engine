@@ -1,11 +1,11 @@
 {
-  "version": "1.11.0",
+  "version": "1.12.0",
   "lastUpdated": "2026-05-19",
   "currentSession": {
-    "id": "SESSION-045",
-    "title": "Completion-state handoff and closure lock",
-    "status": "completed",
-    "taskType": "docs_only"
+    "id": "SESSION-032",
+    "title": "Add license compliance CI gate",
+    "status": "planned",
+    "taskType": "cli"
   },
   "completedSessions": [
     {
@@ -205,6 +205,21 @@
     },
     {
       "id": "SESSION-045",
+      "status": "completed",
+      "completedDate": "2026-05-19"
+    },
+    {
+      "id": "SESSION-028b",
+      "status": "completed",
+      "completedDate": "2026-05-19"
+    },
+    {
+      "id": "SESSION-028c",
+      "status": "completed",
+      "completedDate": "2026-05-19"
+    },
+    {
+      "id": "SESSION-031",
       "status": "completed",
       "completedDate": "2026-05-19"
     }

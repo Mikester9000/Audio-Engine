@@ -62,17 +62,18 @@ The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-
 - [x] Execute SESSION-043 — freeze seed policy (`docs/AI_FACTORY/SEED_POLICY.md`)
 - [x] Execute SESSION-044 — final commercial readiness audit (`docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md`)
 - [x] Execute SESSION-045 — completion-state handoff (`docs/AI_FACTORY/COMPLETION_HANDOFF.md`)
+- [x] Execute SESSION-028b — sample-library scanner + pitch-shift engine (`audio_engine/integration/sample_library.py`, `audio_engine/dsp/pitch_shift.py`)
+- [x] Execute SESSION-028c — deterministic remaster pipeline + CLI wiring (`audio_engine/render/remaster.py`, `audio-engine remaster --events-json`)
+- [x] Execute SESSION-031 — deterministic remaster-batch pipeline (`RemasterBatchPipeline`, `audio-engine remaster-batch`)
 
 ## Recommended next PRs
 
-1. **Execute SESSION-028b + SESSION-028c**
-   - Sample-library scanner/pitch-shift primitives and remaster CLI pipeline.
+1. **Execute SESSION-032**
+   - Add license compliance CI gate with machine-readable report output.
 2. **Execute SESSION-029b**
    - Studio creation tooling UX (preset management + faster iterative generation).
-3. **Execute SESSION-031**
-   - Batch remaster pipeline wiring over ingestion-contract sample folders.
-4. **Execute SESSION-032**
-   - License compliance CI gate (inventory is already complete).
+3. **Execute SESSION-038**
+   - Dual-path vocal/instrumental production workflow stabilization.
 
 ## Do not deprioritize
 

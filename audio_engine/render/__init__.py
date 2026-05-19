@@ -10,6 +10,7 @@ Provides:
 
 from audio_engine.render.offline_bounce import OfflineBounce
 from audio_engine.render.loop_exporter import bake_crossfade_loop
+from audio_engine.render.remaster import RemasterPipeline
 from audio_engine.render.stem_renderer import StemRenderer
 
-__all__ = ["OfflineBounce", "StemRenderer", "bake_crossfade_loop"]
+__all__ = ["OfflineBounce", "StemRenderer", "RemasterPipeline", "bake_crossfade_loop"]

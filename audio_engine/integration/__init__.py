@@ -54,6 +54,9 @@ from audio_engine.integration.asset_pipeline import (
     DraftExportPipeline,
     RequestBatchRecord,
     RequestBatchResult,
+    RemasterBatchPipeline,
+    RemasterBatchRecord,
+    RemasterBatchResult,
     ReviewLogWriter,
 )
 from audio_engine.integration.factory_inputs import (
@@ -71,6 +74,13 @@ from audio_engine.integration.factory_inputs import (
     parse_audio_plan,
     parse_generation_request_batch,
 )
+from audio_engine.integration.sample_library import (
+    OrchestralSampleLibrary,
+    SampleMatch,
+    SampleNote,
+    midi_to_note_name,
+    note_name_to_midi,
+)
 
 __all__ = [
     "ApprovalWorkflow",
@@ -81,6 +91,9 @@ __all__ = [
     "PlanBatchOrchestrator",
     "RequestBatchRecord",
     "RequestBatchResult",
+    "RemasterBatchPipeline",
+    "RemasterBatchRecord",
+    "RemasterBatchResult",
     "ReviewLogWriter",
     "AudioPlan",
     "AudioPlanAssetGroup",
@@ -101,4 +114,9 @@ __all__ = [
     "load_generation_request_batch",
     "parse_audio_plan",
     "parse_generation_request_batch",
+    "OrchestralSampleLibrary",
+    "SampleMatch",
+    "SampleNote",
+    "midi_to_note_name",
+    "note_name_to_midi",
 ]

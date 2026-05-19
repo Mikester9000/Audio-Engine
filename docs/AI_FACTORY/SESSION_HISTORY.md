@@ -48,3 +48,6 @@
 | `SESSION-043` | 2026-05-19 | completed | Published `docs/AI_FACTORY/SEED_POLICY.md` to freeze seed precedence, formatting, and delivery naming regeneration rules. | this PR |
 | `SESSION-044` | 2026-05-19 | completed | Published `docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md` with evidence-backed quality/licensing/automation readiness gates. | this PR |
 | `SESSION-045` | 2026-05-19 | completed | Published `docs/AI_FACTORY/COMPLETION_HANDOFF.md` and finalized completion-state maintenance guidance for post-baseline planned sessions. | this PR |
+| `SESSION-028b` | 2026-05-19 | completed | Added deterministic `samples/orchestral` scanner (`OrchestralSampleLibrary`) and dedicated DSP pitch-shift module (`audio_engine/dsp/pitch_shift.py`) with focused tests. | this PR |
+| `SESSION-028c` | 2026-05-19 | completed | Added `RemasterPipeline` + `RemasterEvent`, wired `audio-engine remaster` to deterministic event-driven sample substitution with synth fallback, and added `--events-json`. | this PR |
+| `SESSION-031` | 2026-05-19 | completed | Added `RemasterBatchPipeline` and additive `audio-engine remaster-batch` command with deterministic traversal and machine-readable `remaster_batch_result.json`. | this PR |

@@ -23,7 +23,7 @@ samples/
   voice/
 ```
 
-The committed `samples/orchestral/*` scaffold is for the planned scanner/remaster workflow; until that lands, place active WAV content in top-level category folders above (or point `--samples-dir` directly at a category root that matches this layout).
+The committed `samples/orchestral/*` scaffold is now supported by the deterministic scanner/remaster workflow (`OrchestralSampleLibrary` + `RemasterPipeline`) and can be used directly with `remaster` / `remaster-batch`.
 
 ## Naming convention
 
@@ -65,6 +65,8 @@ Always verify license terms before commercial use.
 Current CLI surface:
 
 - `audio-engine remaster --input <wav> --samples-dir samples --output <wav>`
+- `audio-engine remaster --input <wav> --samples-dir samples --events-json note_events.json --output <wav>`
+- `audio-engine remaster-batch --input-dir drafts/music --output-dir remastered/music --samples-dir samples`
 
 Notes:
 

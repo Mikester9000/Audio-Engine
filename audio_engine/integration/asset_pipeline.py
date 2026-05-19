@@ -84,6 +84,9 @@ __all__ = [
     "DraftExportPipeline",
     "RequestBatchRecord",
     "RequestBatchResult",
+    "RemasterBatchPipeline",
+    "RemasterBatchRecord",
+    "RemasterBatchResult",
     "ReviewLogWriter",
 ]
 
@@ -1659,6 +1662,148 @@ class PlanBatchOrchestrator:
             if duration is not None:
                 overrides[request.request_id] = float(duration)
         return overrides
+
+
+# ---------------------------------------------------------------------------
+# Remaster batch pipeline
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RemasterBatchRecord:
+    """Per-file record for :class:`RemasterBatchPipeline` execution."""
+
+    source_path: str
+    output_path: str
+    status: str
+    events_path: str | None = None
+    error: str | None = None
+
+
+@dataclass
+class RemasterBatchResult:
+    """Aggregated machine-readable result for remaster-batch execution."""
+
+    input_dir: str
+    output_dir: str
+    samples_dir: str
+    records: list[RemasterBatchRecord] = field(default_factory=list)
+    total_duration_seconds: float = 0.0
+
+    def summary(self) -> str:
+        ok = sum(1 for r in self.records if r.status == "ok")
+        errors = [r for r in self.records if r.status == "error"]
+        return "\n".join(
+            [
+                f"Remaster batch complete — {self.output_dir}",
+                f"  OK      : {ok}",
+                f"  Errors  : {len(errors)}",
+                f"  Total   : {len(self.records)} files in {self.total_duration_seconds:.1f}s",
+            ]
+        )
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {
+                "input_dir": self.input_dir,
+                "output_dir": self.output_dir,
+                "samples_dir": self.samples_dir,
+                "records": [asdict(r) for r in self.records],
+                "total_duration_seconds": self.total_duration_seconds,
+            },
+            indent=2,
+        )
+
+
+class RemasterBatchPipeline:
+    """Deterministic batch remaster execution over WAV files."""
+
+    def __init__(self, progress_callback: Callable[[str], None] | None = None) -> None:
+        self.progress_callback = progress_callback or (lambda msg: None)
+
+    def execute(
+        self,
+        *,
+        input_dir: str | Path,
+        output_dir: str | Path,
+        samples_dir: str | Path,
+        style: str = "ff7_overworld",
+        events_dir: str | Path | None = None,
+        report_path: str | Path | None = None,
+        seed: int | None = None,
+    ) -> RemasterBatchResult:
+        from audio_engine.render.remaster import RemasterPipeline
+
+        input_dir = Path(input_dir)
+        output_dir = Path(output_dir)
+        samples_dir = Path(samples_dir)
+        events_dir = Path(events_dir) if events_dir is not None else None
+
+        wav_files = sorted(p for p in input_dir.rglob("*.wav") if p.is_file())
+        if not wav_files:
+            raise ValueError(f"No WAV files found under {input_dir}")
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        result = RemasterBatchResult(
+            input_dir=str(input_dir),
+            output_dir=str(output_dir),
+            samples_dir=str(samples_dir),
+        )
+        t_start = time.monotonic()
+        pipeline = RemasterPipeline(seed=seed)
+
+        for source in wav_files:
+            rel = source.relative_to(input_dir)
+            target = output_dir / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            events_json = self._resolve_events_json(source, events_dir)
+            try:
+                pipeline.remaster_file(
+                    source,
+                    target,
+                    style=style,
+                    samples_dir=samples_dir,
+                    events_json=events_json,
+                    fmt="wav",
+                )
+                result.records.append(
+                    RemasterBatchRecord(
+                        source_path=str(source),
+                        output_path=str(target),
+                        status="ok",
+                        events_path=str(events_json) if events_json else None,
+                    )
+                )
+                self.progress_callback(f"  [ok]   {source} → {target}")
+            except Exception as exc:  # noqa: BLE001
+                result.records.append(
+                    RemasterBatchRecord(
+                        source_path=str(source),
+                        output_path=str(target),
+                        status="error",
+                        events_path=str(events_json) if events_json else None,
+                        error=str(exc),
+                    )
+                )
+                self.progress_callback(f"  [err]  {source.name}: {exc}")
+
+        result.total_duration_seconds = time.monotonic() - t_start
+
+        if report_path is None:
+            report_path = output_dir / "remaster_batch_result.json"
+        report_path = Path(report_path)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(result.to_json(), encoding="utf-8")
+        self.progress_callback(f"result report written → {report_path}")
+        return result
+
+    @staticmethod
+    def _resolve_events_json(source_path: Path, events_dir: Path | None) -> Path | None:
+        if events_dir is not None:
+            candidate = events_dir / f"{source_path.stem}.events.json"
+        else:
+            candidate = source_path.with_name(f"{source_path.stem}.events.json")
+        return candidate if candidate.exists() else None
 
 
 # ---------------------------------------------------------------------------
