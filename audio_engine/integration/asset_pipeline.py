@@ -1184,17 +1184,21 @@ class AssetPipeline:
         output_path: Path,
         default_duration: float,
         *,
-        mastering_profile: str = "game",
+        mastering_profile: str | None = None,
     ) -> Path:
         """Generate and export one music request using per-request seed."""
         from audio_engine.ai.music_gen import MusicGen
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        gen_kwargs = {
+            "sample_rate": request.output.sample_rate,
+            "backend": request.backend,
+            "seed": request.seed,
+        }
+        if mastering_profile is not None:
+            gen_kwargs["mastering_profile"] = mastering_profile
         gen = MusicGen(
-            sample_rate=request.output.sample_rate,
-            backend=request.backend,
-            seed=request.seed,
-            mastering_profile=mastering_profile,
+            **gen_kwargs,
         )
         return gen.generate_to_file(
             prompt=request.prompt,

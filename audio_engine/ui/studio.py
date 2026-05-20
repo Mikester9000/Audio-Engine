@@ -20,9 +20,13 @@ class _StatusLabel(Protocol):
 
 
 def _safe_int(value: str, fallback: int) -> int:
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+    if not isinstance(value, str):
+        return fallback
     try:
         return int(value.strip())
-    except (AttributeError, TypeError, ValueError):
+    except ValueError:
         return fallback
 
 
