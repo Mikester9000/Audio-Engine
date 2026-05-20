@@ -391,6 +391,22 @@ class TestFactoryInputLoaders:
 
         assert parsed.requests[0].duration_seconds == 12.5
 
+    def test_generation_request_loader_parses_music_dual_delivery_mode(self):
+        batch_data = self._base_generation_request_batch()
+        batch_data["requests"][0]["musicDeliveryMode"] = "dual_vocal_instrumental"
+
+        parsed = parse_generation_request_batch(batch_data, source="dual_delivery_request")
+
+        assert parsed.requests[0].music_delivery_mode == "dual_vocal_instrumental"
+
+    def test_generation_request_loader_rejects_music_delivery_mode_for_non_music(self):
+        batch_data = self._base_generation_request_batch()
+        batch_data["requests"][0]["type"] = "voice"
+        batch_data["requests"][0]["musicDeliveryMode"] = "dual_vocal_instrumental"
+
+        with pytest.raises(FactoryInputError, match="only valid for type 'music'"):
+            parse_generation_request_batch(batch_data, source="invalid_dual_delivery_request")
+
     def test_generation_request_loader_rejects_duplicates(self):
         invalid_batch = self._base_generation_request_batch()
         duplicate_request = json.loads(json.dumps(invalid_batch["requests"][0]))
@@ -960,6 +976,54 @@ class TestRequestBatchPipeline:
         for record in manifest.music:
             assert Path(record["file"]).exists(), f"Missing output: {record['file']}"
             assert record["seed"] > 0
+
+    def test_execute_music_batch_dual_path_writes_paired_outputs(self, tmp_path, monkeypatch):
+        """musicDeliveryMode=dual_vocal_instrumental should write instrumental + vocal-ready outputs."""
+        from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
+        from audio_engine.integration.factory_inputs import GenerationRequestBatch
+        from audio_engine.ai.music_gen import MusicGen
+
+        full_batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        wav_request = next(request for request in full_batch.requests if request.output.format == "wav")
+        dual_request = replace(wav_request, music_delivery_mode="dual_vocal_instrumental")
+        batch = GenerationRequestBatch(
+            request_batch_version=full_batch.request_batch_version,
+            project=full_batch.project,
+            scope="dual-path-tests",
+            requests=[dual_request],
+        )
+
+        def _patched_music_generate(self, prompt, duration=30.0, loopable=False):
+            return np.zeros((2048, 2), dtype=np.float32)
+
+        monkeypatch.setattr(MusicGen, "generate", _patched_music_generate)
+
+        pipeline = RequestBatchPipeline(skip_existing=False)
+        manifest = pipeline.execute(batch, tmp_path)
+
+        assert not manifest.errors
+        assert len(manifest.music) == 2
+        produced_ids = {record["request_id"] for record in manifest.music}
+        assert f"{dual_request.request_id}__instrumental" in produced_ids
+        assert f"{dual_request.request_id}__vocal_ready" in produced_ids
+
+        instrumental = next(record for record in manifest.music if record["request_id"].endswith("__instrumental"))
+        vocal_ready = next(record for record in manifest.music if record["request_id"].endswith("__vocal_ready"))
+
+        instrument_prov = Path(instrumental["file"]).with_name(Path(instrumental["file"]).stem + ".provenance.json")
+        vocal_prov = Path(vocal_ready["file"]).with_name(Path(vocal_ready["file"]).stem + ".provenance.json")
+        assert instrument_prov.exists()
+        assert vocal_prov.exists()
+
+        instrument_data = json.loads(instrument_prov.read_text(encoding="utf-8"))
+        vocal_data = json.loads(vocal_prov.read_text(encoding="utf-8"))
+        assert instrument_data["dualPathRole"] == "instrumental"
+        assert vocal_data["dualPathRole"] == "vocal_ready"
+        assert instrument_data["dualPathGroupId"] == vocal_data["dualPathGroupId"]
+        assert instrument_data["pairedOutputPath"] == vocal_ready["file"]
+        assert vocal_data["pairedOutputPath"] == instrumental["file"]
 
     def test_execute_applies_duration_overrides(self, tmp_path, monkeypatch):
         """duration_overrides should override default generation durations per request."""
@@ -1810,6 +1874,64 @@ class TestRequestBatchExecution:
         assert not [record for record in result.records if record.status == "error"]
         assert observed_music_durations == [0.66]
         assert observed_sfx_durations == [0.22]
+
+    def test_execute_request_batch_dual_path_produces_linked_records(self, tmp_path, monkeypatch):
+        """Legacy request-file execution should emit paired records + linked provenance for dual-path music."""
+        from audio_engine.ai.music_gen import MusicGen
+        from audio_engine.integration.factory_inputs import GenerationRequestBatch
+
+        music_batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        wav_request = next(request for request in music_batch.requests if request.output.format == "wav")
+        dual_request = replace(
+            wav_request,
+            duration_seconds=0.5,
+            music_delivery_mode="dual_vocal_instrumental",
+        )
+        batch = GenerationRequestBatch(
+            request_batch_version=music_batch.request_batch_version,
+            project=music_batch.project,
+            scope="legacy-dual-path-tests",
+            requests=[dual_request],
+        )
+
+        def _patched_generate_to_file(
+            self,
+            *,
+            prompt,
+            output_path,
+            duration=30.0,
+            loopable=False,
+            fmt="wav",
+        ):
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_bytes(b"dual-path")
+            return output_path.with_suffix(f".{fmt}")
+
+        monkeypatch.setattr(MusicGen, "generate_to_file", _patched_generate_to_file)
+
+        pipeline = AssetPipeline()
+        result = pipeline.execute_request_batch(
+            batch,
+            tmp_path,
+            default_music_duration=0.5,
+            write_provenance=True,
+        )
+
+        assert len(result.records) == 2
+        assert all(record.status == "ok" for record in result.records)
+        instrumental = next(record for record in result.records if record.request_id.endswith("__instrumental"))
+        vocal_ready = next(record for record in result.records if record.request_id.endswith("__vocal_ready"))
+
+        instrument_data = json.loads(Path(instrumental.provenance_path).read_text(encoding="utf-8"))
+        vocal_data = json.loads(Path(vocal_ready.provenance_path).read_text(encoding="utf-8"))
+        assert instrument_data["dualPathRole"] == "instrumental"
+        assert vocal_data["dualPathRole"] == "vocal_ready"
+        assert instrument_data["dualPathGroupId"] == vocal_data["dualPathGroupId"]
+        assert instrument_data["pairedOutputPath"] == vocal_ready.output_path
+        assert vocal_data["pairedOutputPath"] == instrumental.output_path
 
     def test_skip_existing_files(self, tmp_path):
         """force=False should skip files that already exist."""

@@ -91,6 +91,9 @@ __all__ = [
 ]
 
 _SUPPORTED_REQUEST_FORMATS = frozenset({"wav", "ogg"})
+_DUAL_PATH_MUSIC_MODE = "dual_vocal_instrumental"
+_DUAL_PATH_INSTRUMENTAL_SUFFIX = "__instrumental"
+_DUAL_PATH_VOCAL_READY_SUFFIX = "__vocal_ready"
 
 
 # ---------------------------------------------------------------------------
@@ -263,7 +266,14 @@ class RequestBatchResult:
 # Provenance sidecar helper
 # ---------------------------------------------------------------------------
 
-def _write_provenance_sidecar(request: "GenerationRequest", output_path: Path) -> Path:
+def _write_provenance_sidecar(
+    request: "GenerationRequest",
+    output_path: Path,
+    *,
+    dual_path_group_id: str | None = None,
+    dual_path_role: str | None = None,
+    paired_output_path: str | None = None,
+) -> Path:
     """Write a ``.provenance.json`` sidecar file next to *output_path*.
 
     Returns the path of the written sidecar file.
@@ -292,6 +302,12 @@ def _write_provenance_sidecar(request: "GenerationRequest", output_path: Path) -
             variation_family, variation_index = parsed_variant
             provenance["variationFamily"] = variation_family
             provenance["variationIndex"] = variation_index
+    if dual_path_group_id is not None:
+        provenance["dualPathGroupId"] = dual_path_group_id
+    if dual_path_role is not None:
+        provenance["dualPathRole"] = dual_path_role
+    if paired_output_path is not None:
+        provenance["pairedOutputPath"] = paired_output_path
     provenance_path = output_path.with_name(output_path.stem + ".provenance.json")
     provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
     return provenance_path
@@ -947,6 +963,107 @@ class AssetPipeline:
                 )
                 exported_path = output_path.with_suffix(f".{request.output.format}")
 
+                if request.type == "music" and request.music_delivery_mode == _DUAL_PATH_MUSIC_MODE:
+                    instrumental_output = self._dual_path_output_path(output_path, role="instrumental")
+                    vocal_ready_output = self._dual_path_output_path(output_path, role="vocal_ready")
+                    instrumental_exported = instrumental_output.with_suffix(f".{request.output.format}")
+                    vocal_ready_exported = vocal_ready_output.with_suffix(f".{request.output.format}")
+                    dual_group = f"{request.request_id}::dual-path"
+
+                    if not force and instrumental_exported.exists() and vocal_ready_exported.exists():
+                        self.progress_callback(
+                            f"  [skip] {request.request_id} dual-path → "
+                            f"{instrumental_exported.name}, {vocal_ready_exported.name}"
+                        )
+                        result.records.extend(
+                            [
+                                RequestBatchRecord(
+                                    request_id=f"{request.request_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                                    asset_id=f"{request.asset_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                                    type=request.type,
+                                    seed=request.seed,
+                                    output_path=str(instrumental_exported),
+                                    status="skipped",
+                                ),
+                                RequestBatchRecord(
+                                    request_id=f"{request.request_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                                    asset_id=f"{request.asset_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                                    type=request.type,
+                                    seed=request.seed,
+                                    output_path=str(vocal_ready_exported),
+                                    status="skipped",
+                                ),
+                            ]
+                        )
+                        continue
+
+                    instrumental_exported = self._execute_music_request(
+                        request,
+                        instrumental_output,
+                        self._resolve_request_duration(
+                            request=request,
+                            fallback_duration=default_music_duration,
+                        ),
+                        mastering_profile="game",
+                    )
+                    vocal_ready_exported = self._execute_music_request(
+                        request,
+                        vocal_ready_output,
+                        self._resolve_request_duration(
+                            request=request,
+                            fallback_duration=default_music_duration,
+                        ),
+                        mastering_profile="vocal_mix",
+                    )
+
+                    instrumental_prov_path: str | None = None
+                    vocal_ready_prov_path: str | None = None
+                    if write_provenance:
+                        instrumental_sidecar = _write_provenance_sidecar(
+                            request,
+                            instrumental_exported,
+                            dual_path_group_id=dual_group,
+                            dual_path_role="instrumental",
+                            paired_output_path=str(vocal_ready_exported),
+                        )
+                        vocal_ready_sidecar = _write_provenance_sidecar(
+                            request,
+                            vocal_ready_exported,
+                            dual_path_group_id=dual_group,
+                            dual_path_role="vocal_ready",
+                            paired_output_path=str(instrumental_exported),
+                        )
+                        instrumental_prov_path = str(instrumental_sidecar)
+                        vocal_ready_prov_path = str(vocal_ready_sidecar)
+
+                    result.records.extend(
+                        [
+                            RequestBatchRecord(
+                                request_id=f"{request.request_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                                asset_id=f"{request.asset_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                                type=request.type,
+                                seed=request.seed,
+                                output_path=str(instrumental_exported),
+                                status="ok",
+                                provenance_path=instrumental_prov_path,
+                            ),
+                            RequestBatchRecord(
+                                request_id=f"{request.request_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                                asset_id=f"{request.asset_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                                type=request.type,
+                                seed=request.seed,
+                                output_path=str(vocal_ready_exported),
+                                status="ok",
+                                provenance_path=vocal_ready_prov_path,
+                            ),
+                        ]
+                    )
+                    self.progress_callback(
+                        f"  [ok]   {request.request_id} dual-path → "
+                        f"{instrumental_exported.name}, {vocal_ready_exported.name}"
+                    )
+                    continue
+
                 if not force and exported_path.exists():
                     self.progress_callback(f"  [skip] {request.request_id} → {exported_path}")
                     result.records.append(
@@ -1066,6 +1183,8 @@ class AssetPipeline:
         request: "GenerationRequest",
         output_path: Path,
         default_duration: float,
+        *,
+        mastering_profile: str = "game",
     ) -> Path:
         """Generate and export one music request using per-request seed."""
         from audio_engine.ai.music_gen import MusicGen
@@ -1075,6 +1194,7 @@ class AssetPipeline:
             sample_rate=request.output.sample_rate,
             backend=request.backend,
             seed=request.seed,
+            mastering_profile=mastering_profile,
         )
         return gen.generate_to_file(
             prompt=request.prompt,
@@ -1083,6 +1203,16 @@ class AssetPipeline:
             loopable=request.qa.loop_required,
             fmt=request.output.format,
         )
+
+    @staticmethod
+    def _dual_path_output_path(output_path: Path, *, role: str) -> Path:
+        if role == "instrumental":
+            suffix = _DUAL_PATH_INSTRUMENTAL_SUFFIX
+        elif role == "vocal_ready":
+            suffix = _DUAL_PATH_VOCAL_READY_SUFFIX
+        else:  # pragma: no cover - defensive branch
+            raise ValueError(f"unsupported dual-path role: {role!r}")
+        return output_path.with_name(output_path.stem + suffix)
 
     def _execute_sfx_request(
         self,
@@ -1348,6 +1478,93 @@ class RequestBatchPipeline:
             target_name = request.request_id + target_ext
             output_path = type_dir / target_name
 
+            if request.type == "music" and request.music_delivery_mode == _DUAL_PATH_MUSIC_MODE:
+                instrumental_name = request.request_id + _DUAL_PATH_INSTRUMENTAL_SUFFIX + target_ext
+                vocal_ready_name = request.request_id + _DUAL_PATH_VOCAL_READY_SUFFIX + target_ext
+                instrumental_path = type_dir / instrumental_name
+                vocal_ready_path = type_dir / vocal_ready_name
+                dual_group = f"{request.request_id}::dual-path"
+
+                if self.skip_existing and instrumental_path.exists() and vocal_ready_path.exists():
+                    self.progress_callback(
+                        f"  [skip] {request.request_id} dual-path → "
+                        f"{instrumental_path}, {vocal_ready_path}"
+                    )
+                    self._append_record(
+                        manifest,
+                        request,
+                        instrumental_path,
+                        "skipped",
+                        record_request_id=f"{request.request_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                        record_asset_id=f"{request.asset_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                    )
+                    self._append_record(
+                        manifest,
+                        request,
+                        vocal_ready_path,
+                        "skipped",
+                        record_request_id=f"{request.request_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                        record_asset_id=f"{request.asset_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                    )
+                    continue
+
+                try:
+                    duration_override = self._resolve_duration_override(
+                        request=request,
+                        duration_overrides=duration_overrides,
+                    )
+                    actual_instrumental_path = self._generate_one(
+                        request,
+                        instrumental_path,
+                        duration_override=duration_override,
+                        mastering_profile="game",
+                    )
+                    actual_vocal_ready_path = self._generate_one(
+                        request,
+                        vocal_ready_path,
+                        duration_override=duration_override,
+                        mastering_profile="vocal_mix",
+                    )
+                    self._write_provenance(
+                        request,
+                        actual_instrumental_path,
+                        dual_path_group_id=dual_group,
+                        dual_path_role="instrumental",
+                        paired_output_path=str(actual_vocal_ready_path),
+                    )
+                    self._write_provenance(
+                        request,
+                        actual_vocal_ready_path,
+                        dual_path_group_id=dual_group,
+                        dual_path_role="vocal_ready",
+                        paired_output_path=str(actual_instrumental_path),
+                    )
+                    self.progress_callback(
+                        f"  [ok]   {request.request_id} dual-path → "
+                        f"{actual_instrumental_path}, {actual_vocal_ready_path}"
+                    )
+                    self._append_record(
+                        manifest,
+                        request,
+                        actual_instrumental_path,
+                        "ok",
+                        record_request_id=f"{request.request_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                        record_asset_id=f"{request.asset_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                    )
+                    self._append_record(
+                        manifest,
+                        request,
+                        actual_vocal_ready_path,
+                        "ok",
+                        record_request_id=f"{request.request_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                        record_asset_id=f"{request.asset_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    msg = f"{request.request_id}: {exc}"
+                    manifest.errors.append(msg)
+                    self.progress_callback(f"  [err]  {msg}")
+                continue
+
             if self.skip_existing and output_path.exists():
                 self.progress_callback(f"  [skip] {request.request_id} → {output_path}")
                 self._append_record(manifest, request, output_path, "skipped")
@@ -1392,6 +1609,7 @@ class RequestBatchPipeline:
         output_path: Path,
         *,
         duration_override: float | None = None,
+        mastering_profile: str = "game",
     ) -> Path:
         """Generate audio for one request and write it to *output_path*.
 
@@ -1410,7 +1628,11 @@ class RequestBatchPipeline:
         """
         from audio_engine.export.audio_exporter import AudioExporter
 
-        audio = self._generate_audio(request, duration_override=duration_override)
+        audio = self._generate_audio(
+            request,
+            duration_override=duration_override,
+            mastering_profile=mastering_profile,
+        )
         audio = _convert_channels(audio, request.output.channels)
 
         exporter = AudioExporter(sample_rate=request.output.sample_rate, bit_depth=16)
@@ -1428,6 +1650,7 @@ class RequestBatchPipeline:
         request: GenerationRequest,
         *,
         duration_override: float | None = None,
+        mastering_profile: str = "game",
     ) -> np.ndarray:
         """Generate raw audio for *request* using the appropriate generator."""
         sr = request.output.sample_rate
@@ -1435,7 +1658,12 @@ class RequestBatchPipeline:
         if request.type == "music":
             from audio_engine.ai.music_gen import MusicGen
 
-            gen = MusicGen(sample_rate=sr, backend=request.backend, seed=request.seed)
+            gen = MusicGen(
+                sample_rate=sr,
+                backend=request.backend,
+                seed=request.seed,
+                mastering_profile=mastering_profile,
+            )
             return gen.generate(
                 prompt=request.prompt,
                 duration=duration_override if duration_override is not None else 30.0,
@@ -1487,11 +1715,14 @@ class RequestBatchPipeline:
         request: GenerationRequest,
         path: Path,
         status: str,
+        *,
+        record_request_id: str | None = None,
+        record_asset_id: str | None = None,
     ) -> None:
         """Append a result record to the appropriate manifest list."""
         record: dict = {
-            "request_id": request.request_id,
-            "asset_id": request.asset_id,
+            "request_id": record_request_id or request.request_id,
+            "asset_id": record_asset_id or request.asset_id,
             "type": request.type,
             "seed": request.seed,
             "file": str(path),
@@ -1508,9 +1739,19 @@ class RequestBatchPipeline:
         self,
         request: GenerationRequest,
         output_path: Path,
+        *,
+        dual_path_group_id: str | None = None,
+        dual_path_role: str | None = None,
+        paired_output_path: str | None = None,
     ) -> None:
         """Write a machine-readable provenance sidecar file next to *output_path*."""
-        _write_provenance_sidecar(request, output_path)
+        _write_provenance_sidecar(
+            request,
+            output_path,
+            dual_path_group_id=dual_path_group_id,
+            dual_path_role=dual_path_role,
+            paired_output_path=paired_output_path,
+        )
 
 
 # ---------------------------------------------------------------------------
