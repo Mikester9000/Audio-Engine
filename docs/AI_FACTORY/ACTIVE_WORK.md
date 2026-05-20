@@ -67,15 +67,14 @@ The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-
 - [x] Execute SESSION-031 — deterministic remaster-batch pipeline (`RemasterBatchPipeline`, `audio-engine remaster-batch`)
 - [x] Execute SESSION-046 — expand music testing fixture style coverage (`generation_requests.music.v1.json`, `tests/test_integration.py`)
 - [x] Execute SESSION-047 — synchronize continuity/session-control docs after SESSION-046
+- [x] Execute SESSION-029b — expand studio creation tooling with presets/profile loading/batch shortcut/retry UX
 
 ## Recommended next PRs
 
-1. **Execute SESSION-032**
-   - Add license compliance CI gate with machine-readable report output.
-2. **Execute SESSION-029b**
-   - Studio creation tooling UX (preset management + faster iterative generation).
-3. **Execute SESSION-038**
+1. **Execute SESSION-038**
    - Dual-path vocal/instrumental production workflow stabilization.
+2. Continue iterative studio quality refinement
+   - Use the new preset + batch + retry tooling to accelerate deterministic music/SFX iteration loops.
 
 ## Do not deprioritize
 

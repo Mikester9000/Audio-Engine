@@ -9,13 +9,14 @@
 - mastering through `OfflineBounce`
 - CLI access through `generate` and `generate-music`
 - backend selection/discovery surfaces through `generate-music --backend` and `list-backends`
+- studio-side music mastering-profile selection plus preset save/load and one-click batch generation in `audio_engine/ui/studio.py`
 - existing integration mapping for multiple game states in `audio_engine/integration/game_state_map.py`
 
 ## What is missing
 
 - richer style-preset registry beyond current built-in styles
 - verified non-procedural backend quality benchmarks using real downloaded model weights
-- studio-side reusable profile/preset management for creation workflows
+- full dual-path vocal/instrumental production export stabilization (SESSION-038 planned)
 
 ## Backend evaluation notes (SESSION-011 + optional neural scaffolding)
 

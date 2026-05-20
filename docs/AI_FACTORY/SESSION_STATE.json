@@ -2,10 +2,10 @@
   "version": "1.14.0",
   "lastUpdated": "2026-05-20",
   "currentSession": {
-    "id": "SESSION-029b",
-    "title": "Expand creation tooling / studio workflow",
+    "id": "SESSION-038",
+    "title": "Stabilize dual-path vocal and instrumental workflow",
     "status": "planned",
-    "taskType": "cli + ui"
+    "taskType": "pipeline + voice"
   },
   "completedSessions": [
     {
@@ -240,6 +240,11 @@
     },
     {
       "id": "SESSION-032",
+      "status": "completed",
+      "completedDate": "2026-05-20"
+    },
+    {
+      "id": "SESSION-029b",
       "status": "completed",
       "completedDate": "2026-05-20"
     }

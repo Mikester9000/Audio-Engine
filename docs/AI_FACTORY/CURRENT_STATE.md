@@ -4,7 +4,7 @@
 
 ## Current snapshot
 
-The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice plus a broader 21-piece music style/mood/environment testing set (driving through grand opera), and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, review logs now have executable writer paths integrated with approval/export handoff and request-batch result JSON ingestion, and both the newer request-batch pipeline and the backward-compatible legacy request-file path now support explicit per-request duration control for music/SFX. Procedural generation quality is now substantially upgraded with structured phrase planning, motif-bank reuse/variation, cadence-aware sectioning, 8-layer arrangement/voice management, distinct per-category SFX recipes, and richer deterministic voice synthesis. Windows one-click bootstrap files now exist (`setup.bat`, `run.bat`) with an idempotent model downloader (`tools/download_models.py`) and optional local-files-only neural backend adapters under `audio_engine/ai/backends/`. Backend preflight verification (`audio-engine verify-backends`) is now implemented. A `vocal_mix` mastering profile is now available in `OfflineBounce` and selectable via `--profile` on `generate-music`. WAV sample-folder ingestion contract, license inventory, commercial eligibility matrix, and autopilot command contracts are now documented. Deterministic sample-note scanning (`samples/orchestral`), DSP pitch-shifting, event-driven remastering (`audio-engine remaster --events-json`), and deterministic `audio-engine remaster-batch` result reporting are now implemented.
+The repository contains a working Python audio engine with tests, a manifest validation workflow, a stronger repo-memory plus session-autopilot and execution-safety layer for low-prompt AI execution, typed loader primitives for committed audio-plan and generation-request artifacts, deterministic request-batch generation with provenance sidecars, plan-driven batch orchestration, a batch QA gate, a GameRewritten export profile, an approval workflow that promotes drafts to `approved/`, and a CI QA gate workflow. Music-duration policy is clearly documented, taxonomy fixtures now cover ambience/fanfares/stingers/expanded SFX/tension/sadness/optional voice plus a broader 21-piece music style/mood/environment testing set (driving through grand opera), and backend evaluation plus repeated-SFX variation rules now have executable code paths. Category-specific SFX/ambience loudness-readability guidance and variant-family review/report templates are now documented for consistent manual QA decisions, review logs now have executable writer paths integrated with approval/export handoff and request-batch result JSON ingestion, and both the newer request-batch pipeline and the backward-compatible legacy request-file path now support explicit per-request duration control for music/SFX. Procedural generation quality is now substantially upgraded with structured phrase planning, motif-bank reuse/variation, cadence-aware sectioning, 8-layer arrangement/voice management, distinct per-category SFX recipes, and richer deterministic voice synthesis. Studio workflow tooling is now expanded with preset save/load JSON controls, in-studio mastering-profile selection, one-click batch generation, and retry-last-error UX. Windows one-click bootstrap files now exist (`setup.bat`, `run.bat`) with an idempotent model downloader (`tools/download_models.py`) and optional local-files-only neural backend adapters under `audio_engine/ai/backends/`. Backend preflight verification (`audio-engine verify-backends`) is now implemented. A `vocal_mix` mastering profile is now available in `OfflineBounce` and selectable via `--profile` on `generate-music`. WAV sample-folder ingestion contract, license inventory, commercial eligibility matrix, and autopilot command contracts are now documented. Deterministic sample-note scanning (`samples/orchestral`), DSP pitch-shifting, event-driven remastering (`audio-engine remaster --events-json`), and deterministic `audio-engine remaster-batch` result reporting are now implemented.
 
 ## What is implemented today
 
@@ -19,6 +19,7 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Procedural SFX generation (distinct recipe families) | Implemented | `audio_engine/ai/sfx_gen.py`, `audio_engine/ai/sfx_synth.py` |
 | Local voice synthesis (phoneme-aware voiced/unvoiced + prosody) | Implemented | `audio_engine/ai/voice_gen.py`, `audio_engine/ai/voice_synth.py` |
 | Local Tkinter studio UI (`audio-engine studio`) | Implemented | `audio_engine/ui/studio.py`, `audio_engine/cli.py` |
+| Studio creation-tooling preset/profile/batch/retry workflow | Implemented | `audio_engine/ui/studio.py`, `tests/test_studio_ui.py` |
 | DSP/mastering/QA | Implemented | `audio_engine/dsp/*`, `audio_engine/render/*`, `audio_engine/qa/*` |
 | Export to WAV / optional OGG | Implemented | `audio_engine/export/audio_exporter.py` |
 | Batch game asset generation | Implemented | `audio_engine/integration/asset_pipeline.py` |
@@ -61,20 +62,18 @@ The repository contains a working Python audio engine with tests, a manifest val
 
 ```bash
 python -m pip install -e ".[dev]"
+python -m pytest tests/test_studio_ui.py tests/test_procedural_overhaul.py -k studio
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
-audio-engine verify-backends --smoke --output-report /tmp/backend_preflight.json
-audio-engine generate-music --prompt "battle theme" --duration 0.5 --output /tmp/test.wav --profile vocal_mix
-audio-engine remaster --input /tmp/test.wav --samples-dir samples --output /tmp/test_remaster.wav
-audio-engine remaster-batch --input-dir /tmp/remaster_in --output-dir /tmp/remaster_out --samples-dir samples --quiet
+python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
+python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
 ```
 
 Observed result in this session:
 
-- baseline repo verification passed (full `pytest` 978 passed + asset-manifest validation)
-- `verify-backends` command exits 0 and emits valid JSON report with procedural backend marked available
-- `--profile vocal_mix` accepted and produces valid WAV output
-- `remaster` and `remaster-batch` commands complete successfully on deterministic `/tmp` smoke fixtures with machine-readable batch results
+- baseline repo verification passed (full `pytest` 1043 passed + asset-manifest validation)
+- targeted studio tests passed (3 selected tests)
+- session-control JSON files parse cleanly
 
 
 ## What is implemented today

@@ -2,23 +2,23 @@
   "version": "1.14.0",
   "lastUpdated": "2026-05-20",
   "currentSession": {
-    "id": "SESSION-029b",
-    "title": "Expand creation tooling / studio workflow",
+    "id": "SESSION-038",
+    "title": "Stabilize dual-path vocal and instrumental workflow",
     "status": "planned",
-    "taskType": "cli + ui",
-    "objective": "Add post-MVP creation tooling improvements for the local studio workflow (presets, profile loading, batch generation shortcuts, and error-recovery UX).",
+    "taskType": "pipeline + voice",
+    "objective": "Add deterministic support for paired instrumental and vocal-production-ready generation/export workflows while preserving additive compatibility.",
     "previousSessions": [
+      {
+        "id": "SESSION-029b",
+        "title": "Expand creation tooling / studio workflow",
+        "status": "completed",
+        "notes": "Added studio preset save/load, in-studio mastering profile selection, Generate All shortcut, and retry-last-error UX."
+      },
       {
         "id": "SESSION-048",
         "title": "Full Orchestral Synth",
         "status": "completed",
         "notes": "Added 8 new instruments (oboe, clarinet, french_horn, cello, harp, celesta, timpani, marimba), full_orchestral backend with per-section panning, updated 6 style defs."
-      },
-      {
-        "id": "SESSION-032",
-        "title": "Add license compliance CI gate",
-        "status": "completed",
-        "notes": "Added tools/license_policy.toml, audio_engine/compliance/, audio-engine check-licenses CLI, .github/workflows/license-compliance.yml, 21 new tests."
       }
     ],
     "readFirst": [
@@ -28,12 +28,12 @@
       "docs/AI_FACTORY/CODEBASE_MAP.md"
     ],
     "likelyModify": [
+      "audio_engine/ai/music_gen.py",
+      "audio_engine/integration/asset_pipeline.py",
       "audio_engine/cli.py",
-      "audio_engine/studio.py",
-      "tests/test_engine_cli.py",
+      "tests/test_integration.py",
       "docs/AI_FACTORY/ACTIVE_WORK.md",
       "docs/AI_FACTORY/HANDOFF.md"
     ]
   }
 }
-
