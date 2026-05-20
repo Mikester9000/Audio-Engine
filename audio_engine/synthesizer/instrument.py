@@ -630,6 +630,9 @@ def _orchestral_hit(sr: int = 44100) -> Instrument:
 # clear tonal separation from the instruments above.
 # ---------------------------------------------------------------------------
 
+_OBOE_NOISE_SEED = 37
+_CLARINET_NOISE_SEED = 41
+_HARP_NOISE_SEED = 53
 _TIMPANI_NOISE_SEED = 67
 
 
@@ -649,7 +652,10 @@ def _oboe(sr: int = 44100) -> Instrument:
         # Add weak reed buzz via high-frequency FM modulation
         mod_phase = 2.0 * np.pi * freq * 2.0 * np.arange(n, dtype=np.float64) / sr
         buzz = (0.18 * np.sin(mod_phase + 1.6 * np.sin(mod_phase * 0.5))).astype(np.float32)
-        return carrier + buzz
+        # Seeded reed-breath noise (filtered white noise simulating air through the reed)
+        breath = np.random.default_rng(_OBOE_NOISE_SEED).standard_normal(n).astype(np.float32)
+        breath = Filter(sr).band_pass(breath, 400.0, 2500.0)
+        return carrier + buzz + 0.06 * breath
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
@@ -684,7 +690,12 @@ def _clarinet(sr: int = 44100) -> Instrument:
         h3 = np.sin(3.0 * phase0).astype(np.float32) * 0.30
         h5 = np.sin(5.0 * phase0).astype(np.float32) * 0.14
         h7 = np.sin(7.0 * phase0).astype(np.float32) * 0.06
-        return h1 + h3 + h5 + h7
+        tones = h1 + h3 + h5 + h7
+        # Seeded air-column breath noise (low-amplitude, narrow-band — the clarinet "hiss")
+        n = len(h1)
+        air = np.random.default_rng(_CLARINET_NOISE_SEED).standard_normal(n).astype(np.float32)
+        air = Filter(sr).band_pass(air, 250.0, 1500.0)
+        return tones + 0.05 * air
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
@@ -794,7 +805,11 @@ def _harp(sr: int = 44100) -> Instrument:
         carrier = np.sin(2.0 * np.pi * freq * t + mod_signal).astype(np.float32)
         # Add a little string resonance via second harmonic
         second = (0.22 * np.sin(2.0 * np.pi * freq * 2.0 * t) * np.exp(-12.0 * t)).astype(np.float32)
-        return carrier + second
+        # Seeded fingernail pluck transient (bright, very fast-decaying noise burst)
+        pluck_noise = np.random.default_rng(_HARP_NOISE_SEED).standard_normal(n).astype(np.float32)
+        pluck_noise = Filter(sr).band_pass(pluck_noise, 1000.0, 8000.0)
+        pluck_noise *= np.exp(-50.0 * t).astype(np.float32)
+        return carrier + second + 0.10 * pluck_noise
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
