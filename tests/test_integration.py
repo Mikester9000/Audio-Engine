@@ -986,7 +986,9 @@ class TestRequestBatchPipeline:
         full_batch = load_generation_request_batch(
             EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
         )
-        wav_request = next(request for request in full_batch.requests if request.output.format == "wav")
+        wav_requests = [request for request in full_batch.requests if request.output.format == "wav"]
+        assert wav_requests, "No WAV-format music requests found in fixture"
+        wav_request = wav_requests[0]
         dual_request = replace(wav_request, music_delivery_mode="dual_vocal_instrumental")
         batch = GenerationRequestBatch(
             request_batch_version=full_batch.request_batch_version,
@@ -1883,7 +1885,9 @@ class TestRequestBatchExecution:
         music_batch = load_generation_request_batch(
             EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
         )
-        wav_request = next(request for request in music_batch.requests if request.output.format == "wav")
+        wav_requests = [request for request in music_batch.requests if request.output.format == "wav"]
+        assert wav_requests, "No WAV-format music requests found in fixture"
+        wav_request = wav_requests[0]
         dual_request = replace(
             wav_request,
             duration_seconds=0.5,

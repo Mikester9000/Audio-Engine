@@ -22,21 +22,21 @@ class _StatusLabel(Protocol):
 def _safe_int(value: str, fallback: int) -> int:
     try:
         return int(value.strip())
-    except Exception:
+    except (AttributeError, TypeError, ValueError):
         return fallback
 
 
 def _parse_float_field(value: object, *, field_name: str) -> float:
     try:
         return float(value)
-    except Exception as exc:
+    except (TypeError, ValueError) as exc:
         raise ValueError(f"invalid preset field '{field_name}': expected float") from exc
 
 
 def _read_studio_preset(path: Path) -> dict[str, object]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"failed to read preset JSON: {path}") from exc
     if not isinstance(data, dict):
         raise ValueError("studio preset must be a JSON object")

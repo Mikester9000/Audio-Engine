@@ -1206,12 +1206,14 @@ class AssetPipeline:
 
     @staticmethod
     def _dual_path_output_path(output_path: Path, *, role: str) -> Path:
-        if role == "instrumental":
-            suffix = _DUAL_PATH_INSTRUMENTAL_SUFFIX
-        elif role == "vocal_ready":
-            suffix = _DUAL_PATH_VOCAL_READY_SUFFIX
-        else:  # pragma: no cover - defensive branch
-            raise ValueError(f"unsupported dual-path role: {role!r}")
+        suffix_map = {
+            "instrumental": _DUAL_PATH_INSTRUMENTAL_SUFFIX,
+            "vocal_ready": _DUAL_PATH_VOCAL_READY_SUFFIX,
+        }
+        try:
+            suffix = suffix_map[role]
+        except KeyError as exc:  # pragma: no cover - defensive branch for future call sites
+            raise ValueError(f"unsupported dual-path role: {role!r}") from exc
         return output_path.with_name(output_path.stem + suffix)
 
     def _execute_sfx_request(
