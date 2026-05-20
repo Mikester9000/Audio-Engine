@@ -246,6 +246,10 @@ class BackendRegistry:
     ``"synth_orchestral"``
         Clean synthesised orchestra — PS2-quality mock-up without
         hardware degradation.  Natural remaster target for sample blending.
+    ``"full_orchestral"``
+        Rich multi-section orchestral synth — uses oboe, clarinet, french_horn,
+        cello, harp, celesta, timpani, and marimba with per-section stereo
+        panning and OST mastering for the most cinematic local-only output.
     ``"sample"``
         Sample-augmented backend: blends real `.wav` files from a
         ``samples/`` directory over synth_orchestral synthesis.
@@ -274,6 +278,13 @@ class BackendRegistry:
             try:
                 from audio_engine.ai.synth_orchestral_backend import SynthOrchestralBackend
                 cls._registry["synth_orchestral"] = SynthOrchestralBackend
+            except ImportError:
+                pass
+
+        if "full_orchestral" not in cls._registry:
+            try:
+                from audio_engine.ai.full_orchestral_backend import FullOrchestralBackend
+                cls._registry["full_orchestral"] = FullOrchestralBackend
             except ImportError:
                 pass
 

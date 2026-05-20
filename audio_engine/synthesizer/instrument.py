@@ -622,3 +622,316 @@ def _orchestral_hit(sr: int = 44100) -> Instrument:
         volume=0.85,
         sample_rate=sr,
     )
+
+
+# ---------------------------------------------------------------------------
+# Full-orchestra section instruments — distinct timbres for rich multi-section
+# orchestral arrangements.  Each uses a unique synthesis technique to ensure
+# clear tonal separation from the instruments above.
+# ---------------------------------------------------------------------------
+
+_OBOE_NOISE_SEED = 37
+_CLARINET_NOISE_SEED = 41
+_HARP_NOISE_SEED = 53
+_TIMPANI_NOISE_SEED = 67
+
+
+@InstrumentLibrary.register("oboe")
+def _oboe(sr: int = 44100) -> Instrument:
+    """Nasal, double-reed woodwind — the characteristic voice of the oboe.
+
+    Uses FM synthesis with a sawtooth carrier and narrow bandpass filtering
+    to create the oboe's distinctive "nasal" resonance peak around 1 kHz.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        # Slight vibrato on the carrier
+        phase = _vibrato_phase(freq, dur, sr, rate_hz=5.5, depth_semitones=0.25)
+        carrier = scipy_sawtooth(phase).astype(np.float32)
+        # Add weak reed buzz via high-frequency FM modulation
+        mod_phase = 2.0 * np.pi * freq * 2.0 * np.arange(n, dtype=np.float64) / sr
+        buzz = (0.18 * np.sin(mod_phase + 1.6 * np.sin(mod_phase * 0.5))).astype(np.float32)
+        # Seeded reed-breath noise (filtered white noise simulating air through the reed)
+        breath = np.random.default_rng(_OBOE_NOISE_SEED).standard_normal(n).astype(np.float32)
+        breath = Filter(sr).band_pass(breath, 400.0, 2500.0)
+        return carrier + buzz + 0.06 * breath
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        # Oboe resonance peak ~1–1.5 kHz, cut harsh highs
+        sig = flt.band_pass(sig, 600.0, 3500.0)
+        sig = fx.reverb(sig, room_size=0.32, wet=0.14)
+        return sig
+
+    return Instrument(
+        name="oboe",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.04, decay=0.06, sustain=0.88, release=0.22, sample_rate=sr),
+        post_process=post,
+        volume=0.68,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("clarinet")
+def _clarinet(sr: int = 44100) -> Instrument:
+    """Hollow, liquid woodwind — the characteristic sound of the clarinet.
+
+    Clarinets have a strong odd-harmonic series (like a stopped pipe), which
+    gives them their distinctive hollow quality.  Modelled using additive
+    synthesis with only odd harmonics.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        # Odd-harmonic additive series: 1, 3, 5, 7 with decreasing amplitude
+        phase0 = _vibrato_phase(freq, dur, sr, rate_hz=4.8, depth_semitones=0.2)
+        h1 = np.sin(phase0).astype(np.float32) * 0.70
+        h3 = np.sin(3.0 * phase0).astype(np.float32) * 0.30
+        h5 = np.sin(5.0 * phase0).astype(np.float32) * 0.14
+        h7 = np.sin(7.0 * phase0).astype(np.float32) * 0.06
+        tones = h1 + h3 + h5 + h7
+        # Seeded air-column breath noise (low-amplitude, narrow-band — the clarinet "hiss")
+        n = len(h1)
+        air = np.random.default_rng(_CLARINET_NOISE_SEED).standard_normal(n).astype(np.float32)
+        air = Filter(sr).band_pass(air, 250.0, 1500.0)
+        return tones + 0.05 * air
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.low_pass(sig, 4500.0)
+        sig = flt.high_pass(sig, 250.0)
+        sig = fx.reverb(sig, room_size=0.28, wet=0.12)
+        return sig
+
+    return Instrument(
+        name="clarinet",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.06, decay=0.05, sustain=0.90, release=0.20, sample_rate=sr),
+        post_process=post,
+        volume=0.72,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("french_horn")
+def _french_horn(sr: int = 44100) -> Instrument:
+    """Warm, mellow brass — the lyrical voice of the French horn.
+
+    Distinct from the brighter ``brass`` instrument: softer onset, narrow
+    harmonic series with emphasis on the fundamental and a gentle mellow
+    character.  Modelled using additive synthesis with a smooth onset.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        # Fewer harmonics than trumpet, gentle amplitude envelope per harmonic
+        sig = osc.additive(
+            freq, dur,
+            [(1, 1.0), (2, 0.58), (3, 0.34), (4, 0.14), (5, 0.06)],
+        )
+        # Soft tanh saturation for a slightly warm, organic character
+        return np.tanh(sig * 1.2).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.low_pass(sig, 3500.0)
+        sig = fx.reverb(sig, room_size=0.60, wet=0.24)
+        return sig
+
+    return Instrument(
+        name="french_horn",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.08, decay=0.18, sustain=0.74, release=0.36, sample_rate=sr),
+        post_process=post,
+        volume=0.78,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("cello")
+def _cello(sr: int = 44100) -> Instrument:
+    """Deep, resonant bowed string — the cello.
+
+    Similar synthesis approach to ``strings`` but tuned to the cello's
+    lower register: more fundamental weight, slower bow attack, and a
+    richer low-mid resonance.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        phase_c = _vibrato_phase(freq, dur, sr, rate_hz=4.5, depth_semitones=0.55)
+        phase_u = _vibrato_phase(freq * _cents_to_ratio(4.0), dur, sr, rate_hz=4.6, depth_semitones=0.5)
+        phase_l = _vibrato_phase(freq * _cents_to_ratio(-4.0), dur, sr, rate_hz=4.4, depth_semitones=0.5)
+        # Heavier fundamental than the strings section, less of the upper detune
+        body = (
+            0.55 * scipy_sawtooth(phase_c)
+            + 0.25 * scipy_sawtooth(phase_u)
+            + 0.20 * scipy_sawtooth(phase_l)
+        )
+        noise = np.random.default_rng(_STRINGS_BOW_NOISE_SEED + 3).standard_normal(len(body)).astype(np.float32)
+        noise = Filter(sr).band_pass(noise, 100.0, 1200.0)
+        return body.astype(np.float32) + 0.08 * noise
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.low_pass(sig, 4000.0)
+        sig = flt.high_pass(sig, 55.0)
+        sig = fx.reverb(sig, room_size=0.68, wet=0.22)
+        return fx.chorus(sig, rate=0.6, depth=0.003, wet=0.20)
+
+    return Instrument(
+        name="cello",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.28, decay=0.30, sustain=0.80, release=0.90, sample_rate=sr),
+        post_process=post,
+        volume=0.80,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("harp")
+def _harp(sr: int = 44100) -> Instrument:
+    """Plucked, bright-decaying harp — the ethereal orchestral harp.
+
+    Uses FM synthesis with a fast exponential decay to produce the harp's
+    characteristic bright pluck that blossoms into a warm resonance.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        # FM pluck: carrier + modulator that decays quickly
+        mod_decay = np.exp(-18.0 * t)
+        mod_signal = 2.5 * mod_decay * np.sin(2.0 * np.pi * freq * 2.0 * t)
+        carrier = np.sin(2.0 * np.pi * freq * t + mod_signal).astype(np.float32)
+        # Add a little string resonance via second harmonic
+        second = (0.22 * np.sin(2.0 * np.pi * freq * 2.0 * t) * np.exp(-12.0 * t)).astype(np.float32)
+        # Seeded fingernail pluck transient (bright, very fast-decaying noise burst)
+        pluck_noise = np.random.default_rng(_HARP_NOISE_SEED).standard_normal(n).astype(np.float32)
+        pluck_noise = Filter(sr).band_pass(pluck_noise, 1000.0, 8000.0)
+        pluck_noise *= np.exp(-50.0 * t).astype(np.float32)
+        return carrier + second + 0.10 * pluck_noise
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 80.0)
+        sig = flt.low_pass(sig, 8000.0)
+        sig = fx.reverb(sig, room_size=0.55, wet=0.30)
+        return sig
+
+    return Instrument(
+        name="harp",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.001, decay=0.35, sustain=0.0, release=0.45, sample_rate=sr),
+        post_process=post,
+        volume=0.72,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("celesta")
+def _celesta(sr: int = 44100) -> Instrument:
+    """Sparkly, bell-like keyboard — the celesta.
+
+    Pure-sine additive synthesis with slightly inharmonic upper partials
+    (like a real celesta's metal bars) and fast exponential decay.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        # Slightly inharmonic partials — celesta bar modes are ~2.76, 5.4, 8.9...
+        fundamental = np.sin(2.0 * np.pi * freq * t) * np.exp(-5.0 * t)
+        h2 = 0.38 * np.sin(2.0 * np.pi * freq * 2.76 * t) * np.exp(-8.0 * t)
+        h3 = 0.14 * np.sin(2.0 * np.pi * freq * 5.40 * t) * np.exp(-14.0 * t)
+        return (fundamental + h2 + h3).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 200.0)
+        sig = fx.reverb(sig, room_size=0.70, wet=0.38)
+        return sig
+
+    return Instrument(
+        name="celesta",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.001, decay=0.22, sustain=0.0, release=0.30, sample_rate=sr),
+        post_process=post,
+        volume=0.65,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("timpani")
+def _timpani(sr: int = 44100) -> Instrument:
+    """Tonal orchestral kettledrum — the timpani.
+
+    Combines an inharmonic membrane resonance (pitch sweep on attack)
+    with a tunable fundamental tone to produce the timpani's characteristic
+    boom.  The fundamental is clearly pitched unlike a regular bass drum.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        # Pitch glide: starts ~30% above target and settles in ~80 ms
+        freq_envelope = freq * (1.0 + 0.30 * np.exp(-25.0 * t))
+        phase = 2.0 * np.pi * np.cumsum(freq_envelope / sr)
+        fundamental = np.sin(phase).astype(np.float32) * np.exp(-4.5 * t).astype(np.float32)
+        # Inharmonic partials of a circular membrane: ~1.59, 2.14, 2.65 times fundamental
+        p2 = (0.35 * np.sin(1.59 * phase) * np.exp(-7.0 * t)).astype(np.float32)
+        p3 = (0.18 * np.sin(2.14 * phase) * np.exp(-10.0 * t)).astype(np.float32)
+        # Beater impact noise burst
+        noise = np.random.default_rng(_TIMPANI_NOISE_SEED).standard_normal(n).astype(np.float32)
+        transient = Filter(sr).band_pass(noise, 200.0, 5000.0) * np.exp(-80.0 * t).astype(np.float32) * 0.4
+        return fundamental + p2 + p3 + transient
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 40.0)
+        sig = flt.low_pass(sig, 5000.0)
+        sig = fx.compress(sig, threshold=0.5, ratio=4.0, makeup_gain=1.1)
+        return fx.reverb(sig, room_size=0.55, wet=0.20)
+
+    return Instrument(
+        name="timpani",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.002, decay=0.50, sustain=0.0, release=0.60, sample_rate=sr),
+        post_process=post,
+        volume=0.90,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("marimba")
+def _marimba(sr: int = 44100) -> Instrument:
+    """Warm wooden mallet percussion — the marimba.
+
+    Sine-heavy additive synthesis with a wooden attack transient and fast
+    decay, producing the characteristic warm-but-woody marimba tone.
+    """
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        # Marimba bar: fundamental + ~4th harmonic (slightly inharmonic)
+        fundamental = np.sin(2.0 * np.pi * freq * t) * np.exp(-6.5 * t)
+        fourth = 0.28 * np.sin(2.0 * np.pi * freq * 3.98 * t) * np.exp(-14.0 * t)
+        # Brief mallet click transient
+        click_len = max(1, int(0.004 * sr))
+        click = np.zeros(n, dtype=np.float64)
+        click[:click_len] = 0.5 * np.exp(-np.linspace(0.0, 8.0, click_len))
+        return (fundamental + fourth + click).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.band_pass(sig, 150.0, 6000.0)
+        return fx.reverb(sig, room_size=0.35, wet=0.16)
+
+    return Instrument(
+        name="marimba",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.001, decay=0.30, sustain=0.0, release=0.25, sample_rate=sr),
+        post_process=post,
+        volume=0.76,
+        sample_rate=sr,
+    )
