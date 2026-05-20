@@ -1,11 +1,11 @@
 {
-  "version": "1.14.0",
+  "version": "1.13.0",
   "lastUpdated": "2026-05-20",
   "currentSession": {
-    "id": "SESSION-029b",
-    "title": "Expand creation tooling / studio workflow",
+    "id": "SESSION-032",
+    "title": "Add license compliance CI gate",
     "status": "planned",
-    "taskType": "cli + ui"
+    "taskType": "cli"
   },
   "completedSessions": [
     {
@@ -230,16 +230,6 @@
     },
     {
       "id": "SESSION-047",
-      "status": "completed",
-      "completedDate": "2026-05-20"
-    },
-    {
-      "id": "SESSION-048",
-      "status": "completed",
-      "completedDate": "2026-05-20"
-    },
-    {
-      "id": "SESSION-032",
       "status": "completed",
       "completedDate": "2026-05-20"
     }

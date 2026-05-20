@@ -110,7 +110,6 @@ class _StyleDef:
     melody_pattern: str              # name of a RhythmPattern classmethod
     chord_pattern: str
     bars: int = 8                    # number of bars to generate
-    ostinato_instrument: str = "crystal_synth"  # instrument for high-register ostinato texture
 
 
 _STYLE_DEFS: dict[str, _StyleDef] = {
@@ -133,13 +132,12 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         root="G",
         octave=4,
         progression_name="I_V_vi_IV",
-        instruments=["flute", "oboe"],
+        instruments=["flute", "strings"],
         accompaniment=["strings", "choir"],
         bass_instrument="bass",
         percussion_instrument=None,
         melody_pattern="eighth_notes",
         chord_pattern="half_notes",
-        ostinato_instrument="celesta",
     ),
     "ambient": _StyleDef(
         bpm=60,
@@ -153,7 +151,6 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         percussion_instrument=None,
         melody_pattern="ambient",
         chord_pattern="ambient",
-        ostinato_instrument="celesta",
     ),
     "boss": _StyleDef(
         bpm=160,
@@ -797,13 +794,12 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         root="D",
         octave=3,
         progression_name="i_bVII_bVI_V",
-        instruments=["french_horn", "brass"],
-        accompaniment=["cello", "ff7_strings"],
+        instruments=["brass", "ff7_strings"],
+        accompaniment=["choir", "ff7_strings"],
         bass_instrument="ff7_bass",
-        percussion_instrument="timpani",
+        percussion_instrument="percussion",
         melody_pattern="half_notes",
         chord_pattern="half_notes",
-        ostinato_instrument="harp",
         bars=8,
     ),
 
@@ -821,7 +817,6 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         percussion_instrument=None,
         melody_pattern="half_notes",
         chord_pattern="ambient",
-        ostinato_instrument="harp",
         bars=8,
     ),
 
@@ -833,13 +828,12 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         root="D",
         octave=4,
         progression_name="i_bVII_bVI_bVII",
-        instruments=["flute", "clarinet"],
+        instruments=["flute", "piano"],
         accompaniment=["ff7_strings"],
         bass_instrument="bass",
         percussion_instrument="percussion",
         melody_pattern="eighth_notes",
         chord_pattern="four_on_the_floor",
-        ostinato_instrument="marimba",
         bars=8,
     ),
 
@@ -942,7 +936,6 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         percussion_instrument=None,
         melody_pattern="ambient",
         chord_pattern="ambient",
-        ostinato_instrument="celesta",
         bars=8,
     ),
 
@@ -1632,7 +1625,7 @@ class MusicGenerator:
     def _configure_tracks(self, seq: Sequencer, sdef: _StyleDef) -> None:
         lead_name = sdef.instruments[0] if sdef.instruments else "strings"
         counter_name = sdef.instruments[1] if len(sdef.instruments) > 1 else "flute"
-        ostinato_name = sdef.ostinato_instrument
+        ostinato_name = "crystal_synth"
         pad_name = sdef.accompaniment[0] if sdef.accompaniment else "synth_pad"
         chord_name = sdef.accompaniment[1] if len(sdef.accompaniment) > 1 else "strings"
         bass_name = sdef.bass_instrument or "bass"

@@ -182,56 +182,6 @@ class TestBackendRegistry:
     def test_optional_backends_import_does_not_break_registry(self):
         assert "procedural" in BackendRegistry.available_backends()
 
-    def test_full_orchestral_registered(self):
-        assert "full_orchestral" in BackendRegistry.available_backends()
-
-    def test_full_orchestral_name(self):
-        backend = BackendRegistry.get("full_orchestral", sample_rate=SR)
-        assert backend.name == "full_orchestral"
-
-    def test_full_orchestral_music_shape(self):
-        from audio_engine.ai.full_orchestral_backend import FullOrchestralBackend
-        backend = FullOrchestralBackend(sample_rate=SR, seed=42)
-        audio = backend.generate_music_audio("orchestral_epic", duration=1.0)
-        assert audio.ndim == 2
-        assert audio.shape[1] == 2
-        assert audio.dtype == np.float32
-
-    def test_full_orchestral_music_exploration(self):
-        from audio_engine.ai.full_orchestral_backend import FullOrchestralBackend
-        backend = FullOrchestralBackend(sample_rate=SR, seed=7)
-        audio = backend.generate_music_audio("exploration", duration=1.0)
-        assert audio.size > 0
-
-    def test_full_orchestral_sfx(self):
-        from audio_engine.ai.full_orchestral_backend import FullOrchestralBackend
-        backend = FullOrchestralBackend(sample_rate=SR, seed=42)
-        sfx = backend.generate_sfx_audio("explosion", duration=0.5)
-        assert sfx.ndim == 1
-        assert sfx.dtype == np.float32
-        assert np.max(np.abs(sfx)) <= 1.0 + 1e-5
-
-    def test_full_orchestral_voice(self):
-        from audio_engine.ai.full_orchestral_backend import FullOrchestralBackend
-        backend = FullOrchestralBackend(sample_rate=SR, seed=42)
-        voice = backend.generate_voice_audio("hello world", voice_preset="narrator")
-        assert voice.ndim == 1
-        assert voice.dtype == np.float32
-
-    def test_full_orchestral_unknown_style_fallback(self):
-        from audio_engine.ai.full_orchestral_backend import FullOrchestralBackend
-        backend = FullOrchestralBackend(sample_rate=SR, seed=42)
-        # Should not raise even for unknown styles — falls back to procedural
-        audio = backend.generate_music_audio("battle", duration=0.5)
-        assert audio.size > 0
-
-    @pytest.mark.parametrize("style", ["ambient", "celtic_adventure", "horror_ambient", "menu"])
-    def test_full_orchestral_distinct_styles(self, style):
-        from audio_engine.ai.full_orchestral_backend import FullOrchestralBackend
-        backend = FullOrchestralBackend(sample_rate=SR, seed=99)
-        audio = backend.generate_music_audio(style, duration=1.0)
-        assert audio.ndim == 2 and audio.size > 0
-
 
 def _install_fake_transformers_modules(monkeypatch, model_attr: str) -> dict[str, int]:
     call_counts = {"model": 0, "processor": 0, "seed": 0}

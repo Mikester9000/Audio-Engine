@@ -926,55 +926,6 @@ def _cmd_verify_backends(args: argparse.Namespace) -> None:
         raise SystemExit(2)
 
 
-def _cmd_check_licenses(args: argparse.Namespace) -> None:
-    """Check installed package licenses against the compliance policy and emit a JSON report."""
-    import json as _json
-    from pathlib import Path as _Path
-    from audio_engine.compliance.license_checker import check_licenses
-
-    policy_path = _Path(args.policy) if args.policy else None
-    include_dev = args.include_dev
-    all_installed = getattr(args, "all_installed", False)
-    quiet = args.quiet
-
-    report = check_licenses(policy_path=policy_path, include_dev=include_dev, all_installed=all_installed)
-
-    if not quiet:
-        print(f"Scanned {len(report.packages)} packages using policy: {report.policy_path}")
-        print(f"Summary: allow={report.summary.get('allow', 0)}, "
-              f"conditional={report.summary.get('conditional', 0)}, "
-              f"block={report.summary.get('block', 0)}, "
-              f"unknown={report.summary.get('unknown', 0)}")
-        if not report.compliant:
-            blocked = [p for p in report.packages if p.policy == "block"]
-            unknown = [p for p in report.packages if p.policy == "unknown"]
-            if blocked:
-                print("\nBLOCKED packages (commercial use not permitted):")
-                for p in blocked:
-                    print(f"  {p.package} {p.version} — {p.spdx_license}: {p.policy_notes}")
-            if unknown:
-                print("\nUNKNOWN packages (license not verified — treated as block):")
-                for p in unknown:
-                    print(f"  {p.package} {p.version} — {p.spdx_license}: {p.policy_notes}")
-        else:
-            print("All packages comply with the license policy.")
-
-    report_dict = report.to_dict()
-
-    if args.output_report:
-        out_path = _Path(args.output_report)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(_json.dumps(report_dict, indent=2), encoding="utf-8")
-        if not quiet:
-            print(f"\nReport written → {out_path}")
-    else:
-        print()
-        print(_json.dumps(report_dict, indent=2))
-
-    if not report.compliant:
-        raise SystemExit(1)
-
-
 def build_parser() -> argparse.ArgumentParser:
     from audio_engine.render.offline_bounce import VALID_PROFILES
 
@@ -1569,45 +1520,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--quiet",
         action="store_true",
         help="Suppress per-backend progress messages (report is still written/printed).",
-    )
-
-    # --- check-licenses ---
-    cl = sub.add_parser(
-        "check-licenses",
-        help=(
-            "Check installed package licenses against the compliance policy and emit a "
-            "machine-readable JSON report.  Exits 0 when all packages are allow/conditional; "
-            "exits 1 when any package is block or unknown."
-        ),
-    )
-    cl.add_argument(
-        "--policy", default=None,
-        help=(
-            "Path to the TOML license policy file.  Defaults to tools/license_policy.toml "
-            "in the repository root."
-        ),
-    )
-    cl.add_argument(
-        "--output-report", "-o", default=None,
-        help="Path to write the JSON compliance report (optional; prints to stdout if omitted).",
-    )
-    cl.add_argument(
-        "--include-dev",
-        action="store_true",
-        help="Include dev/test packages declared in the dev extra.",
-    )
-    cl.add_argument(
-        "--all-installed",
-        action="store_true",
-        help=(
-            "Scan all packages in the current environment instead of only "
-            "those declared in pyproject.toml."
-        ),
-    )
-    cl.add_argument(
-        "--quiet",
-        action="store_true",
-        help="Suppress human-readable summary (JSON report is still written/printed).",
     )
 
     # --- studio ---
@@ -2206,7 +2118,6 @@ def main(argv: list[str] | None = None) -> int:
         "list-instruments": _cmd_list_instruments,
         "list-backends": _cmd_list_backends,
         "verify-backends": _cmd_verify_backends,
-        "check-licenses": _cmd_check_licenses,
         "studio": _cmd_studio,
         "generate-request-batch": _cmd_generate_request_batch,
         "generate-plan-batch": _cmd_generate_plan_batch,

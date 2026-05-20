@@ -301,28 +301,12 @@
 
 ## Current next session
 
-### SESSION-048 — Full Orchestral Synth (completed)
-
-- **Status:** `completed`
-- **Task type:** `synthesis + cli`
-- **Objective:** Add a full orchestral synth backend and new distinct instruments to address "same sounds for everything" audio feedback.
-- **Notes:**
-  - Added 8 new orchestral instruments: `oboe`, `clarinet`, `french_horn`, `cello`, `harp`, `celesta`, `timpani`, `marimba`.
-  - Added `full_orchestral` backend with per-section stereo panning and OST mastering.
-  - Updated 6 style defs to use distinct section instruments.
-  - 24 new instrument tests + 14 new backend tests.
-
 ### SESSION-032 — Add license compliance CI gate
 
-- **Status:** `completed`
+- **Status:** `planned`
 - **Task type:** `cli`
 - **Objective:** Fail CI on unknown or disallowed dependency/model licenses and emit a machine-readable compliance report for auditability.
-- **Notes:**
-  - Added `tools/license_policy.toml` (SPDX policy with allow/conditional/block sections).
-  - Added `audio_engine/compliance/license_checker.py` scoped to declared deps only.
-  - Added `audio-engine check-licenses` CLI command (exits 0=compliant, 1=blocked/unknown).
-  - Added `.github/workflows/license-compliance.yml` CI gate.
-  - 21 new tests in `tests/test_license_compliance.py`.
+- **Notes:** Keep policy config explicit and version-controlled.
 
 ## Remaining planned sessions (post-baseline)
 
@@ -353,3 +337,10 @@
 - **Task type:** `integration_export`
 - **Objective:** Add deterministic remaster-batch execution over ingestion-contract sample folders with machine-readable per-file outcomes.
 - **Notes:** Added additive `RemasterBatchPipeline` + `RemasterBatchResult` in `audio_engine/integration/asset_pipeline.py`, exported via `audio_engine.integration`, and added additive `audio-engine remaster-batch` CLI command with deterministic ordering and `remaster_batch_result.json` output; covered with CLI + pipeline tests.
+
+### SESSION-032 — Add license compliance CI gate
+
+- **Status:** `planned`
+- **Task type:** `cli`
+- **Objective:** Fail CI on unknown or disallowed dependency/model licenses and emit a machine-readable compliance report for auditability.
+- **Notes:** Keep policy config explicit and version-controlled.
