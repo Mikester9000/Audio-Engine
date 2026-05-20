@@ -1,0 +1,93 @@
+# ============================================================================
+# license-compliance.yml — License Compliance CI Gate (SESSION-032)
+# ============================================================================
+#
+# What this workflow does:
+#   1. Installs the audio-engine package with all declared dependencies.
+#   2. Runs `audio-engine check-licenses` against the policy in
+#      tools/license_policy.toml.
+#   3. Fails CI (exit 1) if any declared dependency has a blocked or unknown
+#      license, so commercial-unsafe packages are caught before merging.
+#   4. Uploads the machine-readable license_report.json as a workflow artifact
+#      for auditability (retained for 90 days).
+#
+# Trigger: push or pull_request touching source code, deps, or the policy file.
+#
+# Exit codes from `audio-engine check-licenses`:
+#   0 — all packages are `allow` or `conditional` → CI passes
+#   1 — at least one package is `block` or `unknown` → CI fails
+# ============================================================================
+
+name: License Compliance Gate
+
+on:
+  push:
+    paths:
+      - 'audio_engine/**'
+      - 'tools/license_policy.toml'
+      - 'pyproject.toml'
+      - '.github/workflows/license-compliance.yml'
+  pull_request:
+    paths:
+      - 'audio_engine/**'
+      - 'tools/license_policy.toml'
+      - 'pyproject.toml'
+      - '.github/workflows/license-compliance.yml'
+  # Allow manual trigger for ad-hoc compliance audits.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  license-compliance:
+    name: Check dependency licenses against compliance policy
+    runs-on: ubuntu-latest
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Check out the repository
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. Set up Python
+      # -----------------------------------------------------------------------
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # -----------------------------------------------------------------------
+      # 3. Install audio-engine with all declared dependency groups so that
+      #    every optional dep (neural, ogg) appears in importlib.metadata.
+      # -----------------------------------------------------------------------
+      - name: Install audio-engine (core + ogg extras)
+        run: pip install -e ".[dev,ogg]"
+
+      # -----------------------------------------------------------------------
+      # 4. Run the license compliance check.
+      #    --output-report writes the machine-readable JSON to disk.
+      #    The command exits 1 if any package is blocked or unknown, which
+      #    fails this CI step and blocks the PR.
+      # -----------------------------------------------------------------------
+      - name: Run license compliance check
+        run: |
+          audio-engine check-licenses \
+            --output-report /tmp/license_report.json \
+            --include-dev
+        # The step will fail automatically if the command exits 1.
+
+      # -----------------------------------------------------------------------
+      # 5. Upload the compliance report as a retained artifact.
+      #    `if: always()` ensures the artifact is uploaded even on failure
+      #    so reviewers can see exactly which packages were flagged.
+      # -----------------------------------------------------------------------
+      - name: Upload license compliance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-compliance-report
+          path: /tmp/license_report.json
+          retention-days: 90
