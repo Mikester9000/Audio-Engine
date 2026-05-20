@@ -289,7 +289,8 @@ class TestFactoryInputLoaders:
             "bgm_test_grand_opera",
         }
         actual_assets = {request.asset_id for request in batch.requests}
-        assert expected_assets.issubset(actual_assets)
+        missing_assets = expected_assets - actual_assets
+        assert not missing_assets
 
     def test_generation_request_loader_rejects_missing_request_id(self):
         invalid_batch = {
