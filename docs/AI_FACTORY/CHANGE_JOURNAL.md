@@ -2,6 +2,14 @@
 
 > Append a short entry for every substantial PR. Keep entries brief and factual.
 
+## 2026-05-19 — Complete SESSION-028b, SESSION-028c, SESSION-031 (functional remaster stack)
+
+- SESSION-028b: added deterministic orchestral note scanner (`audio_engine/integration/sample_library.py`) and dedicated DSP pitch-shift primitives (`audio_engine/dsp/pitch_shift.py`), then integrated pitch-shift helper use into `audio_engine/samples/sample_library.py`.
+- SESSION-028c: added `audio_engine/render/remaster.py` (`RemasterPipeline`, `RemasterEvent`) for deterministic note-event sample substitution with synth fallback; rewired `audio-engine remaster` to this pipeline and added additive `--events-json`.
+- SESSION-031: added `RemasterBatchPipeline` + result dataclasses in `audio_engine/integration/asset_pipeline.py` and additive `audio-engine remaster-batch` CLI command with deterministic ordering and machine-readable `remaster_batch_result.json`.
+- Added focused tests: `tests/test_pitch_shift.py`, `tests/test_sample_library.py`, `tests/test_remaster.py`, and remaster-batch CLI coverage in `tests/test_engine_cli.py`.
+- Verification: full `python -m pytest` (978 passed) and `python tools/validate-assets.py assets/examples/ --verbose` PASS.
+
 ## 2026-05-19 — Complete SESSION-036, SESSION-037, SESSION-040, SESSION-043, SESSION-044, SESSION-045 + review follow-ups
 
 - SESSION-036 (`qa`): added `audio_engine/qa/spectral_analyzer.py` with `SpectralAnalyzer`/`SpectralReport`; integrated spectral metrics into `qa` and `qa-batch` output surfaces.

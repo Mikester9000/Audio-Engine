@@ -1,27 +1,28 @@
 {
-  "version": "1.11.0",
+  "version": "1.12.0",
   "lastUpdated": "2026-05-19",
   "currentSession": {
-    "id": "SESSION-028b",
-    "title": "Sample library scanner and pitch-shift engine",
+    "id": "SESSION-032",
+    "title": "Add license compliance CI gate",
     "status": "planned",
-    "taskType": "integration_export",
-    "objective": "Add executable sample-library scanning and deterministic pitch-shift primitives for orchestral remaster workflows.",
+    "taskType": "cli",
+    "objective": "Fail CI on unknown or disallowed dependency/model licenses and emit a machine-readable compliance report for auditability.",
     "readFirst": [
       "docs/AI_FACTORY/SESSION_QUEUE.md",
       "docs/AI_FACTORY/HANDOFF.md",
       "docs/AI_FACTORY/CURRENT_STATE.md",
-      "docs/AI_FACTORY/SCHEMAS/WAV_INGESTION_CONTRACT.md",
-      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md",
+      "docs/AI_FACTORY/LICENSE_INVENTORY.md",
+      "docs/AI_FACTORY/COMMERCIAL_ELIGIBILITY_MATRIX.md",
       "docs/AI_FACTORY/CODEBASE_MAP.md"
     ],
     "likelyModify": [
-      "audio_engine/integration/sample_library.py",
-      "audio_engine/dsp/pitch_shift.py",
-      "tests/test_sample_library.py",
-      "tests/test_pitch_shift.py",
+      ".github/workflows/*",
+      "tools/*",
+      "audio_engine/cli.py",
+      "tests/test_engine_cli.py",
       "docs/AI_FACTORY/ACTIVE_WORK.md",
-      "docs/AI_FACTORY/HANDOFF.md"
+      "docs/AI_FACTORY/HANDOFF.md",
+      "docs/AI_FACTORY/SUBSYSTEMS/ASSET_PIPELINE.md"
     ]
   }
 }

@@ -16,6 +16,10 @@
   - `qa-batch`
   - `export-drafts`
   - `approve-draft`
+- Deterministic remaster workflows are now executable:
+  - `audio-engine remaster --input <wav> --samples-dir <dir> --events-json <events.json> --output <wav>`
+  - `audio-engine remaster-batch --input-dir <dir> --output-dir <dir> --samples-dir <dir>`
+  - `RemasterBatchPipeline` writes machine-readable `remaster_batch_result.json`
 - Machine-readable review-log writing is executable:
   - `write-review-log`
   - optional review-log update flags on `approve-draft` and `export-drafts`
@@ -40,7 +44,8 @@
 - On the legacy `--request-file` path, provenance sidecars are now additive/optional via `generate-request-batch --write-provenance`; result records include `provenance_path` when written.
 - On the legacy `--request-file` path, manifest parity is now additive and always written to `<output_dir>/batch_manifest.json`.
 - OGG export depends on `soundfile`; if unavailable, requests that specify `.ogg` fail.
+- Event-driven remaster note substitution requires instrument note files under `samples/orchestral/<instrument>/` that include note names in filenames (for example `violin_C4.wav`).
 
 ## Near-term goal
 
-Reduce remaining differences between the newer drafts/provenance-oriented request-batch pipeline and the backward-compatible legacy `--request-file` execution path without breaking stable CLI/output behavior.
+Add the license compliance CI gate (SESSION-032) while preserving additive compatibility across existing generation and remaster command surfaces.

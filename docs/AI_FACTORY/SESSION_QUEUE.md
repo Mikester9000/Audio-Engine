@@ -182,17 +182,17 @@
 
 ### SESSION-028b — Sample library scanner and pitch-shift engine
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `integration_export`
 - **Objective:** Add executable sample-library scanning and note pitch-shift primitives for orchestral remaster workflows.
-- **Notes:** Implement `audio_engine/integration/sample_library.py` instrument→note→filepath scanning over `samples/orchestral/`, add `audio_engine/dsp/pitch_shift.py` scipy-based pitch shifting, and include focused tests.
+- **Notes:** Added `audio_engine/integration/sample_library.py` (`OrchestralSampleLibrary`, note parsing/resolution) for deterministic instrument→note→filepath scanning over `samples/orchestral/`; added `audio_engine/dsp/pitch_shift.py` and integrated it into `audio_engine/samples/sample_library.py`; added focused tests in `tests/test_sample_library.py` and `tests/test_pitch_shift.py`.
 
 ### SESSION-028c — Remaster pipeline and CLI command
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `integration_export`
 - **Objective:** Add a deterministic remaster pipeline that replays provenance note events and substitutes available orchestral samples with synth fallback.
-- **Notes:** Implement `audio_engine/render/remaster.py`, add additive `audio-engine remaster --input <wav> --samples samples/orchestral/ --output <wav>` CLI surface, and cover fallback + substitution behavior with tests.
+- **Notes:** Added `audio_engine/render/remaster.py` (`RemasterPipeline`, `RemasterEvent`) with deterministic event-driven sample substitution plus synth fallback; wired `audio-engine remaster` to this pipeline and added `--events-json`; added focused tests in `tests/test_remaster.py`.
 
 ### SESSION-029 — Finalize dual synth profile targets (PS1/PS2-era + orchestral)
 
@@ -217,10 +217,10 @@
 
 ### SESSION-031 — Complete batch remaster pipeline wiring
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `integration_export`
 - **Objective:** Add deterministic remaster-batch execution over ingestion-contract sample folders with machine-readable per-file outcomes.
-- **Notes:** Preserve additive behavior and avoid breaking existing generation request-batch flows.
+- **Notes:** Added additive `RemasterBatchPipeline` + `RemasterBatchResult` in `audio_engine/integration/asset_pipeline.py`, exported via `audio_engine.integration`, and added additive `audio-engine remaster-batch` CLI command with deterministic ordering and `remaster_batch_result.json` output; covered with CLI + pipeline tests.
 
 ### SESSION-032 — Add license compliance CI gate
 
@@ -287,28 +287,28 @@
 
 ## Current next session
 
-### SESSION-045 — Completion-state handoff and closure lock
+### SESSION-032 — Add license compliance CI gate
 
-- **Status:** `completed`
-- **Task type:** `docs_only`
-- **Objective:** Mark the baseline factory as complete and publish final handoff/maintenance instructions.
-- **Notes:** Published `docs/AI_FACTORY/COMPLETION_HANDOFF.md` with stable baseline capabilities table, maintenance instructions, and file reading order for future agents.
+- **Status:** `planned`
+- **Task type:** `cli`
+- **Objective:** Fail CI on unknown or disallowed dependency/model licenses and emit a machine-readable compliance report for auditability.
+- **Notes:** Keep policy config explicit and version-controlled.
 
 ## Remaining planned sessions (post-baseline)
 
 ### SESSION-028b — Sample library scanner and pitch-shift engine
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `integration_export`
 - **Objective:** Add executable sample-library scanning and note pitch-shift primitives for orchestral remaster workflows.
-- **Notes:** Implement `audio_engine/integration/sample_library.py` instrument→note→filepath scanning over `samples/orchestral/`, add `audio_engine/dsp/pitch_shift.py` scipy-based pitch shifting, and include focused tests.
+- **Notes:** Added `audio_engine/integration/sample_library.py` (`OrchestralSampleLibrary`, note parsing/resolution) for deterministic instrument→note→filepath scanning over `samples/orchestral/`; added `audio_engine/dsp/pitch_shift.py` and integrated it into `audio_engine/samples/sample_library.py`; added focused tests in `tests/test_sample_library.py` and `tests/test_pitch_shift.py`.
 
 ### SESSION-028c — Remaster pipeline and CLI command
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `integration_export`
 - **Objective:** Add a deterministic remaster pipeline that replays provenance note events and substitutes available orchestral samples with synth fallback.
-- **Notes:** Implement `audio_engine/render/remaster.py`, add additive `audio-engine remaster --input <wav> --samples samples/orchestral/ --output <wav>` CLI surface, and cover fallback + substitution behavior with tests.
+- **Notes:** Added `audio_engine/render/remaster.py` (`RemasterPipeline`, `RemasterEvent`) with deterministic event-driven sample substitution plus synth fallback; wired `audio-engine remaster` to this pipeline and added `--events-json`; added focused tests in `tests/test_remaster.py`.
 
 ### SESSION-029b — Expand creation tooling / studio workflow
 
@@ -319,10 +319,10 @@
 
 ### SESSION-031 — Complete batch remaster pipeline wiring
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `integration_export`
 - **Objective:** Add deterministic remaster-batch execution over ingestion-contract sample folders with machine-readable per-file outcomes.
-- **Notes:** Preserve additive behavior and avoid breaking existing generation request-batch flows.
+- **Notes:** Added additive `RemasterBatchPipeline` + `RemasterBatchResult` in `audio_engine/integration/asset_pipeline.py`, exported via `audio_engine.integration`, and added additive `audio-engine remaster-batch` CLI command with deterministic ordering and `remaster_batch_result.json` output; covered with CLI + pipeline tests.
 
 ### SESSION-032 — Add license compliance CI gate
 

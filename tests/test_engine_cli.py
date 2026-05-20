@@ -2,6 +2,7 @@
 
 import json
 import sys
+import wave
 from pathlib import Path
 
 import numpy as np
@@ -130,6 +131,77 @@ _FIXTURE_DIR = (
     / "EXAMPLES"
     / "gamerewritten_vertical_slice"
 )
+
+
+def _write_wav(path: Path, audio: np.ndarray, sr: int = SR) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pcm = np.clip(audio, -1.0, 1.0)
+    pcm = (pcm * 32767.0).astype(np.int16)
+    with wave.open(str(path), "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sr)
+        wf.writeframes(pcm.tobytes())
+
+
+def _tone(sr: int = SR, seconds: float = 0.2, hz: float = 440.0) -> np.ndarray:
+    t = np.linspace(0.0, seconds, int(sr * seconds), endpoint=False)
+    return np.sin(2.0 * np.pi * hz * t).astype(np.float32)
+
+
+def test_cli_remaster_batch_subcommand_registered():
+    import argparse
+
+    parser = build_parser()
+    subparsers_actions = [
+        action
+        for action in parser._actions
+        if isinstance(action, argparse._SubParsersAction)
+    ]
+    assert subparsers_actions
+    assert "remaster-batch" in subparsers_actions[0].choices
+
+
+def test_cli_remaster_batch_smoke(tmp_path):
+    input_dir = tmp_path / "in"
+    output_dir = tmp_path / "out"
+    samples_dir = tmp_path / "samples"
+    events_dir = tmp_path / "events"
+
+    _write_wav(input_dir / "music" / "track.wav", _tone())
+    _write_wav(samples_dir / "orchestral" / "strings" / "section_C4.wav", _tone(hz=261.63))
+    events_dir.mkdir(parents=True, exist_ok=True)
+    (events_dir / "track.events.json").write_text(
+        json.dumps(
+            [
+                {
+                    "instrument": "strings",
+                    "note": "E4",
+                    "startSeconds": 0.0,
+                    "durationSeconds": 0.2,
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    rc = main(
+        [
+            "remaster-batch",
+            "--input-dir",
+            str(input_dir),
+            "--output-dir",
+            str(output_dir),
+            "--samples-dir",
+            str(samples_dir),
+            "--events-dir",
+            str(events_dir),
+            "--quiet",
+        ]
+    )
+    assert rc == 0
+    assert (output_dir / "music" / "track.wav").exists()
+    assert (output_dir / "remaster_batch_result.json").exists()
 
 
 

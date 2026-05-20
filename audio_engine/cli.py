@@ -196,47 +196,29 @@ def _cmd_studio(args: argparse.Namespace) -> None:
 
 
 def _cmd_remaster(args: argparse.Namespace) -> None:
-    """Remaster an existing WAV file by blending in orchestral samples."""
-    import wave
-    import numpy as np
-
-    from audio_engine.ai.sample_backend import SampleBackend
-    from audio_engine.export.audio_exporter import AudioExporter
-
+    """Remaster an existing WAV file using sample substitution + synth fallback."""
     input_path = Path(args.input)
     if not input_path.exists():
         print(f"Error: file not found: {input_path}", file=sys.stderr)
         raise FileNotFoundError(f"file not found: {input_path}")
 
-    audio, sr, n_channels = _load_wav_array(input_path)
+    from audio_engine.render.remaster import RemasterPipeline
 
     samples_dir = args.samples_dir or "samples/"
     base_backend = "ps1" if args.ps1 else "synth_orchestral"
-    backend = SampleBackend(
-        samples_dir=samples_dir,
-        sample_rate=sr,
-        seed=args.seed,
-        base_backend=base_backend,
-    )
-
-    cats = backend.available_sample_categories()
-    if not cats:
-        print(
-            f"Warning: no .wav samples found in '{samples_dir}'. "
-            "Output will be identical to input.",
-            file=sys.stderr,
-        )
-
+    pipeline = RemasterPipeline(seed=args.seed, base_backend=base_backend)
     print(
         f"Remastering: {input_path.name}  "
-        f"(samples: {cats or ['none']}, style: {args.style}) → {args.output} …"
+        f"(samples: {samples_dir}, style: {args.style}) → {args.output} …"
     )
-
-    duration = audio.shape[0] / sr if audio.ndim == 2 else len(audio) / sr
-    remastered = backend.remaster_audio(audio, style=args.style, duration=duration)
-
-    exporter = AudioExporter(sample_rate=sr)
-    out_path = exporter.export(remastered, args.output, fmt=args.format)
+    out_path = pipeline.remaster_file(
+        input_path=input_path,
+        output_path=args.output,
+        style=args.style,
+        samples_dir=samples_dir,
+        events_json=getattr(args, "events_json", None),
+        fmt=args.format,
+    )
     print(f"Done. Saved to: {out_path}")
 
 
@@ -1380,7 +1362,47 @@ def build_parser() -> argparse.ArgumentParser:
         default="wav",
         help="Output format (default: wav).",
     )
+    rm.add_argument(
+        "--events-json",
+        default=None,
+        help=(
+            "Optional note-event JSON file for deterministic sample substitution. "
+            "Accepted shape: [{'instrument','note','startSeconds','durationSeconds'}]."
+        ),
+    )
     rm.add_argument("--seed", type=int, default=None, help="Random seed.")
+
+    # --- remaster-batch ---
+    rmb = sub.add_parser(
+        "remaster-batch",
+        help="Deterministically remaster every WAV under an input directory with machine-readable results.",
+    )
+    rmb.add_argument("--input-dir", "-i", required=True, help="Directory tree containing source WAV files.")
+    rmb.add_argument("--output-dir", "-o", required=True, help="Directory tree for remastered WAV outputs.")
+    rmb.add_argument(
+        "--samples-dir",
+        default="samples/",
+        metavar="DIR",
+        help="Root samples directory (default: samples/).",
+    )
+    rmb.add_argument(
+        "--events-dir",
+        default=None,
+        metavar="DIR",
+        help="Optional directory containing <stem>.events.json files for source WAVs.",
+    )
+    rmb.add_argument(
+        "--style",
+        default="ff7_overworld",
+        help="Style hint for synth fallback blend (default: ff7_overworld).",
+    )
+    rmb.add_argument(
+        "--report-path",
+        default=None,
+        help="Optional output path for remaster_batch_result.json.",
+    )
+    rmb.add_argument("--seed", type=int, default=None, help="Random seed.")
+    rmb.add_argument("--quiet", action="store_true", help="Suppress per-file progress output.")
 
     # --- compose-piece ---
     cp = sub.add_parser(
@@ -2047,6 +2069,29 @@ def _cmd_export_wav_delivery(args: argparse.Namespace) -> None:
         print(f"  Manifest: {report['deliveryDir']}/delivery_manifest.json")
 
 
+def _cmd_remaster_batch(args: argparse.Namespace) -> None:
+    """Run deterministic remaster-batch execution over a WAV directory tree."""
+    from audio_engine.integration.asset_pipeline import RemasterBatchPipeline
+
+    quiet = getattr(args, "quiet", False)
+
+    def _progress(msg: str) -> None:
+        if not quiet:
+            print(msg)
+
+    pipeline = RemasterBatchPipeline(progress_callback=_progress)
+    result = pipeline.execute(
+        input_dir=args.input_dir,
+        output_dir=args.output_dir,
+        samples_dir=args.samples_dir,
+        style=args.style,
+        events_dir=args.events_dir,
+        report_path=args.report_path,
+        seed=args.seed,
+    )
+    print(result.summary())
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -2057,6 +2102,7 @@ def main(argv: list[str] | None = None) -> int:
         "generate-sfx": _cmd_generate_sfx,
         "generate-voice": _cmd_generate_voice,
         "remaster": _cmd_remaster,
+        "remaster-batch": _cmd_remaster_batch,
         "compose-piece": _cmd_compose_piece,
         "list-music-library": _cmd_list_music_library,
         "generate-track": _cmd_generate_track,

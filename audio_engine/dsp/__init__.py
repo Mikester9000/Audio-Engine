@@ -26,6 +26,13 @@ from audio_engine.dsp.chorus import apply_chorus
 from audio_engine.dsp.limiter import Limiter
 from audio_engine.dsp.reverb import ConvolutionReverb, apply_reverb
 from audio_engine.dsp.stereo import apply_haas, apply_mid_side_width
+from audio_engine.dsp.pitch_shift import (
+    pitch_ratio_from_midi,
+    pitch_shift_midi,
+    pitch_shift_ratio,
+    pitch_shift_semitones,
+    semitone_ratio,
+)
 from audio_engine.dsp.resample import resample
 from audio_engine.dsp.dither import dither
 
@@ -38,6 +45,11 @@ __all__ = [
     "apply_reverb",
     "apply_haas",
     "apply_mid_side_width",
+    "semitone_ratio",
+    "pitch_ratio_from_midi",
+    "pitch_shift_ratio",
+    "pitch_shift_semitones",
+    "pitch_shift_midi",
     "resample",
     "dither",
 ]

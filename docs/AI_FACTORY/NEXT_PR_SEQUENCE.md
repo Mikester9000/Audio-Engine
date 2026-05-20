@@ -20,23 +20,23 @@
 - **Verification commands:** `python -m pytest tests/test_instrument.py tests/test_dsp.py tests/test_dsp_chorus.py tests/test_dsp_reverb.py tests/test_dsp_stereo.py tests/test_render.py tests/test_loop_exporter.py`
 - **Definition of done:** New DSP/profile code paths are additive, tested, and default behavior remains backward compatible.
 
-## PR-9 — Sample library scanner + pitch-shift engine
+## PR-9 — Sample library scanner + pitch-shift engine (completed)
 
 - **Suggested title:** `Add sample library scanning and deterministic pitch shifting`
 - **Objective:** Implement `audio_engine/integration/sample_library.py` and `audio_engine/dsp/pitch_shift.py`.
 - **Why it matters:** Enables note-aligned sample substitution for orchestral remastering.
 - **Likely files to change:** `audio_engine/integration/sample_library.py`, `audio_engine/dsp/pitch_shift.py`, tests
 - **Verification commands:** `python -m pytest tests/test_sample_library.py tests/test_pitch_shift.py`
-- **Definition of done:** Engine can index sample folders and pitch-shift source notes to requested targets reproducibly.
+- **Definition of done:** ✅ Completed — engine now indexes `samples/orchestral` note files and pitch-shifts source notes to requested targets reproducibly.
 
-## PR-10 — Remaster pipeline + CLI command
+## PR-10 — Remaster pipeline + CLI command (completed)
 
 - **Suggested title:** `Add remaster pipeline and additive remaster CLI`
 - **Objective:** Implement `audio_engine/render/remaster.py` and `audio-engine remaster` command.
 - **Why it matters:** Turns synth-first outputs into higher-fidelity sample-based renders from provenance events.
 - **Likely files to change:** `audio_engine/render/remaster.py`, `audio_engine/cli.py`, integration tests
 - **Verification commands:** `python -m pytest tests/test_remaster.py tests/test_engine_cli.py -k remaster`
-- **Definition of done:** CLI remaster path works with sample substitution and synth fallback per instrument.
+- **Definition of done:** ✅ Completed — CLI remaster path works with event-driven sample substitution and synth fallback per instrument.
 
 ## PR-11 — Backend preflight verify command (SESSION-028)
 
@@ -74,14 +74,14 @@
 - **Verification commands:** manual doc review + JSON parse checks
 - **Definition of done:** Ingestion contract is explicit enough for no-ambiguity automation.
 
-## PR-15 — Batch remaster pipeline wiring (SESSION-031)
+## PR-15 — Batch remaster pipeline wiring (SESSION-031, completed)
 
 - **Suggested title:** `Wire deterministic batch remaster execution`
 - **Objective:** Add batch remaster execution and machine-readable outcomes.
 - **Why it matters:** Scales remastering beyond one-off CLI usage.
 - **Likely files to change:** `audio_engine/integration/asset_pipeline.py`, `audio_engine/cli.py`, tests
 - **Verification commands:** `python -m pytest tests/test_integration.py tests/test_engine_cli.py -k remaster`
-- **Definition of done:** Batch remaster pipeline runs deterministically with result manifests.
+- **Definition of done:** ✅ Completed — batch remaster pipeline runs deterministically with machine-readable result manifests.
 
 ## PR-16 — License compliance CI gate (SESSION-032/033/034)
 

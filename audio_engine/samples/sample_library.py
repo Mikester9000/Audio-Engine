@@ -45,6 +45,8 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from audio_engine.dsp.pitch_shift import pitch_shift_ratio
+
 __all__ = ["SampleLibrary"]
 
 # ---------------------------------------------------------------------------
@@ -116,35 +118,6 @@ def _resample(audio: np.ndarray, src_sr: int, dst_sr: int) -> np.ndarray:
             np.arange(len(audio)),
             audio,
         ).astype(np.float32)
-
-
-def _pitch_shift_ratio(audio: np.ndarray, ratio: float, sr: int) -> np.ndarray:
-    """Pitch-shift by resampling at a different rate then trimming/padding.
-
-    *ratio* > 1.0 pitches up; < 1.0 pitches down.
-    This is the tracker/hardware-sampler approach: play the sample back at a
-    different speed.  The output has the same number of samples as the input.
-    """
-    if abs(ratio - 1.0) < 1e-6:
-        return audio
-    n = len(audio)
-    new_len = max(1, int(n / ratio))
-    # Resample to target length
-    try:
-        from scipy.signal import resample  # type: ignore[import]
-        shifted = resample(audio.astype(np.float64), new_len).astype(np.float32)
-    except ImportError:
-        shifted = np.interp(
-            np.linspace(0, n - 1, new_len),
-            np.arange(n),
-            audio,
-        ).astype(np.float32)
-
-    # Trim or zero-pad to original length
-    if len(shifted) >= n:
-        return shifted[:n]
-    pad = np.zeros(n - len(shifted), dtype=np.float32)
-    return np.concatenate([shifted, pad])
 
 
 class SampleLibrary:
@@ -256,7 +229,7 @@ class SampleLibrary:
         audio = samples[idx].copy()
 
         if abs(pitch_ratio - 1.0) > 1e-6:
-            audio = _pitch_shift_ratio(audio, pitch_ratio, self.sample_rate)
+            audio = pitch_shift_ratio(audio, pitch_ratio)
 
         if duration is not None:
             target_n = int(duration * self.sample_rate)

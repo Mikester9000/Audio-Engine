@@ -1,5 +1,5 @@
 {
-  "statusVersion": "1.2.0",
+  "statusVersion": "1.3.0",
   "lastUpdated": "2026-05-19",
   "repositoryRole": "GitHub-native audio asset factory for downstream game import",
   "coverageGoal": [
@@ -26,7 +26,10 @@
     "gamerewritten_import_automation": "implemented",
     "session_autopilot_layer": "implemented",
     "execution_safety_hardening_layer": "implemented",
-    "optional_neural_readiness_preflight": "planned"
+    "optional_neural_readiness_preflight": "implemented",
+    "sample_scanner_pitch_shift_engine": "implemented",
+    "deterministic_remaster_pipeline": "implemented",
+    "deterministic_remaster_batch_pipeline": "implemented"
   },
   "sourceDocs": {
     "implementationMatrix": "docs/AI_FACTORY/IMPLEMENTATION_MATRIX.md",
@@ -47,10 +50,10 @@
     "sessionState": "docs/AI_FACTORY/SESSION_STATE.json"
   },
   "currentSession": {
-    "id": "SESSION-028b",
+    "id": "SESSION-032",
     "status": "planned",
-    "title": "Sample library scanner and pitch-shift engine",
+    "title": "Add license compliance CI gate",
     "detailDoc": "docs/AI_FACTORY/CURRENT_SESSION.json",
-    "next": "SESSION-028c"
+    "next": "SESSION-029b"
   }
 }
