@@ -51,3 +51,5 @@
 | `SESSION-028b` | 2026-05-19 | completed | Added deterministic `samples/orchestral` scanner (`OrchestralSampleLibrary`) and dedicated DSP pitch-shift module (`audio_engine/dsp/pitch_shift.py`) with focused tests. | this PR |
 | `SESSION-028c` | 2026-05-19 | completed | Added `RemasterPipeline` + `RemasterEvent`, wired `audio-engine remaster` to deterministic event-driven sample substitution with synth fallback, and added `--events-json`. | this PR |
 | `SESSION-031` | 2026-05-19 | completed | Added `RemasterBatchPipeline` and additive `audio-engine remaster-batch` command with deterministic traversal and machine-readable `remaster_batch_result.json`. | this PR |
+| `SESSION-046` | 2026-05-20 | completed | Expanded `generation_requests.music.v1.json` with 21 additional deterministic music test-piece requests covering requested genres/moods/environments (driving through grand opera) using explicit `durationSeconds`. | this PR |
+| `SESSION-047` | 2026-05-20 | completed | Synchronized fixture-driven tests and continuity/session-control docs after SESSION-046 while preserving SESSION-032 as the active planned implementation session. | this PR |

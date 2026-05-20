@@ -64,13 +64,14 @@ When generating via `generate-request-batch`:
 - Music requests with no explicit duration default to **30 s**.
 - The `--music-duration` CLI flag only applies to the `--request-file` /
   `execute_request_batch` path; it is **ignored** by the `--batch-file` /
-  `RequestBatchPipeline` path, which calls `MusicGen.generate()` directly
-  without a duration override.
+  `RequestBatchPipeline` path.
+- The `--batch-file` / `RequestBatchPipeline` path now supports per-request
+  `durationSeconds`; when provided, it is used as the explicit generation
+  duration for music requests.
 - For long-form OST variants, use the `--request-file` path with
   `--music-duration 180` (or higher, up to 300 s / 5 min), or use
   plan-driven orchestration where `durationTargetSeconds` is enforced per
-  target. The `--batch-file` path still does not consume an explicit
-  per-request duration field.
+  target.
 
 ## Near-term goals
 
@@ -78,3 +79,5 @@ When generating via `generate-request-batch`:
 2. capture prompt + seed + target path in request manifests
 3. define loop and loudness acceptance profiles per category
 4. add long-form OST variant support to example request fixtures
+5. keep expanding committed style/mood/environment fixture prompts for
+   deterministic broad-coverage testing
