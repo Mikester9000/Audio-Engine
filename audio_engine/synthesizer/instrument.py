@@ -675,7 +675,7 @@ def _oboe(sr: int = 44100) -> Instrument:
 def _clarinet(sr: int = 44100) -> Instrument:
     """Hollow, liquid woodwind — the characteristic sound of the clarinet.
 
-    Clarinetshave a strong odd-harmonic series (like a stopped pipe), which
+    Clarinets have a strong odd-harmonic series (like a stopped pipe), which
     gives them their distinctive hollow quality.  Modelled using additive
     synthesis with only odd harmonics.
     """

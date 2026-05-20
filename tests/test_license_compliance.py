@@ -101,7 +101,7 @@ class TestDeclaredPackageNames:
 
     def test_includes_core_deps(self):
         names = _declared_package_names(include_dev=False)
-        assert "numpy" in names or "numpy" in names
+        assert "numpy" in names
         assert "scipy" in names
 
     def test_include_dev_adds_pytest(self):
