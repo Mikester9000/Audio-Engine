@@ -977,7 +977,7 @@ class TestRequestBatchPipeline:
             assert Path(record["file"]).exists(), f"Missing output: {record['file']}"
             assert record["seed"] > 0
 
-    def test_execute_music_batch_dual_path_writes_paired_outputs(self, tmp_path, monkeypatch):
+    def test_request_batch_pipeline_dual_path_writes_paired_outputs(self, tmp_path, monkeypatch):
         """musicDeliveryMode=dual_vocal_instrumental should write instrumental + vocal-ready outputs."""
         from audio_engine.integration import RequestBatchPipeline, load_generation_request_batch
         from audio_engine.integration.factory_inputs import GenerationRequestBatch
