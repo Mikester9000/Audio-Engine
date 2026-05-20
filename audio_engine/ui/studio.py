@@ -19,7 +19,7 @@ class _StatusLabel(Protocol):
     def update_idletasks(self) -> object: ...
 
 
-def _safe_int(value: str, fallback: int) -> int:
+def _safe_int(value: str | int, fallback: int) -> int:
     if isinstance(value, int) and not isinstance(value, bool):
         return value
     if not isinstance(value, str):
