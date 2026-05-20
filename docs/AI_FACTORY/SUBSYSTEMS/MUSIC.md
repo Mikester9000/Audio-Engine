@@ -16,6 +16,7 @@
 
 - richer style-preset registry beyond current built-in styles
 - verified non-procedural backend quality benchmarks using real downloaded model weights
+- full studio-side profile/preset lifecycle management (beyond current save/load + profile selection)
 - full dual-path vocal/instrumental production export stabilization (SESSION-038 planned)
 
 ## Backend evaluation notes (SESSION-011 + optional neural scaffolding)
