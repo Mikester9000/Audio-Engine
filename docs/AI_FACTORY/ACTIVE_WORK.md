@@ -65,6 +65,8 @@ The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-
 - [x] Execute SESSION-028b — sample-library scanner + pitch-shift engine (`audio_engine/integration/sample_library.py`, `audio_engine/dsp/pitch_shift.py`)
 - [x] Execute SESSION-028c — deterministic remaster pipeline + CLI wiring (`audio_engine/render/remaster.py`, `audio-engine remaster --events-json`)
 - [x] Execute SESSION-031 — deterministic remaster-batch pipeline (`RemasterBatchPipeline`, `audio-engine remaster-batch`)
+- [x] Execute SESSION-046 — expand music testing fixture style coverage (`generation_requests.music.v1.json`, `tests/test_integration.py`)
+- [x] Execute SESSION-047 — synchronize continuity/session-control docs after SESSION-046
 
 ## Recommended next PRs
 

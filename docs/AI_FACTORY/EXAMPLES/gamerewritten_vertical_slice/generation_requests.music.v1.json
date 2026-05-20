@@ -332,6 +332,489 @@
         "acceptanceProfile": "music-stinger",
         "notes": []
       }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_driving_v1",
+      "assetId": "bgm_test_driving",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205001,
+      "prompt": "driving action groove with steady pulse, energetic rhythm section, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_driving.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_hopeful_v1",
+      "assetId": "bgm_test_hopeful",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205002,
+      "prompt": "hopeful cinematic cue with uplifting harmony and forward motion, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_hopeful.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_romance_v1",
+      "assetId": "bgm_test_romance",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205003,
+      "prompt": "romantic theme with warm strings and gentle phrasing, loopable",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_romance.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_love_v1",
+      "assetId": "bgm_test_love",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205004,
+      "prompt": "tender love theme with lyrical melody and soft accompaniment, non-looping",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_love.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-ost",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_sailing_v1",
+      "assetId": "bgm_test_sailing",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205005,
+      "prompt": "open sea sailing theme with rolling rhythm and adventurous spirit, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_sailing.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_beach_v1",
+      "assetId": "bgm_test_beach",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205006,
+      "prompt": "relaxed beach ambience music with light percussion and warm chords, loopable",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_beach.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_snowy_mountains_v1",
+      "assetId": "bgm_test_snowy_mountains",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205007,
+      "prompt": "snowy mountain traversal cue with airy pads and cold expansive tone, loopable",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_snowy_mountains.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_hot_desert_v1",
+      "assetId": "bgm_test_hot_desert",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205008,
+      "prompt": "hot desert journey theme with sparse percussion and mirage-like motifs, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_hot_desert.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_high_tech_city_v1",
+      "assetId": "bgm_test_high_tech_city",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205009,
+      "prompt": "high-tech city soundtrack with sleek synth pulse and modern atmosphere, loopable",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_high_tech_city.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_elevator_music_v1",
+      "assetId": "bgm_test_elevator_music",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205010,
+      "prompt": "light elevator music style cue with soft jazz harmony and unobtrusive mood, non-looping",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 10,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_elevator_music.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-ost",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_guitar_solo_v1",
+      "assetId": "bgm_test_guitar_solo",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205011,
+      "prompt": "expressive guitar solo showcase over minimal backing, non-looping",
+      "styleFamily": "heroic-sci-fantasy",
+      "durationSeconds": 10,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_guitar_solo.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-ost",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_piano_solo_v1",
+      "assetId": "bgm_test_piano_solo",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205012,
+      "prompt": "intimate piano solo with clear melodic contour and dynamic phrasing, non-looping",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 10,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_piano_solo.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-ost",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_cyberpunk_v1",
+      "assetId": "bgm_test_cyberpunk",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205013,
+      "prompt": "cyberpunk night drive cue with gritty synth bass and neon atmosphere, loopable",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_cyberpunk.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_country_v1",
+      "assetId": "bgm_test_country",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205014,
+      "prompt": "country-inspired track with acoustic strum feel and laid-back groove, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_country.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_rock_v1",
+      "assetId": "bgm_test_rock",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205015,
+      "prompt": "driving rock track with punchy drums and strong guitar rhythm, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_rock.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_emo_v1",
+      "assetId": "bgm_test_emo",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205016,
+      "prompt": "emo-inspired piece with emotional chord changes and introspective tone, loopable",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_emo.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_lo_fi_v1",
+      "assetId": "bgm_test_lo_fi",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205017,
+      "prompt": "lo-fi chill loop with soft texture, vinyl-like warmth, and mellow beat",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_lo_fi.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_synth_pop_v1",
+      "assetId": "bgm_test_synth_pop",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205018,
+      "prompt": "synth-pop track with bright hooks and danceable mid-tempo pulse, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_synth_pop.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_synth_rock_v1",
+      "assetId": "bgm_test_synth_rock",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205019,
+      "prompt": "synth-rock hybrid with layered guitars and retro synth drive, loopable",
+      "styleFamily": "heroic-sci-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_synth_rock.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_synth_wave_v1",
+      "assetId": "bgm_test_synth_wave",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205020,
+      "prompt": "synth-wave cue with nostalgic analog textures and night-city momentum, loopable",
+      "styleFamily": "melancholic-techno-fantasy",
+      "durationSeconds": 12,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_synth_wave.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": true,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-loop",
+        "notes": []
+      }
+    },
+    {
+      "requestVersion": "1.0.0",
+      "requestId": "req_music_bgm_test_grand_opera_v1",
+      "assetId": "bgm_test_grand_opera",
+      "type": "music",
+      "backend": "procedural",
+      "seed": 205021,
+      "prompt": "grand opera inspired finale with dramatic arc and theatrical cadence, non-looping",
+      "styleFamily": "heroic-sci-fantasy",
+      "durationSeconds": 14,
+      "output": {
+        "targetPath": "Content/Audio/bgm_test_grand_opera.ogg",
+        "format": "ogg",
+        "sampleRate": 44100,
+        "channels": 2
+      },
+      "qa": {
+        "loopRequired": false,
+        "reviewStatus": "draft",
+        "acceptanceProfile": "music-ost",
+        "notes": []
+      }
     }
   ]
 }

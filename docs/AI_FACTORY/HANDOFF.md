@@ -4,24 +4,20 @@
 
 ## Last completed change
 
-Completed SESSION-028b, SESSION-028c, and SESSION-031 in a single functional PR:
+Completed SESSION-046 and SESSION-047 in one continuity-safe PR:
 
-- **SESSION-028b** (scanner + pitch-shift): Added `audio_engine/integration/sample_library.py` with deterministic note-aware `samples/orchestral` scanning (`OrchestralSampleLibrary`, nearest-note resolution). Added `audio_engine/dsp/pitch_shift.py` and integrated pitch-shift primitive use into `audio_engine/samples/sample_library.py`.
-- **SESSION-028c** (remaster pipeline): Added `audio_engine/render/remaster.py` (`RemasterPipeline`, `RemasterEvent`) to perform deterministic event-driven sample substitution with synth fallback. Wired `audio-engine remaster` to this pipeline and added additive `--events-json` support.
-- **SESSION-031** (batch remaster wiring): Added `RemasterBatchPipeline` (`audio_engine/integration/asset_pipeline.py`) with deterministic WAV traversal and machine-readable `remaster_batch_result.json` output. Added additive `audio-engine remaster-batch` CLI command.
+- **SESSION-046** (taxonomy fixture expansion): Added 21 additive music testing requests to `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json` for requested styles/moods/environments: driving, hopeful, romance, love, sailing, beach, snowy mountains, hot desert, high-tech city, elevator music, guitar solo, piano solo, cyberpunk, country, rock, emo, lo-fi, synth-pop, synth-rock, synth-wave, and grand opera. All new requests use deterministic IDs/seeds and explicit `durationSeconds`.
+- **SESSION-047** (continuity synchronization): Updated fixture-driven test expectations in `tests/test_integration.py` and synchronized continuity/session-control docs (`SESSION_QUEUE.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, `SESSION_HISTORY.md`, `CURRENT_STATE.md`, `ACTIVE_WORK.md`, `SUBSYSTEMS/MUSIC.md`).
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_pitch_shift.py tests/test_sample_library.py tests/test_remaster.py tests/test_engine_cli.py::test_cli_remaster_batch_subcommand_registered tests/test_engine_cli.py::test_cli_remaster_batch_smoke
+python -m pytest tests/test_integration.py -k "load_generation_request_fixture or expanded_style_piece_requests"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
-audio-engine remaster --input /tmp/remaster_smoke/in/input.wav --samples-dir /tmp/remaster_smoke/samples --events-json /tmp/remaster_smoke/events/input.events.json --output /tmp/remaster_smoke/single_out.wav
-audio-engine remaster-batch --input-dir /tmp/remaster_smoke/in --output-dir /tmp/remaster_smoke/out --samples-dir /tmp/remaster_smoke/samples --events-dir /tmp/remaster_smoke/events --quiet
 python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
 python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
-python -m json.tool docs/AI_FACTORY/FACTORY_STATUS.json
 ```
 
 Observed result:

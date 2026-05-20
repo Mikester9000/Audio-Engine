@@ -228,7 +228,7 @@ class TestFactoryInputLoaders:
     @pytest.mark.parametrize(
         ("filename", "expected_type", "expected_request_count"),
         [
-            ("generation_requests.music.v1.json", "music", 15),
+            ("generation_requests.music.v1.json", "music", 36),
             ("generation_requests.sfx.v1.json", "sfx", 10),
             ("generation_requests.voice.v1.json", "voice", 2),
         ],
@@ -260,6 +260,37 @@ class TestFactoryInputLoaders:
             assert request.type == "music"
             assert request.output.format == "wav"
             assert request.qa.loop_required is False
+
+    def test_music_fixture_includes_expanded_style_piece_requests(self):
+        batch = load_generation_request_batch(
+            EXAMPLE_FACTORY_INPUTS_DIR / "generation_requests.music.v1.json"
+        )
+        expected_assets = {
+            "bgm_test_driving",
+            "bgm_test_hopeful",
+            "bgm_test_romance",
+            "bgm_test_love",
+            "bgm_test_sailing",
+            "bgm_test_beach",
+            "bgm_test_snowy_mountains",
+            "bgm_test_hot_desert",
+            "bgm_test_high_tech_city",
+            "bgm_test_elevator_music",
+            "bgm_test_guitar_solo",
+            "bgm_test_piano_solo",
+            "bgm_test_cyberpunk",
+            "bgm_test_country",
+            "bgm_test_rock",
+            "bgm_test_emo",
+            "bgm_test_lo_fi",
+            "bgm_test_synth_pop",
+            "bgm_test_synth_rock",
+            "bgm_test_synth_wave",
+            "bgm_test_grand_opera",
+        }
+        actual_assets = {request.asset_id for request in batch.requests}
+        missing_assets = expected_assets - actual_assets
+        assert not missing_assets
 
     def test_generation_request_loader_rejects_missing_request_id(self):
         invalid_batch = {

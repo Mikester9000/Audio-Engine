@@ -1,6 +1,6 @@
 {
-  "version": "1.12.0",
-  "lastUpdated": "2026-05-19",
+  "version": "1.13.0",
+  "lastUpdated": "2026-05-20",
   "currentSession": {
     "id": "SESSION-032",
     "title": "Add license compliance CI gate",
