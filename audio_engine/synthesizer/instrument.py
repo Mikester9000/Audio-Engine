@@ -630,9 +630,6 @@ def _orchestral_hit(sr: int = 44100) -> Instrument:
 # clear tonal separation from the instruments above.
 # ---------------------------------------------------------------------------
 
-_OBOE_NOISE_SEED = 37
-_CLARINET_NOISE_SEED = 41
-_HARP_NOISE_SEED = 53
 _TIMPANI_NOISE_SEED = 67
 
 

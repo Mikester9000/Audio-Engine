@@ -32,8 +32,9 @@ __all__ = ["FullOrchestralBackend"]
 
 # ---------------------------------------------------------------------------
 # Per-style orchestral section overrides
-# Maps style name → (lead_section, counter_section, bass_section, use_timpani)
-# The sections map to instrument families in the InstrumentLibrary.
+# Maps style name → a dict of role→instrument name strings.
+# Recognised roles: lead, counter, bass, ostinato, pad, chord.
+# Any role not present falls back to the style-def instruments.
 # ---------------------------------------------------------------------------
 _ORCHESTRAL_STYLE_MAP: dict[str, dict[str, str]] = {
     # Orchestral styles use proper section instruments
@@ -292,7 +293,6 @@ class FullOrchestralBackend(InferenceBackend):
                 pass
 
         # Use the generator's phrase planning helpers to fill the sequencer
-        import random
         scale_name = gen._resolve_scale_name(style, sdef.scale_name)
         scale = ScaleLibrary.get(scale_name, sdef.root, sdef.octave)
         rng = gen._rng_for_call(style, bars)

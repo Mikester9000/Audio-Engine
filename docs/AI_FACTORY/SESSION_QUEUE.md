@@ -301,7 +301,7 @@
 
 ## Current next session
 
-### SESSION-048 — Full Orchestral Synth (active session)
+### SESSION-048 — Full Orchestral Synth (completed)
 
 - **Status:** `completed`
 - **Task type:** `synthesis + cli`

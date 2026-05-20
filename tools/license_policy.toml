@@ -25,10 +25,10 @@
 "ISC"           = "Permissive — full commercial use permitted"
 "Unlicense"     = "Public domain — full commercial use permitted"
 "CC0-1.0"       = "Public domain — full commercial use permitted"
-"LGPL-2.1"      = "LGPL — dynamic-link commercial use permitted with attribution"
-"LGPL-3.0"      = "LGPL — dynamic-link commercial use permitted with attribution"
-"LGPL-2.1-only" = "LGPL — dynamic-link commercial use permitted with attribution"
-"LGPL-3.0-only" = "LGPL — dynamic-link commercial use permitted with attribution"
+"LGPL-2.1-only"     = "LGPL — dynamic-link commercial use permitted with attribution"
+"LGPL-3.0-only"     = "LGPL — dynamic-link commercial use permitted with attribution"
+"LGPL-2.1-or-later" = "LGPL — dynamic-link commercial use permitted with attribution"
+"LGPL-3.0-or-later" = "LGPL — dynamic-link commercial use permitted with attribution"
 
 [conditional]
 "GPL-2.0"  = "Attribution + must share modifications; commercial use may be allowed — verify"

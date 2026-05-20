@@ -63,8 +63,8 @@ jobs:
       # 3. Install audio-engine with all declared dependency groups so that
       #    every optional dep (neural, ogg) appears in importlib.metadata.
       # -----------------------------------------------------------------------
-      - name: Install audio-engine (core + ogg extras)
-        run: pip install -e ".[dev,ogg]"
+      - name: Install audio-engine (core + dev + ogg + neural extras)
+        run: pip install -e ".[dev,ogg,neural]"
 
       # -----------------------------------------------------------------------
       # 4. Run the license compliance check.

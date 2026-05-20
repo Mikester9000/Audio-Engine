@@ -26,10 +26,20 @@ from __future__ import annotations
 
 import json
 import re
-import tomllib
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Literal
+
+try:
+    import tomllib  # Python 3.11+
+except ImportError:  # Python 3.9 / 3.10
+    try:
+        import tomli as tomllib  # type: ignore[no-redef]
+    except ImportError as _tomli_err:
+        raise ImportError(
+            "tomllib is not available (Python < 3.11) and the 'tomli' back-port "
+            "is not installed.  Install it with:  pip install tomli"
+        ) from _tomli_err
 
 __all__ = ["check_licenses", "LicenseReport", "PackageEntry"]
 
@@ -54,16 +64,16 @@ _SPDX_ALIASES: dict[str, str] = {
     "Apache License 2.0": "Apache-2.0",
     "Apache Software License": "Apache-2.0",
     "Apache Software License 2.0": "Apache-2.0",
-    "GNU Lesser General Public License v2 or later (LGPLv2+)": "LGPL-2.1",
-    "GNU Lesser General Public License v3 or later (LGPLv3+)": "LGPL-3.0",
+    "GNU Lesser General Public License v2 or later (LGPLv2+)": "LGPL-2.1-or-later",
+    "GNU Lesser General Public License v3 or later (LGPLv3+)": "LGPL-3.0-or-later",
     "PSF": "PSF-2.0",
     "Python Software Foundation License": "PSF-2.0",
     "ISC License (ISCL)": "ISC",
     "Creative Commons Attribution-NonCommercial 4.0": "CC-BY-NC-4.0",
     "CC BY-NC 4.0": "CC-BY-NC-4.0",
     "GNU Affero General Public License v3 or later (AGPLv3+)": "AGPL-3.0",
-    "LGPL-2.1+": "LGPL-2.1",
-    "LGPL-3.0+": "LGPL-3.0",
+    "LGPL-2.1+": "LGPL-2.1-or-later",
+    "LGPL-3.0+": "LGPL-3.0-or-later",
 }
 
 # Packages to always skip (build-time-only / meta packages).
@@ -120,12 +130,17 @@ def _normalise_license(raw: str) -> str:
 def _first_spdx_token(expression: str) -> str:
     """Return the first SPDX identifier from a compound License-Expression.
 
-    For example ``"BSD-3-Clause AND 0BSD AND MIT"`` returns ``"BSD-3-Clause"``.
+    For example ``"BSD-3-Clause AND 0BSD AND MIT"`` returns ``"BSD-3-Clause"``,
+    and ``"(MIT OR Apache-2.0)"`` returns ``"MIT"``.
     The first token is typically the primary license.
     """
-    # Strip SPDX operators and parentheses
-    token = re.split(r"\s+(?:AND|OR|WITH)\s+|[()\s]", expression.strip())[0]
-    return token.strip()
+    # Strip SPDX operators and parentheses; find the first non-empty token
+    tokens = re.split(r"\s+(?:AND|OR|WITH)\s+|[()\s]", expression.strip())
+    for token in tokens:
+        stripped = token.strip()
+        if stripped:
+            return stripped
+    return ""
 
 
 def _get_package_license(dist) -> tuple[str, list[str]]:
@@ -174,7 +189,12 @@ def _get_package_license(dist) -> tuple[str, list[str]]:
 def _declared_package_names(include_dev: bool) -> set[str]:
     """Read pyproject.toml and return the set of declared dependency package names."""
     if not _PYPROJECT.exists():
-        return set()
+        raise FileNotFoundError(
+            f"pyproject.toml not found at {_PYPROJECT}. "
+            "Cannot determine which packages to scan. "
+            "Either run from the repository root or pass all_installed=True "
+            "(CLI flag: --all-installed) to scan all installed packages."
+        )
 
     with _PYPROJECT.open("rb") as fh:
         proj = tomllib.load(fh)
@@ -229,6 +249,12 @@ def check_licenses(
     """
     if policy_path is None:
         policy_path = _DEFAULT_POLICY
+        if not policy_path.exists():
+            raise FileNotFoundError(
+                f"Default policy file not found at {policy_path}. "
+                "In a wheel install the policy file is not bundled. "
+                "Provide the path explicitly with --policy <file>."
+            )
 
     policy_map = _load_policy(policy_path)
 
