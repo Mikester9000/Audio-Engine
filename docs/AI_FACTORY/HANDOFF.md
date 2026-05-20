@@ -4,19 +4,31 @@
 
 ## Last completed change
 
-Completed **SESSION-029b** (studio creation-tooling workflow expansion):
+Completed **SESSION-038** (dual-path vocal/instrumental workflow stabilization):
 
-- Added studio-side preset save/load JSON controls in `audio_engine/ui/studio.py` (`_read_studio_preset`, `_write_studio_preset`).
-- Added in-studio mastering profile selector (`VALID_PROFILES`) for music generation parity with CLI profile workflows.
-- Added one-click **Generate All** shortcut to generate music/SFX/voice in one pass.
-- Added **Retry Last Error** recovery control and global status feedback for faster iterative troubleshooting.
-- Added focused tests in `tests/test_studio_ui.py` and retained existing `studio` CLI entrypoint coverage in `tests/test_procedural_overhaul.py`.
+- Added additive request schema support in `audio_engine/integration/factory_inputs.py`:
+  - optional `musicDeliveryMode` field
+  - currently supported value: `dual_vocal_instrumental` (music requests only)
+- Implemented deterministic paired output generation in both request-batch execution paths:
+  - `RequestBatchPipeline.execute(...)`
+  - `AssetPipeline.execute_request_batch(...)`
+- Dual-path mode now produces paired files with stable suffixes:
+  - `__instrumental`
+  - `__vocal_ready`
+- Added explicit provenance linkage metadata for both paired outputs:
+  - `dualPathGroupId`
+  - `dualPathRole`
+  - `pairedOutputPath`
+- Added focused parser/pipeline tests in `tests/test_integration.py` for:
+  - `musicDeliveryMode` parsing/validation
+  - dual-path paired output generation
+  - provenance linkage correctness
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_studio_ui.py tests/test_procedural_overhaul.py -k studio
+python -m pytest tests/test_ai_pipeline.py tests/test_integration.py -k "voice or dual_path or music_delivery_mode"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
@@ -24,14 +36,14 @@ python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
 ```
 
 Observed result:
-- Targeted studio slice passes (3 selected tests)
-- Full test suite passes (1043 tests)
+- Targeted dual-path/voice integration slice passes (28 selected tests)
+- Full test suite passes (1048 tests)
 - Asset manifest validation passes
 - Session-control JSON files parse cleanly
 
 ## Immediate next best task
 
-Execute **SESSION-038** (dual-path vocal/instrumental production workflow stabilization).
+Execute **SESSION-041** (end-to-end vertical-slice release gate automation).
 
 ## Files future agents should read first
 

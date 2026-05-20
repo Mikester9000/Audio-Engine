@@ -68,13 +68,14 @@ The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-
 - [x] Execute SESSION-046 — expand music testing fixture style coverage (`generation_requests.music.v1.json`, `tests/test_integration.py`)
 - [x] Execute SESSION-047 — synchronize continuity/session-control docs after SESSION-046
 - [x] Execute SESSION-029b — expand studio creation tooling with presets/profile loading/batch shortcut/retry UX
+- [x] Execute SESSION-038 — stabilize dual-path vocal/instrumental production outputs with provenance linkage
 
 ## Recommended next PRs
 
-1. **Execute SESSION-038**
-   - Dual-path vocal/instrumental production workflow stabilization.
+1. **Execute SESSION-041**
+   - End-to-end vertical-slice release gate automation (generation → QA/compliance → export).
 2. Continue iterative studio quality refinement
-   - Use the new preset + batch + retry tooling to accelerate deterministic music/SFX iteration loops.
+   - Use the new preset + batch + retry tooling plus dual-path delivery modes to accelerate deterministic production loops.
 
 ## Do not deprioritize
 

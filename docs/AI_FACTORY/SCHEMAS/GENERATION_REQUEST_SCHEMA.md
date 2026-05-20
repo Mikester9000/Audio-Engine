@@ -26,6 +26,7 @@ Committed examples:
   "prompt": "uplifting exploration field theme with melancholic sci-fantasy undertone, loopable",
   "styleFamily": "heroic-sci-fantasy",
   "durationSeconds": 90,
+  "musicDeliveryMode": "dual_vocal_instrumental",
   "output": {
     "targetPath": "Content/Audio/bgm_field_day.ogg",
     "format": "ogg",
@@ -62,6 +63,20 @@ Committed examples:
 - On the legacy `--request-file` path, CLI `--music-duration` / `--sfx-duration` values remain additive fallback defaults for requests that omit `durationSeconds`.
 - Plan-driven execution still forwards plan `durationTargetSeconds` as per-request overrides; those overrides take precedence over request-level `durationSeconds` when both are present.
 - `durationSeconds` must be a finite positive number when provided.
+
+## Optional dual-path music delivery field (SESSION-038)
+
+- `musicDeliveryMode` is an additive optional field.
+- Currently supported value:
+  - `dual_vocal_instrumental` (music requests only)
+- When enabled for `type: "music"`, request-batch execution writes **two deterministic outputs** for the same request:
+  - `__instrumental` variant (mastering profile `game`)
+  - `__vocal_ready` variant (mastering profile `vocal_mix`)
+- Both variants write provenance sidecars with explicit linkage metadata:
+  - `dualPathGroupId`
+  - `dualPathRole`
+  - `pairedOutputPath`
+- `musicDeliveryMode` is rejected for non-music request types.
 
 ## Backend field guidance (SESSION-011)
 

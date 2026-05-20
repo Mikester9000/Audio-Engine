@@ -54,3 +54,4 @@
 | `SESSION-046` | 2026-05-20 | completed | Expanded `generation_requests.music.v1.json` with 21 additional deterministic music test-piece requests covering requested genres/moods/environments (driving through grand opera) using explicit `durationSeconds`. | this PR |
 | `SESSION-047` | 2026-05-20 | completed | Synchronized fixture-driven tests and continuity/session-control docs after SESSION-046 while preserving SESSION-032 as the active planned implementation session. | this PR |
 | `SESSION-029b` | 2026-05-20 | completed | Expanded `audio-engine studio` creation tooling with preset save/load JSON, in-studio mastering profile selection, one-click batch generation, and retry-last-error UX. | this PR |
+| `SESSION-038` | 2026-05-20 | completed | Added additive dual-path music request delivery (`musicDeliveryMode`) with deterministic paired instrumental/vocal-ready outputs and provenance linkage metadata across request-batch execution paths. | this PR |

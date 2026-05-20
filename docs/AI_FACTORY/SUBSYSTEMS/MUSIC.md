@@ -10,6 +10,7 @@
 - CLI access through `generate` and `generate-music`
 - backend selection/discovery surfaces through `generate-music --backend` and `list-backends`
 - studio-side music mastering-profile selection plus preset save/load and one-click batch generation in `audio_engine/ui/studio.py`
+- request-driven dual-path delivery mode for paired instrumental and vocal-ready outputs (`musicDeliveryMode: dual_vocal_instrumental`)
 - existing integration mapping for multiple game states in `audio_engine/integration/game_state_map.py`
 
 ## What is missing
@@ -17,7 +18,7 @@
 - richer style-preset registry beyond current built-in styles
 - verified non-procedural backend quality benchmarks using real downloaded model weights
 - full studio-side profile/preset lifecycle management (beyond current save/load + profile selection)
-- full dual-path vocal/instrumental production export stabilization (SESSION-038 planned)
+- full release-gate orchestration that consumes dual-path outputs end-to-end (SESSION-041 planned)
 
 ## Backend evaluation notes (SESSION-011 + optional neural scaffolding)
 

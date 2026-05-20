@@ -330,10 +330,17 @@
 
 ### SESSION-038 — Stabilize dual-path vocal and instrumental workflow
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `pipeline + voice`
 - **Objective:** Support deterministic generation/export of paired instrumental and vocal-production-ready variants with explicit provenance linkage.
-- **Notes:** Keep voice lower-priority than music/SFX and preserve existing command compatibility with additive flags/contracts only.
+- **Notes:** Added additive `musicDeliveryMode: dual_vocal_instrumental` support for music requests, deterministic paired `__instrumental` + `__vocal_ready` outputs in both request-batch execution paths, and provenance linkage fields (`dualPathGroupId`, `dualPathRole`, `pairedOutputPath`).
+
+### SESSION-041 — End-to-end vertical slice release gate automation
+
+- **Status:** `planned`
+- **Task type:** `orchestration`
+- **Objective:** Add one deterministic command that executes vertical-slice generation, QA, compliance checks, and export handoff with machine-readable gate artifacts.
+- **Notes:** Preserve existing command compatibility; wire together existing gates additively instead of replacing current command surfaces.
 
 ### SESSION-028b — Sample library scanner and pitch-shift engine
 
