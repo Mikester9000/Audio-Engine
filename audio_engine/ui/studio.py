@@ -26,6 +26,13 @@ def _safe_int(value: str, fallback: int) -> int:
         return fallback
 
 
+def _parse_float_field(value: object, *, field_name: str) -> float:
+    try:
+        return float(value)
+    except Exception as exc:
+        raise ValueError(f"invalid preset field '{field_name}': expected float") from exc
+
+
 def _read_studio_preset(path: Path) -> dict[str, object]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -306,7 +313,9 @@ def launch_studio() -> None:
                 profile_value = str(music.get("profile", music_profile.get()))
                 if profile_value in VALID_PROFILES:
                     music_profile.set(profile_value)
-                bars_var.set(max(4, _safe_int(str(music.get("bars", bars_var.get())), int(bars_var.get()))))
+                bars_raw = music.get("bars", bars_var.get())
+                bars_value = _safe_int(str(bars_raw), int(bars_var.get()))
+                bars_var.set(max(4, bars_value))
                 music_seed.set(str(music.get("seed", music_seed.get())))
                 music_out.set(str(music.get("outputPath", music_out.get())))
 
@@ -315,7 +324,11 @@ def launch_studio() -> None:
                 sfx_value = str(sfx.get("category", sfx_type.get()))
                 if sfx_value in available_sfx_types():
                     sfx_type.set(sfx_value)
-                sfx_duration.set(float(sfx.get("durationSeconds", sfx_duration.get())))
+                sfx_duration_value = _parse_float_field(
+                    sfx.get("durationSeconds", sfx_duration.get()),
+                    field_name="sfx.durationSeconds",
+                )
+                sfx_duration.set(sfx_duration_value)
                 sfx_pitch.set(str(sfx.get("pitchHz", sfx_pitch.get())))
                 sfx_seed.set(str(sfx.get("seed", sfx_seed.get())))
                 sfx_out.set(str(sfx.get("outputPath", sfx_out.get())))
@@ -327,7 +340,11 @@ def launch_studio() -> None:
                 preset_value = str(voice.get("preset", voice_preset.get()))
                 if preset_value in VOICE_PRESETS:
                     voice_preset.set(preset_value)
-                voice_speed.set(float(voice.get("speed", voice_speed.get())))
+                voice_speed_value = _parse_float_field(
+                    voice.get("speed", voice_speed.get()),
+                    field_name="voice.speed",
+                )
+                voice_speed.set(voice_speed_value)
                 voice_seed.set(str(voice.get("seed", voice_seed.get())))
                 voice_out.set(str(voice.get("outputPath", voice_out.get())))
 

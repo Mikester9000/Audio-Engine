@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from audio_engine.ui.studio import _read_studio_preset, _write_studio_preset
+from audio_engine.ui.studio import _parse_float_field, _read_studio_preset, _write_studio_preset
 
 
 def test_studio_preset_roundtrip(tmp_path):
@@ -46,3 +46,7 @@ def test_read_studio_preset_rejects_non_object_json(tmp_path):
     with pytest.raises(ValueError, match="JSON object"):
         _read_studio_preset(preset_path)
 
+
+def test_parse_float_field_has_clear_error():
+    with pytest.raises(ValueError, match="sfx.durationSeconds"):
+        _parse_float_field("not-a-number", field_name="sfx.durationSeconds")
