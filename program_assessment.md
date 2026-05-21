@@ -2,6 +2,8 @@
 
 ## Review basis
 
+Absolute repository paths are used intentionally in this document to match the task requirement for file references.
+
 This assessment is based on a direct review of the AI-factory control docs, subsystem docs, example `GameRewritten` fixtures, and the current implementation in:
 
 - `/home/runner/work/Audio-Engine/Audio-Engine/audio_engine/integration/cpp/AudioSystem.hpp`

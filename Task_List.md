@@ -1,12 +1,14 @@
 # Task List
 
+Absolute repository paths are used intentionally in this file to match the task requirement for file references.
+
 Ordered one-file-at-a-time tasks to move `/home/runner/work/Audio-Engine/Audio-Engine` toward a full `GameRewritten` audio-delivery program.
 
 ---
 
 ## Task 01
 
-- **Task Name:** Fix runtime music playback, looping, and crossfade ownership
+- **Task Name:** Fix runtime music playback, looping, and cross-fade ownership
 - **Coding logic of task and narrative design required:** Replace fire-and-forget music playback with managed music objects so exploration, battle, boss, and cinematic cues behave like persistent JRPG score layers instead of disposable one-shots.
 - **Logic of how it functions in the program and design it must follow:** The runtime must own current/next music handles, support loop-safe playback, preserve stop/start control, and keep compatibility with the existing Lua/C++ integration surface.
 - **Check to adhere to Final Fantasy aesthetics:** Ensure seamless loop continuity, graceful battle transitions, and a more cinematic PS2-era presentation instead of abrupt cuts.
