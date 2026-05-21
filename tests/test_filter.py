@@ -57,3 +57,59 @@ def test_low_pass_output_dtype():
     noise = _white_noise(512)
     out = FLT.low_pass(noise, 1000.0)
     assert out.dtype == np.float32
+
+
+# ------------------------------------------------------------------
+# resonant_low_pass tests
+# ------------------------------------------------------------------
+
+def _energy_band(signal: np.ndarray, lo_hz: float, hi_hz: float, sr: int = SR) -> float:
+    """Energy in a frequency band."""
+    spec = np.abs(np.fft.rfft(signal)) ** 2
+    freqs = np.fft.rfftfreq(len(signal), 1.0 / sr)
+    mask = (freqs >= lo_hz) & (freqs <= hi_hz)
+    return float(spec[mask].sum())
+
+
+def test_resonant_low_pass_attenuates_high_freq():
+    noise = _white_noise()
+    filtered = FLT.resonant_low_pass(noise, cutoff=1000.0, resonance=1.0)
+    assert _energy_above(filtered, 4000.0) < _energy_above(noise, 4000.0)
+
+
+def test_resonant_low_pass_output_dtype():
+    noise = _white_noise(512)
+    out = FLT.resonant_low_pass(noise, 1000.0)
+    assert out.dtype == np.float32
+
+
+def test_resonant_low_pass_resonance_boosts_cutoff():
+    """Higher resonance should increase energy near the cutoff compared to plain low_pass."""
+    noise = _white_noise()
+    plain = FLT.low_pass(noise, cutoff=1000.0)
+    resonant = FLT.resonant_low_pass(noise, cutoff=1000.0, resonance=2.5)
+    assert _energy_band(resonant, 700.0, 1300.0) > _energy_band(plain, 700.0, 1300.0)
+
+
+# ------------------------------------------------------------------
+# warm_low_pass tests
+# ------------------------------------------------------------------
+
+def test_warm_low_pass_attenuates_high_freq():
+    noise = _white_noise()
+    filtered = FLT.warm_low_pass(noise, cutoff=1000.0)
+    assert _energy_above(filtered, 4000.0) < _energy_above(noise, 4000.0)
+
+
+def test_warm_low_pass_output_dtype():
+    noise = _white_noise(512)
+    out = FLT.warm_low_pass(noise, 1000.0)
+    assert out.dtype == np.float32
+
+
+def test_warm_low_pass_adds_nonlinearity():
+    """warm_low_pass applies mild saturation; output should differ from plain low_pass."""
+    noise = _white_noise()
+    plain = FLT.low_pass(noise, cutoff=3000.0)
+    warm = FLT.warm_low_pass(noise, cutoff=3000.0)
+    assert not np.allclose(plain, warm, atol=1e-4)

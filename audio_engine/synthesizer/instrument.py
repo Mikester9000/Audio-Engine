@@ -40,6 +40,30 @@ def _vibrato_phase(freq: float, dur: float, sr: int, rate_hz: float, depth_semit
     return 2.0 * np.pi * np.cumsum(freq_mod / sr)
 
 
+def _bl_saw_from_phase(phase: np.ndarray, freq: float, sr: int) -> np.ndarray:
+    """Generate a band-limited sawtooth from a precomputed phase accumulator.
+
+    Uses the same Lanczos-windowed additive synthesis as
+    :meth:`Oscillator.bl_sawtooth`, but accepts a time-varying phase track so
+    that the oscillator frequency can be modulated sample-by-sample (true pitch
+    vibrato / FM rather than amplitude modulation / tremolo).
+    """
+    nyquist = sr / 2.0
+    n_harmonics = min(int(nyquist / max(freq, 1.0)), 40)
+    n_harmonics = max(n_harmonics, 1)
+    N = float(n_harmonics)
+    k = np.arange(1, n_harmonics + 1, dtype=np.float64)
+    sigma = np.sinc(k / (N + 1.0))
+    coeff = ((-1.0) ** (k + 1) / k) * sigma  # shape: (n_harmonics,)
+    # phase shape: (n,);  broadcast to (n_harmonics, n) for vectorised sum
+    out = np.sum(coeff[:, None] * np.sin(k[:, None] * phase[None, :]), axis=0)
+    out *= 2.0 / np.pi
+    peak = np.max(np.abs(out))
+    if peak > 1e-9:
+        out /= peak
+    return out.astype(np.float32)
+
+
 @dataclass
 class Instrument:
     """A complete synthesised voice.
@@ -137,21 +161,28 @@ class InstrumentLibrary:
 @InstrumentLibrary.register("strings")
 def _strings(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        phase_c = _vibrato_phase(freq, dur, sr, rate_hz=5.0, depth_semitones=0.5)
-        phase_u = _vibrato_phase(freq * _cents_to_ratio(3.0), dur, sr, rate_hz=5.1, depth_semitones=0.45)
-        phase_l = _vibrato_phase(freq * _cents_to_ratio(-3.0), dur, sr, rate_hz=4.9, depth_semitones=0.45)
-        body = (
-            0.46 * scipy_sawtooth(phase_c)
-            + 0.30 * scipy_sawtooth(phase_u)
-            + 0.24 * scipy_sawtooth(phase_l)
-        )
-        noise = np.random.default_rng(_STRINGS_BOW_NOISE_SEED).standard_normal(len(body)).astype(np.float32)
+        # Use band-limited sawtooth ensemble — three detuned voices for natural width
+        n = max(1, int(dur * sr))
+        rate_hz = 5.0
+        t = np.arange(n, dtype=np.float64) / sr
+        # Per-voice pitch vibrato via frequency modulation (phase accumulation)
+        freq_center = freq * (1.0 + (_cents_to_ratio(0.5) - 1.0) * np.sin(2.0 * np.pi * rate_hz * t))
+        freq_upper  = freq * _cents_to_ratio(3.0) * (1.0 + (_cents_to_ratio(0.45) - 1.0) * np.sin(2.0 * np.pi * 5.1 * t))
+        freq_lower  = freq * _cents_to_ratio(-3.0) * (1.0 + (_cents_to_ratio(0.45) - 1.0) * np.sin(2.0 * np.pi * 4.9 * t))
+        phase_c = 2.0 * np.pi * np.cumsum(freq_center / sr)
+        phase_u = 2.0 * np.pi * np.cumsum(freq_upper / sr)
+        phase_l = 2.0 * np.pi * np.cumsum(freq_lower / sr)
+        body_c = _bl_saw_from_phase(phase_c, freq, sr)
+        body_u = _bl_saw_from_phase(phase_u, freq * _cents_to_ratio(3.0), sr)
+        body_l = _bl_saw_from_phase(phase_l, freq * _cents_to_ratio(-3.0), sr)
+        body = 0.46 * body_c + 0.30 * body_u + 0.24 * body_l
+        noise = np.random.default_rng(_STRINGS_BOW_NOISE_SEED).standard_normal(n).astype(np.float32)
         noise = Filter(sr).band_pass(noise, 200.0, 2000.0)
-        return body.astype(np.float32) + 0.1 * noise  # -20 dB bow layer
+        return body.astype(np.float32) + 0.08 * noise
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
-        sig = flt.low_pass(sig, 6000.0)
+        sig = flt.warm_low_pass(sig, 5500.0)
         sig = fx.reverb(sig, room_size=0.72, wet=0.25)
         return fx.chorus(sig, rate=0.8, depth=0.004, wet=0.28)
 
@@ -168,22 +199,27 @@ def _strings(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("brass")
 def _brass(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        base = osc.additive(
-            freq, dur,
-            [(1, 1.0), (2, 0.85), (3, 0.7), (4, 0.2), (5, 0.1)],
-        )
-        drive = np.where(np.abs(base) > 0.7, 1.02, 1.0)  # slight growl on loud notes
-        return np.tanh(base * drive).astype(np.float32)
+        # Band-limited sawtooth with rich harmonic content
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        # Lip buzz: slight pitch wobble on attack (simulates embouchure settling)
+        # Modulate frequency (phase accumulation) for true pitch variation
+        pitch_freq = freq * (1.0 + 0.008 * np.exp(-12.0 * t))
+        phase = 2.0 * np.pi * np.cumsum(pitch_freq / sr)
+        base = _bl_saw_from_phase(phase, freq, sr)
+        # Mild tanh overdrive for brass harmonic saturation (growl on loud notes)
+        driven = np.tanh(base.astype(np.float64) * 1.6)
+        return driven.astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
-        sig = flt.low_pass(sig, 5000.0)
+        sig = flt.resonant_low_pass(sig, 4800.0, resonance=1.4)
         return fx.reverb(sig, room_size=0.45, wet=0.18)
 
     return Instrument(
         name="brass",
         oscillator_fn=osc_fn,
-        envelope=Envelope(attack=0.02, decay=0.14, sustain=0.72, release=0.24, sample_rate=sr),
+        envelope=Envelope(attack=0.025, decay=0.14, sustain=0.72, release=0.24, sample_rate=sr),
         post_process=post,
         volume=0.8,
         sample_rate=sr,
@@ -195,25 +231,31 @@ def _piano(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
         t = np.arange(n, dtype=np.float32) / sr
-        harmonic_decay = np.exp(-5.5 * t)
+        # String stiffness: upper harmonics go slightly sharp (inharmonicity)
+        harmonic_decay = np.exp(-5.0 * t)
         body = osc.additive(
             freq, dur,
-            [(1, 1.0), (2, 0.55), (3, 0.3), (4.03, 0.16), (5.07, 0.08), (7.12, 0.04)],
+            [(1, 1.0), (2, 0.50), (3, 0.28), (4.03, 0.14), (5.07, 0.07), (7.12, 0.03)],
         )
+        # Sympathetic string resonance (very quiet secondary frequencies)
+        sympathetic = osc.additive(
+            freq * 2.0, dur,
+            [(1, 0.12), (2, 0.06)],
+        ) * np.exp(-8.0 * t)
         click_len = max(1, int(0.005 * sr))
         click = np.zeros(n, dtype=np.float32)
         click[:click_len] = np.exp(-np.linspace(0.0, 6.0, click_len)).astype(np.float32)
-        return (body * harmonic_decay + 0.25 * click).astype(np.float32)
+        return (body * harmonic_decay + sympathetic + 0.18 * click).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
-        sig = flt.low_pass(sig, 6000.0)
-        return fx.reverb(sig, room_size=0.28, wet=0.12)
+        sig = flt.warm_low_pass(sig, 6500.0)
+        return fx.reverb(sig, room_size=0.35, wet=0.15)
 
     return Instrument(
         name="piano",
         oscillator_fn=osc_fn,
-        envelope=Envelope(attack=0.001, decay=0.28, sustain=0.0, release=0.22, sample_rate=sr),
+        envelope=Envelope(attack=0.001, decay=0.30, sustain=0.0, release=0.25, sample_rate=sr),
         post_process=post,
         volume=0.8,
         sample_rate=sr,
@@ -223,24 +265,42 @@ def _piano(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("choir")
 def _choir(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        sig = 0.5 * osc.sine(freq * _cents_to_ratio(0.0), dur)
-        sig += 0.25 * osc.sine(freq * _cents_to_ratio(8.0), dur)
-        sig += 0.25 * osc.sine(freq * _cents_to_ratio(-8.0), dur)
-        return sig
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        # Ensemble vibrato / pitch detuning via frequency modulation (phase accumulation)
+        f1 = freq * (1.0 + 0.003 * np.sin(2.0 * np.pi * 5.2 * t))
+        f2 = freq * _cents_to_ratio(5.0) * (1.0 + 0.003 * np.sin(2.0 * np.pi * 5.0 * t + 0.8))
+        f3 = freq * _cents_to_ratio(-5.0) * (1.0 + 0.003 * np.sin(2.0 * np.pi * 4.8 * t + 1.6))
+        phase1 = 2.0 * np.pi * np.cumsum(f1 / sr)
+        phase2 = 2.0 * np.pi * np.cumsum(f2 / sr)
+        phase3 = 2.0 * np.pi * np.cumsum(f3 / sr)
+        # Glottal source: band-limited sawtooth (good model of vocal folds)
+        g1 = _bl_saw_from_phase(phase1, freq, sr).astype(np.float64)
+        g2 = _bl_saw_from_phase(phase2, freq * _cents_to_ratio(5.0), sr).astype(np.float64)
+        g3 = _bl_saw_from_phase(phase3, freq * _cents_to_ratio(-5.0), sr).astype(np.float64)
+        source = 0.5 * g1 + 0.27 * g2 + 0.23 * g3
+        return source.astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
-        formants = np.zeros_like(sig)
-        for center, bw in zip(_CHOIR_FORMANTS, (120.0, 160.0, 260.0)):
-            formants += flt.band_pass(sig, max(80.0, center - bw), center + bw)
-        formants = formants / max(1, len(_CHOIR_FORMANTS))
-        formants = fx.chorus(formants, rate=0.8, depth=0.006, wet=0.48)
-        return fx.reverb(formants, room_size=0.85, wet=0.38)
+        # Model vowel formants (approximate "ah" vowel: F1≈700, F2≈1150, F3≈2600)
+        formants = np.zeros(len(sig), dtype=np.float64)
+        formant_centers = (_CHOIR_FORMANTS[0], _CHOIR_FORMANTS[1], _CHOIR_FORMANTS[2])
+        formant_bws = (100.0, 130.0, 220.0)
+        formant_amps = (1.0, 0.65, 0.38)
+        for center, bw, amp in zip(formant_centers, formant_bws, formant_amps):
+            band = flt.band_pass(sig, max(80.0, center - bw), min(center + bw, 8000.0))
+            formants += amp * band.astype(np.float64)
+        # Breathiness layer
+        formants /= sum(formant_amps)
+        formants_f32 = formants.astype(np.float32)
+        formants_f32 = fx.chorus(formants_f32, rate=0.7, depth=0.006, wet=0.45)
+        return fx.reverb(formants_f32, room_size=0.88, wet=0.40)
 
     return Instrument(
         name="choir",
         oscillator_fn=osc_fn,
-        envelope=Envelope(attack=0.3, decay=0.25, sustain=0.78, release=0.9, sample_rate=sr),
+        envelope=Envelope(attack=0.32, decay=0.25, sustain=0.78, release=0.95, sample_rate=sr),
         post_process=post,
         volume=0.7,
         sample_rate=sr,
@@ -250,28 +310,30 @@ def _choir(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("synth_pad")
 def _synth_pad(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        # Band-limited sawtooth supersaw — three detuned voices
         return (
-            0.34 * osc.sawtooth(freq * _cents_to_ratio(-6.0), dur)
-            + 0.34 * osc.sawtooth(freq * _cents_to_ratio(0.0), dur)
-            + 0.32 * osc.sawtooth(freq * _cents_to_ratio(6.0), dur)
+            0.34 * osc.bl_sawtooth(freq * _cents_to_ratio(-7.0), dur)
+            + 0.34 * osc.bl_sawtooth(freq, dur)
+            + 0.32 * osc.bl_sawtooth(freq * _cents_to_ratio(7.0), dur)
         )
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
-        low_start = flt.low_pass(sig, 200.0)
-        low_end = flt.low_pass(sig, 8000.0)
+        # Resonant filter sweep from dark to bright over 2 seconds
         n = len(sig)
+        low_start = flt.resonant_low_pass(sig, 350.0, resonance=1.6)
+        low_end = flt.resonant_low_pass(sig, 7000.0, resonance=1.2)
         sweep_len = min(n, int(2.0 * sr))
         alpha = np.ones(n, dtype=np.float32)
         alpha[:sweep_len] = np.linspace(0.0, 1.0, sweep_len, dtype=np.float32)
         sig = low_start * (1.0 - alpha) + low_end * alpha
-        sig = fx.chorus(sig, rate=0.45, depth=0.008, wet=0.55)
-        return fx.reverb(sig, room_size=0.82, wet=0.42)
+        sig = fx.chorus(sig, rate=0.45, depth=0.009, wet=0.55)
+        return fx.reverb(sig, room_size=0.85, wet=0.44)
 
     return Instrument(
         name="synth_pad",
         oscillator_fn=osc_fn,
-        envelope=Envelope(attack=0.35, decay=0.4, sustain=0.85, release=1.2, sample_rate=sr),
+        envelope=Envelope(attack=0.38, decay=0.4, sustain=0.85, release=1.2, sample_rate=sr),
         post_process=post,
         volume=0.65,
         sample_rate=sr,
@@ -304,17 +366,18 @@ def _electric_guitar(sr: int = 44100) -> Instrument:
 def _bass(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
-        fundamental = osc.sine(freq, dur, amplitude=0.75)
-        second = osc.sine(freq * 2.0, dur, amplitude=0.375)  # -6 dB
+        # Band-limited sawtooth for warm bass without aliasing buzz
+        fundamental = osc.bl_sawtooth(freq, dur) * 0.72
+        second = osc.sine(freq * 2.0, dur, amplitude=0.28)
         pick = np.zeros(n, dtype=np.float32)
-        pick_len = max(1, int(0.01 * sr))
+        pick_len = max(1, int(0.008 * sr))
         pick_noise = np.random.default_rng(_BASS_PICK_NOISE_SEED).standard_normal(pick_len).astype(np.float32)
         pick[:pick_len] = pick_noise * np.exp(-np.linspace(0.0, 6.0, pick_len))
-        return fundamental + second + 0.1 * pick
+        return fundamental + second + 0.08 * pick
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
-        sig = flt.low_pass(sig, 900.0)
+        sig = flt.resonant_low_pass(sig, 800.0, resonance=1.3)
         return fx.compress(sig, threshold=0.45, ratio=3.0, makeup_gain=1.05)
 
     return Instrument(
@@ -449,19 +512,19 @@ def _ff7_strings(sr: int = 44100) -> Instrument:
     """Warm-but-synthetic string ensemble — FF7/FF8 SPU string character.
 
     The PS1 ADPCM strings had a compressed, slightly nasal quality.
-    Modelled here with a sawtooth ensemble + gentle low-pass + chorus.
+    Modelled here with a band-limited sawtooth ensemble + gentle low-pass + chorus.
     """
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        s1 = osc.sawtooth(freq, dur, amplitude=0.55)
-        s2 = osc.sawtooth(freq * 1.007, dur, amplitude=0.28)   # detune
-        s3 = osc.sawtooth(freq * 0.994, dur, amplitude=0.17)   # detune low
+        s1 = osc.bl_sawtooth(freq, dur) * 0.55
+        s2 = osc.bl_sawtooth(freq * 1.007, dur) * 0.28   # detune
+        s3 = osc.bl_sawtooth(freq * 0.994, dur) * 0.17   # detune low
         return s1 + s2 + s3
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
-        sig = flt.low_pass(sig, 3800.0)       # compressed bandwidth of ADPCM
+        sig = flt.warm_low_pass(sig, 3600.0)   # compressed bandwidth of ADPCM
         sig = fx.chorus(sig, rate=0.9, depth=0.005, wet=0.35)
         return fx.reverb(sig, room_size=0.55, wet=0.30)
 
@@ -479,19 +542,19 @@ def _ff7_strings(sr: int = 44100) -> Instrument:
 def _ff7_bass(sr: int = 44100) -> Instrument:
     """Punchy melodic bass — Uematsu's bass lines are rhythmically active.
 
-    Uses a sawtooth + square blend for the mid-punch character of the PS1
-    bass samples.  Filter sweeps to 600 Hz to stay out of the way of melody.
+    Uses a band-limited sawtooth + square blend for the mid-punch character of
+    the PS1 bass samples.  Filter sweeps to 600 Hz to stay out of the melody.
     """
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        saw = osc.sawtooth(freq, dur, amplitude=0.65)
-        sq  = osc.square(freq, dur, amplitude=0.35, duty_cycle=0.45)
+        saw = osc.bl_sawtooth(freq, dur) * 0.65
+        sq  = osc.bl_square(freq, dur, duty_cycle=0.45) * 0.35
         return saw + sq
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         from audio_engine.synthesizer.filter import Filter
-        flt = Filter(sr)
-        sig = flt.low_pass(sig, 650.0)
+        flt = Filter(sr, order=8)  # high-order LP keeps bass energy strictly below 500 Hz
+        sig = flt.low_pass(sig, 500.0)
         return fx.compress(sig, threshold=0.5, ratio=3.0, makeup_gain=1.1)
 
     return Instrument(
@@ -543,7 +606,7 @@ def _ff8_electric_guitar(sr: int = 44100) -> Instrument:
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         fm  = osc.fm(freq, freq * 2.0, dur, modulation_index=3.8)
-        sq  = osc.square(freq, dur, amplitude=0.3, duty_cycle=0.48)
+        sq  = osc.bl_square(freq, dur, duty_cycle=0.48) * 0.3
         return fm + sq
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
@@ -646,16 +709,18 @@ def _oboe(sr: int = 44100) -> Instrument:
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
-        # Slight vibrato on the carrier
-        phase = _vibrato_phase(freq, dur, sr, rate_hz=5.5, depth_semitones=0.25)
-        carrier = scipy_sawtooth(phase).astype(np.float32)
+        # Slight vibrato on the carrier via frequency modulation (phase accumulation)
+        t = np.arange(n, dtype=np.float64) / sr
+        carrier_freq = freq * (1.0 + 0.004 * np.sin(2.0 * np.pi * 5.5 * t))
+        phase = 2.0 * np.pi * np.cumsum(carrier_freq / sr)
+        carrier = _bl_saw_from_phase(phase, freq, sr).astype(np.float64)
         # Add weak reed buzz via high-frequency FM modulation
         mod_phase = 2.0 * np.pi * freq * 2.0 * np.arange(n, dtype=np.float64) / sr
         buzz = (0.18 * np.sin(mod_phase + 1.6 * np.sin(mod_phase * 0.5))).astype(np.float32)
         # Seeded reed-breath noise (filtered white noise simulating air through the reed)
         breath = np.random.default_rng(_OBOE_NOISE_SEED).standard_normal(n).astype(np.float32)
         breath = Filter(sr).band_pass(breath, 400.0, 2500.0)
-        return carrier + buzz + 0.06 * breath
+        return (carrier.astype(np.float32) + buzz + 0.06 * breath)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
@@ -758,22 +823,26 @@ def _cello(sr: int = 44100) -> Instrument:
     """
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        phase_c = _vibrato_phase(freq, dur, sr, rate_hz=4.5, depth_semitones=0.55)
-        phase_u = _vibrato_phase(freq * _cents_to_ratio(4.0), dur, sr, rate_hz=4.6, depth_semitones=0.5)
-        phase_l = _vibrato_phase(freq * _cents_to_ratio(-4.0), dur, sr, rate_hz=4.4, depth_semitones=0.5)
-        # Heavier fundamental than the strings section, less of the upper detune
-        body = (
-            0.55 * scipy_sawtooth(phase_c)
-            + 0.25 * scipy_sawtooth(phase_u)
-            + 0.20 * scipy_sawtooth(phase_l)
-        )
-        noise = np.random.default_rng(_STRINGS_BOW_NOISE_SEED + 3).standard_normal(len(body)).astype(np.float32)
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        # Pitch vibrato via frequency modulation (phase accumulation)
+        freq_center = freq * (1.0 + 0.003 * np.sin(2.0 * np.pi * 4.5 * t))
+        freq_upper  = freq * _cents_to_ratio(4.0) * (1.0 + 0.003 * np.sin(2.0 * np.pi * 4.6 * t + 0.5))
+        freq_lower  = freq * _cents_to_ratio(-4.0) * (1.0 + 0.003 * np.sin(2.0 * np.pi * 4.4 * t + 1.0))
+        phase_c = 2.0 * np.pi * np.cumsum(freq_center / sr)
+        phase_u = 2.0 * np.pi * np.cumsum(freq_upper / sr)
+        phase_l = 2.0 * np.pi * np.cumsum(freq_lower / sr)
+        body_c = _bl_saw_from_phase(phase_c, freq, sr).astype(np.float64)
+        body_u = _bl_saw_from_phase(phase_u, freq * _cents_to_ratio(4.0), sr).astype(np.float64)
+        body_l = _bl_saw_from_phase(phase_l, freq * _cents_to_ratio(-4.0), sr).astype(np.float64)
+        body = 0.55 * body_c + 0.25 * body_u + 0.20 * body_l
+        noise = np.random.default_rng(_STRINGS_BOW_NOISE_SEED + 3).standard_normal(n).astype(np.float32)
         noise = Filter(sr).band_pass(noise, 100.0, 1200.0)
-        return body.astype(np.float32) + 0.08 * noise
+        return body.astype(np.float32) + 0.07 * noise
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
-        sig = flt.low_pass(sig, 4000.0)
+        sig = flt.warm_low_pass(sig, 3800.0)
         sig = flt.high_pass(sig, 55.0)
         sig = fx.reverb(sig, room_size=0.68, wet=0.22)
         return fx.chorus(sig, rate=0.6, depth=0.003, wet=0.20)

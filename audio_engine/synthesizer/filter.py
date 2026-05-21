@@ -59,6 +59,54 @@ class Filter:
         high = center + bandwidth / 2.0
         return signal - self.band_pass(signal, max(low, 1.0), high)
 
+    def resonant_low_pass(
+        self,
+        signal: np.ndarray,
+        cutoff: float,
+        resonance: float = 1.0,
+    ) -> np.ndarray:
+        """Resonant (Moog-style) low-pass filter with a peak at *cutoff*.
+
+        Parameters
+        ----------
+        cutoff:
+            Cutoff frequency in Hz.
+        resonance:
+            Q-factor / resonance amount.  Values 0.5–4.0 are useful;
+            higher values emphasise the cutoff frequency (PS2-era warmth).
+        """
+        from scipy.signal import sosfilt  # type: ignore[import]
+
+        nyq = self.sample_rate / 2.0
+        wn = float(np.clip(cutoff / nyq, 1e-4, 0.9999))
+        Q = float(np.clip(resonance, 0.1, 20.0))
+        # 2-pole peaking LP (state-variable style via biquad)
+        # Use a Butterworth LP then boost the cutoff region slightly
+        from scipy.signal import butter
+        sos = butter(2, wn, btype="low", output="sos")
+        out = sosfilt(sos, signal.astype(np.float64))
+        if resonance > 1.2:
+            # Boost a narrow band around cutoff to create the resonant peak
+            bw_hz = max(30.0, cutoff / Q)
+            peak_band = self.band_pass(
+                signal.astype(np.float32),
+                max(20.0, cutoff - bw_hz),
+                min(nyq * 0.999, cutoff + bw_hz),
+            )
+            boost = min((resonance - 1.0) * 0.35, 2.0)
+            out = out + boost * peak_band.astype(np.float64)
+        return out.astype(np.float32)
+
+    def warm_low_pass(self, signal: np.ndarray, cutoff: float) -> np.ndarray:
+        """A gentle 2-pole low-pass with mild saturation for analogue warmth.
+
+        Suitable for softening harsh digital waveforms to a PS2-era character.
+        """
+        filtered = self.low_pass(signal, cutoff)
+        # Mild tanh soft-clip that adds second-harmonic character
+        out = np.tanh(filtered.astype(np.float64) * 1.05) / np.tanh(1.05)
+        return out.astype(np.float32)
+
     # ------------------------------------------------------------------
     # Private
     # ------------------------------------------------------------------
