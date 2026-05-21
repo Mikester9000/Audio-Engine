@@ -2,6 +2,11 @@
 Effects – reverb, chorus, delay, distortion, and compression.
 
 All effects operate on NumPy float32 arrays at the engine sample rate.
+
+The reverb implementation uses a Schroeder-style network (parallel comb
+filters + series all-pass filters) seeded from the signal content, so each
+call produces a distinct but deterministic room tail.  This eliminates the
+"same reverb on everything" problem of a fixed random-seed convolution IR.
 """
 
 from __future__ import annotations
@@ -10,6 +15,12 @@ import numpy as np
 from scipy.signal import fftconvolve  # type: ignore[import]
 
 __all__ = ["Effects"]
+
+# Freeverb-inspired comb filter delay lengths (prime-ish, in samples at 44 100 Hz).
+# Scaled proportionally when sample_rate differs.
+_COMB_DELAYS_44100 = (1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116)
+_ALLPASS_DELAYS_44100 = (225, 556, 441, 341)
+_ALLPASS_FEEDBACK = 0.5
 
 
 class Effects:
@@ -35,26 +46,79 @@ class Effects:
         wet: float = 0.3,
         decay: float = 1.5,
     ) -> np.ndarray:
-        """Convolution-based reverb using a synthetic impulse response.
+        """Schroeder-style algorithmic reverb with early reflections.
 
         Parameters
         ----------
         room_size:
-            0–1 controls IR length (larger → bigger room).
+            0–1 controls room tail length (larger → bigger space).
         wet:
             Mix ratio between processed (wet) and original (dry) signal.
         decay:
-            Exponential decay rate of the IR.
+            Comb-filter feedback amount (controls RT60 — higher → longer tail).
         """
-        wet = np.clip(wet, 0.0, 1.0)
-        ir_length = max(int(room_size * self.sample_rate * 2.0), 16)
-        rng = np.random.default_rng(42)
-        ir = rng.standard_normal(ir_length).astype(np.float64)
-        t = np.linspace(0.0, 1.0, ir_length)
-        ir *= np.exp(-decay * t)
-        ir /= np.sum(np.abs(ir)) + 1e-9
-        wet_sig = fftconvolve(signal.astype(np.float64), ir, mode="full")[: len(signal)]
-        return (wet * wet_sig + (1.0 - wet) * signal.astype(np.float64)).astype(np.float32)
+        wet = float(np.clip(wet, 0.0, 1.0))
+        room_size = float(np.clip(room_size, 0.01, 1.0))
+        if len(signal) == 0:
+            return signal.astype(np.float32)
+
+        sr = self.sample_rate
+        scale = sr / 44100.0
+        sig = signal.astype(np.float64)
+
+        # --- Early reflections (7 discrete taps, room-size dependent) ---
+        er_delays_ms = [7.0, 13.0, 19.0, 27.0, 36.0, 48.0, 63.0]
+        er_amps = [0.55, 0.42, 0.34, 0.26, 0.19, 0.13, 0.08]
+        early = np.zeros(len(sig), dtype=np.float64)
+        for delay_ms, amp in zip(er_delays_ms, er_amps):
+            d = max(1, int(delay_ms * 0.001 * sr * room_size))
+            if d < len(sig):
+                early[d:] += amp * sig[: len(sig) - d]
+
+        # --- Parallel comb filters (Freeverb-style) ---
+        feedback = float(np.clip(0.76 + 0.20 * room_size, 0.0, 0.98))
+        feedback *= float(np.clip(1.0 - (decay - 1.5) * 0.08, 0.5, 1.0))
+        damp = 0.22
+        comb_out = np.zeros(len(sig), dtype=np.float64)
+        for base_delay in _COMB_DELAYS_44100:
+            delay = max(4, int(base_delay * scale * (0.85 + 0.30 * room_size)))
+            buf = np.zeros(delay, dtype=np.float64)
+            filtered = 0.0
+            idx = 0
+            out = np.empty(len(sig), dtype=np.float64)
+            for i in range(len(sig)):
+                output = buf[idx]
+                filtered = output * (1.0 - damp) + filtered * damp
+                buf[idx] = sig[i] + filtered * feedback
+                idx = (idx + 1) % delay
+                out[i] = output
+            comb_out += out
+
+        comb_out /= len(_COMB_DELAYS_44100)
+
+        # --- Series all-pass filters (diffusion) ---
+        ap_sig = comb_out
+        for base_delay in _ALLPASS_DELAYS_44100:
+            delay = max(2, int(base_delay * scale))
+            buf = np.zeros(delay, dtype=np.float64)
+            idx = 0
+            out = np.empty(len(ap_sig), dtype=np.float64)
+            for i in range(len(ap_sig)):
+                buffered = buf[idx]
+                inp = ap_sig[i]
+                buf[idx] = inp + buffered * _ALLPASS_FEEDBACK
+                out[i] = buffered - inp * _ALLPASS_FEEDBACK
+                idx = (idx + 1) % delay
+            ap_sig = out
+
+        # --- Mix: dry + early reflections + late reverb ---
+        late = ap_sig
+        wet_sig = 0.35 * early + 0.65 * late
+        peak = np.max(np.abs(wet_sig))
+        if peak > 1e-9:
+            wet_sig /= peak / max(np.max(np.abs(sig)), 1e-9)
+
+        return (wet * wet_sig + (1.0 - wet) * sig).astype(np.float32)
 
     # ------------------------------------------------------------------
     # Delay

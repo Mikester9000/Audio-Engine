@@ -37,7 +37,17 @@ VOICE_PRESETS: dict[str, _VoicePreset] = {
     "npc": _VoicePreset(f0=150.0, formant_shifts=(1.15, 1.05, 1.0), jitter=0.028, breathiness=0.1),
 }
 
-_BASE_FORMANTS = np.array([700.0, 1220.0, 2600.0], dtype=np.float64)
+# Per-vowel formant frequencies (F1, F2, F3) in Hz for adult average voice
+# Source: standard phonetics reference values
+_VOWEL_FORMANTS: dict[str, tuple[float, float, float]] = {
+    "a": (800.0, 1200.0, 2600.0),  # "ah" as in "father"
+    "e": (400.0, 2000.0, 2800.0),  # "eh" as in "bed"
+    "i": (280.0, 2700.0, 3200.0),  # "ee" as in "see"
+    "o": (450.0, 800.0, 2500.0),   # "oh" as in "go"
+    "u": (310.0, 870.0, 2400.0),   # "oo" as in "moon"
+    "y": (390.0, 2000.0, 2700.0),  # "y" treated as /ɪ/
+}
+_BASE_FORMANTS = np.array([700.0, 1220.0, 2600.0], dtype=np.float64)  # fallback neutral
 _SUBHARMONIC_PHASE_OFFSET = 0.33
 _NOISE_BAND_MIN = 0.001  # Avoid zero-width/zero-frequency band edges during normalization.
 _NOISE_BAND_MAX = 0.949  # Leave room for the minimum high-edge spacing below Nyquist.
@@ -96,33 +106,72 @@ def _sentence_pitch_arc(tokens: list[str], question: bool) -> np.ndarray:
 
 
 def _glottal_excitation(f0: float, duration: float, sr: int, jitter: float, rng: np.random.Generator) -> np.ndarray:
+    """Synthesise a realistic glottal source signal.
+
+    Uses a band-limited sawtooth (additive harmonics up to Nyquist) with
+    pitch jitter and vibrato modulation for natural vocal variation.  The
+    band-limited approach avoids the aliasing that made earlier versions of
+    this function sound harsh and buzzy.
+    """
     n = max(1, int(duration * sr))
     t = np.arange(n, dtype=np.float64) / sr
+    # Micro-vibrato (6 Hz, small depth) + jitter (random cycle-to-cycle irregularity)
     micro = 1.0 + 0.012 * np.sin(2.0 * np.pi * 6.1 * t + rng.uniform(0, 2 * np.pi))
     irregular = 1.0 + jitter * rng.normal(0.0, 0.55, n)
     f_track = np.clip(f0 * micro * irregular, 40.0, sr / 3.0)
     phase = 2.0 * np.pi * np.cumsum(f_track / sr)
 
+    # Band-limited glottal source: sum harmonics up to Nyquist
+    nyquist = sr / 2.0
+    n_harmonics = min(int(nyquist / max(f0, 1.0)), 40)  # cap at 40 for speed
     glottal = np.zeros(n, dtype=np.float64)
-    for k in range(1, 8):
-        glottal += (1.0 / k) * np.sin(k * phase)
-    glottal += 0.35 * np.sin(0.5 * phase + _SUBHARMONIC_PHASE_OFFSET)  # sub-harmonic layer
+    for k in range(1, n_harmonics + 1):
+        # Glottal spectral tilt: 1/k amplitude with slight boost at low harmonics
+        amp = 1.0 / k
+        glottal += amp * np.sin(k * phase)
+    # Sub-harmonic gives the "chest register" richness
+    glottal += 0.28 * np.sin(0.5 * phase + _SUBHARMONIC_PHASE_OFFSET)
     return glottal.astype(np.float32)
 
 
-def _formant_filter(signal: np.ndarray, shifts: tuple[float, float, float], sr: int) -> np.ndarray:
+def _formant_filter(
+    signal: np.ndarray,
+    shifts: tuple[float, float, float],
+    sr: int,
+    base_formants: np.ndarray | None = None,
+) -> np.ndarray:
+    """Apply formant bandpass filters to a glottal source.
+
+    Parameters
+    ----------
+    signal:
+        Glottal source signal.
+    shifts:
+        Per-formant frequency scaling factors from the voice preset.
+    sr:
+        Sample rate.
+    base_formants:
+        Base formant frequencies (F1, F2, F3) in Hz.  Uses the neutral
+        defaults if not provided.  Pass vowel-specific values for more
+        realistic vowel quality.
+    """
     from scipy.signal import butter, sosfilt  # type: ignore[import]
+
+    if base_formants is None:
+        base_formants = _BASE_FORMANTS
 
     sig = signal.astype(np.float64)
     out = np.zeros_like(sig)
-    for base, shift, bw in zip(_BASE_FORMANTS, shifts, (95.0, 130.0, 170.0)):
+    bw_values = (95.0, 130.0, 170.0)
+    amp_values = (1.0, 0.85, 0.55)  # F1 loudest, F3 softer — realistic spectral tilt
+    for base, shift, bw, amp in zip(base_formants, shifts, bw_values, amp_values):
         center = float(base * shift)
         lo = max(60.0, center - bw)
         hi = min(sr / 2.0 - 10.0, center + bw)
         if hi <= lo:
             continue
         sos = butter(2, [lo / (sr / 2.0), hi / (sr / 2.0)], btype="band", output="sos")
-        out += sosfilt(sos, sig)
+        out += amp * sosfilt(sos, sig)
     return out.astype(np.float32)
 
 
@@ -192,7 +241,12 @@ def synthesise_voice(
 
         if token in _VOWELS:
             voiced = _glottal_excitation(base_f0, duration, sample_rate, preset.jitter, rng)
-            segment = _formant_filter(voiced, preset.formant_shifts, sample_rate)
+            # Use per-vowel formant frequencies for more distinct vowel quality
+            vowel_bases = np.array(
+                _VOWEL_FORMANTS.get(token, tuple(_BASE_FORMANTS.tolist())),
+                dtype=np.float64,
+            )
+            segment = _formant_filter(voiced, preset.formant_shifts, sample_rate, vowel_bases)
             shimmer = 0.03 * np.sin(2.0 * np.pi * 12.0 * np.arange(n) / sample_rate + rng.uniform(0, 2 * np.pi))
             segment = segment[:n] * (1.0 + shimmer.astype(np.float32))
         else:

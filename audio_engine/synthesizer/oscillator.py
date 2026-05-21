@@ -1,8 +1,13 @@
 """
 Oscillator – waveform generators.
 
-Provides sine, square, sawtooth, triangle, and noise waveforms that are the
-building-blocks of every synthesised sound in the engine.
+Provides sine, square, sawtooth, triangle, noise, and band-limited waveforms
+that are the building-blocks of every synthesised sound in the engine.
+
+Band-limited variants (``bl_sawtooth``, ``bl_square``, ``bl_triangle``) use
+additive synthesis capped at the Nyquist frequency, eliminating the aliasing
+that makes raw scipy waveforms sound harsh and digital.  Use them by default
+for any pitched instrument — especially strings, brass, and pads.
 """
 
 from __future__ import annotations
@@ -10,6 +15,10 @@ from __future__ import annotations
 import numpy as np
 
 __all__ = ["Oscillator"]
+
+# Maximum number of harmonics computed for band-limited waveforms.
+# 128 gives excellent alias suppression without heavy CPU cost.
+_BL_MAX_HARMONICS = 128
 
 
 class Oscillator:
@@ -53,7 +62,10 @@ class Oscillator:
         amplitude: float = 1.0,
         duty_cycle: float = 0.5,
     ) -> np.ndarray:
-        """Square wave with variable *duty_cycle* (0–1)."""
+        """Square wave with variable *duty_cycle* (0–1).
+
+        Prefer :meth:`bl_square` for pitched instruments to avoid aliasing.
+        """
         from scipy.signal import square as scipy_square  # type: ignore[import]
 
         phase = self._phase(frequency, duration)
@@ -66,7 +78,10 @@ class Oscillator:
         amplitude: float = 1.0,
         rising: bool = True,
     ) -> np.ndarray:
-        """Sawtooth wave.  *rising=True* → ramp-up, *rising=False* → ramp-down."""
+        """Sawtooth wave.  *rising=True* → ramp-up, *rising=False* → ramp-down.
+
+        Prefer :meth:`bl_sawtooth` for pitched instruments to avoid aliasing.
+        """
         from scipy.signal import sawtooth as scipy_saw  # type: ignore[import]
 
         phase = self._phase(frequency, duration)
@@ -74,7 +89,10 @@ class Oscillator:
         return amplitude * scipy_saw(phase, width=width)
 
     def triangle(self, frequency: float, duration: float, amplitude: float = 1.0) -> np.ndarray:
-        """Triangle wave (symmetric sawtooth)."""
+        """Triangle wave (symmetric sawtooth).
+
+        Prefer :meth:`bl_triangle` for pitched instruments to avoid aliasing.
+        """
         from scipy.signal import sawtooth as scipy_saw  # type: ignore[import]
 
         phase = self._phase(frequency, duration)
@@ -97,6 +115,109 @@ class Oscillator:
         return self.square(frequency, duration, amplitude, duty_cycle=pulse_width)
 
     # ------------------------------------------------------------------
+    # Band-limited waveforms (alias-free pitched oscillators)
+    # ------------------------------------------------------------------
+
+    def bl_sawtooth(
+        self,
+        frequency: float,
+        duration: float,
+        amplitude: float = 1.0,
+        rising: bool = True,
+    ) -> np.ndarray:
+        """Band-limited sawtooth via additive synthesis.
+
+        Sums sine harmonics up to the Nyquist limit, so no aliasing folds back
+        into the audible spectrum.  Results in a warm, smooth tone compared to
+        the raw scipy sawtooth.
+
+        The Gibbs ringing is attenuated using a Lanczos sigma factor.
+        """
+        frequency = max(frequency, 1.0)
+        nyquist = self.sample_rate / 2.0
+        n_harmonics = min(int(nyquist / frequency), _BL_MAX_HARMONICS)
+        n_harmonics = max(n_harmonics, 1)
+        n_samples = max(1, int(self.sample_rate * duration))
+        t = np.arange(n_samples, dtype=np.float64) / self.sample_rate
+        out = np.zeros(n_samples, dtype=np.float64)
+        N = float(n_harmonics)
+        for k in range(1, n_harmonics + 1):
+            # Lanczos sigma factor suppresses Gibbs phenomenon
+            sigma = np.sinc(k / (N + 1.0))
+            coeff = ((-1.0) ** (k + 1) / k) * sigma
+            if not rising:
+                coeff = -coeff
+            out += coeff * np.sin(2.0 * np.pi * k * frequency * t)
+        out *= 2.0 / np.pi
+        peak = np.max(np.abs(out))
+        if peak > 1e-9:
+            out /= peak
+        return (amplitude * out).astype(np.float32)
+
+    def bl_square(
+        self,
+        frequency: float,
+        duration: float,
+        amplitude: float = 1.0,
+        duty_cycle: float = 0.5,
+    ) -> np.ndarray:
+        """Band-limited square / pulse wave via additive synthesis.
+
+        Only odd harmonics are included (up to Nyquist).  Lanczos sigma
+        correction suppresses ringing at the waveform edges.
+        """
+        frequency = max(frequency, 1.0)
+        nyquist = self.sample_rate / 2.0
+        n_harmonics = min(int(nyquist / frequency), _BL_MAX_HARMONICS)
+        n_harmonics = max(n_harmonics, 1)
+        n_samples = max(1, int(self.sample_rate * duration))
+        t = np.arange(n_samples, dtype=np.float64) / self.sample_rate
+        out = np.zeros(n_samples, dtype=np.float64)
+        N = float(n_harmonics)
+        # Generalised duty-cycle square via two sawtooth differences
+        # PWM = saw(f,t) - saw(f, t - duty/f)
+        phase_shift = 2.0 * np.pi * duty_cycle
+        for k in range(1, n_harmonics + 1):
+            sigma = np.sinc(k / (N + 1.0))
+            coeff = (2.0 / (np.pi * k)) * sigma
+            out += coeff * np.sin(2.0 * np.pi * k * frequency * t) * np.sin(k * phase_shift / 2.0)
+        peak = np.max(np.abs(out))
+        if peak > 1e-9:
+            out /= peak
+        return (amplitude * out).astype(np.float32)
+
+    def bl_triangle(
+        self,
+        frequency: float,
+        duration: float,
+        amplitude: float = 1.0,
+    ) -> np.ndarray:
+        """Band-limited triangle wave via additive synthesis.
+
+        Triangle waves have rapidly decaying harmonics (1/k²) so they're
+        naturally much softer than sawtooth.  This version still band-limits
+        for strict alias freedom.
+        """
+        frequency = max(frequency, 1.0)
+        nyquist = self.sample_rate / 2.0
+        n_harmonics = min(int(nyquist / frequency), _BL_MAX_HARMONICS)
+        n_harmonics = max(n_harmonics, 1)
+        n_samples = max(1, int(self.sample_rate * duration))
+        t = np.arange(n_samples, dtype=np.float64) / self.sample_rate
+        out = np.zeros(n_samples, dtype=np.float64)
+        for k in range(n_harmonics):
+            n = 2 * k + 1  # odd harmonics only
+            if n * frequency >= nyquist:
+                break
+            sign = (-1.0) ** k
+            out += sign * (1.0 / n**2) * np.sin(2.0 * np.pi * n * frequency * t)
+        out *= 8.0 / np.pi**2
+        peak = np.max(np.abs(out))
+        if peak > 1e-9:
+            out /= peak
+        return (amplitude * out).astype(np.float32)
+
+    # ------------------------------------------------------------------
     # Additive synthesis helper
     # ------------------------------------------------------------------
 
@@ -109,18 +230,26 @@ class Oscillator:
     ) -> np.ndarray:
         """Additive synthesis from a list of (harmonic_number, relative_amplitude) pairs.
 
+        Only harmonics below the Nyquist frequency are included, preventing
+        aliasing when high harmonic numbers are requested.
+
         Example
         -------
         >>> osc.additive(440.0, 1.0, [(1, 1.0), (2, 0.5), (3, 0.25)])
         """
-        result = np.zeros(int(self.sample_rate * duration))
+        nyquist = self.sample_rate / 2.0
+        n_samples = max(1, int(self.sample_rate * duration))
+        t = np.arange(n_samples, dtype=np.float64) / self.sample_rate
+        result = np.zeros(n_samples, dtype=np.float64)
         for harmonic, rel_amp in harmonics:
-            result = result + rel_amp * np.sin(self._phase(frequency * harmonic, duration))
-        # Normalise
+            f_h = frequency * harmonic
+            if f_h >= nyquist:
+                continue
+            result += rel_amp * np.sin(2.0 * np.pi * f_h * t)
         max_amp = np.max(np.abs(result))
         if max_amp > 0:
             result = result / max_amp
-        return amplitude * result
+        return (amplitude * result).astype(np.float32)
 
     # ------------------------------------------------------------------
     # Frequency modulation
