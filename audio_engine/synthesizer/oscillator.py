@@ -17,8 +17,9 @@ import numpy as np
 __all__ = ["Oscillator"]
 
 # Maximum number of harmonics computed for band-limited waveforms.
-# 128 gives excellent alias suppression without heavy CPU cost.
-_BL_MAX_HARMONICS = 128
+# 40 harmonics gives very good alias suppression (content up to ~20 kHz for
+# 440 Hz fundamentals) while keeping the vectorised computation fast.
+_BL_MAX_HARMONICS = 40
 
 
 class Oscillator:
@@ -132,6 +133,7 @@ class Oscillator:
         the raw scipy sawtooth.
 
         The Gibbs ringing is attenuated using a Lanczos sigma factor.
+        Uses fully-vectorised NumPy operations for CPU efficiency.
         """
         frequency = max(frequency, 1.0)
         nyquist = self.sample_rate / 2.0
@@ -139,15 +141,14 @@ class Oscillator:
         n_harmonics = max(n_harmonics, 1)
         n_samples = max(1, int(self.sample_rate * duration))
         t = np.arange(n_samples, dtype=np.float64) / self.sample_rate
-        out = np.zeros(n_samples, dtype=np.float64)
         N = float(n_harmonics)
-        for k in range(1, n_harmonics + 1):
-            # Lanczos sigma factor suppresses Gibbs phenomenon
-            sigma = np.sinc(k / (N + 1.0))
-            coeff = ((-1.0) ** (k + 1) / k) * sigma
-            if not rising:
-                coeff = -coeff
-            out += coeff * np.sin(2.0 * np.pi * k * frequency * t)
+        k = np.arange(1, n_harmonics + 1, dtype=np.float64)[:, None]
+        sigma = np.sinc(k / (N + 1.0))
+        coeff = ((-1.0) ** (k + 1) / k) * sigma
+        if not rising:
+            coeff = -coeff
+        phases = 2.0 * np.pi * k * frequency * t[None, :]
+        out = np.sum(coeff * np.sin(phases), axis=0)
         out *= 2.0 / np.pi
         peak = np.max(np.abs(out))
         if peak > 1e-9:
@@ -165,6 +166,7 @@ class Oscillator:
 
         Only odd harmonics are included (up to Nyquist).  Lanczos sigma
         correction suppresses ringing at the waveform edges.
+        Uses fully-vectorised NumPy operations for CPU efficiency.
         """
         frequency = max(frequency, 1.0)
         nyquist = self.sample_rate / 2.0
@@ -172,15 +174,13 @@ class Oscillator:
         n_harmonics = max(n_harmonics, 1)
         n_samples = max(1, int(self.sample_rate * duration))
         t = np.arange(n_samples, dtype=np.float64) / self.sample_rate
-        out = np.zeros(n_samples, dtype=np.float64)
         N = float(n_harmonics)
-        # Generalised duty-cycle square via two sawtooth differences
-        # PWM = saw(f,t) - saw(f, t - duty/f)
         phase_shift = 2.0 * np.pi * duty_cycle
-        for k in range(1, n_harmonics + 1):
-            sigma = np.sinc(k / (N + 1.0))
-            coeff = (2.0 / (np.pi * k)) * sigma
-            out += coeff * np.sin(2.0 * np.pi * k * frequency * t) * np.sin(k * phase_shift / 2.0)
+        k = np.arange(1, n_harmonics + 1, dtype=np.float64)[:, None]
+        sigma = np.sinc(k / (N + 1.0))
+        coeff = (2.0 / (np.pi * k)) * sigma * np.sin(k * phase_shift / 2.0)
+        phases = 2.0 * np.pi * k * frequency * t[None, :]
+        out = np.sum(coeff * np.sin(phases), axis=0)
         peak = np.max(np.abs(out))
         if peak > 1e-9:
             out /= peak
@@ -195,23 +195,24 @@ class Oscillator:
         """Band-limited triangle wave via additive synthesis.
 
         Triangle waves have rapidly decaying harmonics (1/k²) so they're
-        naturally much softer than sawtooth.  This version still band-limits
-        for strict alias freedom.
+        naturally much softer than sawtooth.
+        Uses fully-vectorised NumPy operations for CPU efficiency.
         """
         frequency = max(frequency, 1.0)
         nyquist = self.sample_rate / 2.0
-        n_harmonics = min(int(nyquist / frequency), _BL_MAX_HARMONICS)
-        n_harmonics = max(n_harmonics, 1)
+        max_n = min(int(nyquist / frequency), _BL_MAX_HARMONICS)
         n_samples = max(1, int(self.sample_rate * duration))
         t = np.arange(n_samples, dtype=np.float64) / self.sample_rate
-        out = np.zeros(n_samples, dtype=np.float64)
-        for k in range(n_harmonics):
-            n = 2 * k + 1  # odd harmonics only
-            if n * frequency >= nyquist:
-                break
-            sign = (-1.0) ** k
-            out += sign * (1.0 / n**2) * np.sin(2.0 * np.pi * n * frequency * t)
-        out *= 8.0 / np.pi**2
+        odd_k = np.arange(1, 2 * max_n + 1, 2, dtype=np.float64)
+        odd_k = odd_k[odd_k * frequency < nyquist]
+        if len(odd_k) == 0:
+            odd_k = np.array([1.0])
+        idx = np.arange(len(odd_k), dtype=np.float64)
+        signs = (-1.0) ** idx
+        coeffs = (signs / (odd_k ** 2))[:, None]
+        phases = 2.0 * np.pi * odd_k[:, None] * frequency * t[None, :]
+        out = np.sum(coeffs * np.sin(phases), axis=0)
+        out *= 8.0 / np.pi ** 2
         peak = np.max(np.abs(out))
         if peak > 1e-9:
             out /= peak

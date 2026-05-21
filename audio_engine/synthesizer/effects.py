@@ -3,24 +3,28 @@ Effects – reverb, chorus, delay, distortion, and compression.
 
 All effects operate on NumPy float32 arrays at the engine sample rate.
 
-The reverb implementation uses a Schroeder-style network (parallel comb
-filters + series all-pass filters) seeded from the signal content, so each
-call produces a distinct but deterministic room tail.  This eliminates the
-"same reverb on everything" problem of a fixed random-seed convolution IR.
+The reverb implementation builds a structured synthetic impulse response with:
+  * Discrete early reflections (more room-like than a single diffuse noise tail)
+  * Late reverberation tail (exponentially decaying noise shaped to Nyquist)
+  * Unique RNG seed derived from the input signal's CRC so each call produces
+    a distinct but deterministic room tail rather than the same fixed IR
+
+This is fast (all via FFT convolution) and sounds much richer than a single
+decayed white-noise IR.
 """
 
 from __future__ import annotations
+
+import zlib
 
 import numpy as np
 from scipy.signal import fftconvolve  # type: ignore[import]
 
 __all__ = ["Effects"]
 
-# Freeverb-inspired comb filter delay lengths (prime-ish, in samples at 44 100 Hz).
-# Scaled proportionally when sample_rate differs.
-_COMB_DELAYS_44100 = (1557, 1617, 1491, 1422, 1277, 1356, 1188, 1116)
-_ALLPASS_DELAYS_44100 = (225, 556, 441, 341)
-_ALLPASS_FEEDBACK = 0.5
+# Early-reflection tap offsets (ms) and gains — dense, diffuse feel
+_ER_DELAYS_MS = (7.0, 13.0, 19.0, 27.0, 36.0, 48.0, 63.0)
+_ER_GAINS     = (0.75, 0.58, 0.44, 0.32, 0.22, 0.14, 0.09)
 
 
 class Effects:
@@ -46,16 +50,25 @@ class Effects:
         wet: float = 0.3,
         decay: float = 1.5,
     ) -> np.ndarray:
-        """Schroeder-style algorithmic reverb with early reflections.
+        """High-quality synthetic reverb with early reflections.
+
+        Builds a structured impulse response (IR) that combines:
+
+        1. **Early reflections** — discrete echo taps derived from *room_size*.
+        2. **Late reverb** — decaying noise tail with spectral balance.
+
+        The IR is generated from a seed derived from the signal's CRC32, so
+        every unique audio block gets a distinct room character while remaining
+        deterministic within a run.
 
         Parameters
         ----------
         room_size:
-            0–1 controls room tail length (larger → bigger space).
+            0–1 controls reverb tail length and early-reflection spread.
         wet:
-            Mix ratio between processed (wet) and original (dry) signal.
+            Dry/wet mix (0 = dry, 1 = fully wet).
         decay:
-            Comb-filter feedback amount (controls RT60 — higher → longer tail).
+            Exponential decay rate of the late-reverb tail.
         """
         wet = float(np.clip(wet, 0.0, 1.0))
         room_size = float(np.clip(room_size, 0.01, 1.0))
@@ -63,62 +76,54 @@ class Effects:
             return signal.astype(np.float32)
 
         sr = self.sample_rate
-        scale = sr / 44100.0
-        sig = signal.astype(np.float64)
+        sig_f64 = signal.astype(np.float64)
 
-        # --- Early reflections (7 discrete taps, room-size dependent) ---
-        er_delays_ms = [7.0, 13.0, 19.0, 27.0, 36.0, 48.0, 63.0]
-        er_amps = [0.55, 0.42, 0.34, 0.26, 0.19, 0.13, 0.08]
-        early = np.zeros(len(sig), dtype=np.float64)
-        for delay_ms, amp in zip(er_delays_ms, er_amps):
-            d = max(1, int(delay_ms * 0.001 * sr * room_size))
-            if d < len(sig):
-                early[d:] += amp * sig[: len(sig) - d]
+        # --- Impulse response length (up to 2 s for large rooms) ---
+        ir_seconds = max(0.08, room_size * 2.0)
+        ir_len = max(32, int(ir_seconds * sr))
 
-        # --- Parallel comb filters (Freeverb-style) ---
-        feedback = float(np.clip(0.76 + 0.20 * room_size, 0.0, 0.98))
-        feedback *= float(np.clip(1.0 - (decay - 1.5) * 0.08, 0.5, 1.0))
-        damp = 0.22
-        comb_out = np.zeros(len(sig), dtype=np.float64)
-        for base_delay in _COMB_DELAYS_44100:
-            delay = max(4, int(base_delay * scale * (0.85 + 0.30 * room_size)))
-            buf = np.zeros(delay, dtype=np.float64)
-            filtered = 0.0
-            idx = 0
-            out = np.empty(len(sig), dtype=np.float64)
-            for i in range(len(sig)):
-                output = buf[idx]
-                filtered = output * (1.0 - damp) + filtered * damp
-                buf[idx] = sig[i] + filtered * feedback
-                idx = (idx + 1) % delay
-                out[i] = output
-            comb_out += out
+        # --- Unique late-reverb seed from signal content ---
+        crc = zlib.crc32(signal[:min(256, len(signal))].tobytes()) & 0x7FFF_FFFF
+        rng = np.random.default_rng(crc)
 
-        comb_out /= len(_COMB_DELAYS_44100)
+        # --- Build structured IR ---
+        ir = np.zeros(ir_len, dtype=np.float64)
 
-        # --- Series all-pass filters (diffusion) ---
-        ap_sig = comb_out
-        for base_delay in _ALLPASS_DELAYS_44100:
-            delay = max(2, int(base_delay * scale))
-            buf = np.zeros(delay, dtype=np.float64)
-            idx = 0
-            out = np.empty(len(ap_sig), dtype=np.float64)
-            for i in range(len(ap_sig)):
-                buffered = buf[idx]
-                inp = ap_sig[i]
-                buf[idx] = inp + buffered * _ALLPASS_FEEDBACK
-                out[i] = buffered - inp * _ALLPASS_FEEDBACK
-                idx = (idx + 1) % delay
-            ap_sig = out
+        # Early reflections
+        for dt_ms, gain in zip(_ER_DELAYS_MS, _ER_GAINS):
+            pos = max(1, int(dt_ms * 0.001 * sr * (0.7 + 0.6 * room_size)))
+            if pos < ir_len:
+                ir[pos] += gain
 
-        # --- Mix: dry + early reflections + late reverb ---
-        late = ap_sig
-        wet_sig = 0.35 * early + 0.65 * late
-        peak = np.max(np.abs(wet_sig))
-        if peak > 1e-9:
-            wet_sig /= peak / max(np.max(np.abs(sig)), 1e-9)
+        # Late reverb: spectrally shaped noise with exponential decay
+        late_onset = max(1, int(0.05 * ir_seconds * sr))
+        late_noise = rng.standard_normal(ir_len)
+        # Apply a gentle spectral shaping (roll off >8 kHz to avoid shrillness)
+        from scipy.signal import butter, sosfilt  # type: ignore[import]
+        nyq = sr / 2.0
+        hi_cut = min(8000.0, nyq * 0.8)
+        sos = butter(2, hi_cut / nyq, btype="low", output="sos")
+        late_noise = sosfilt(sos, late_noise)
+        t = np.arange(ir_len, dtype=np.float64) / sr
+        late_env = np.exp(-decay * t)
+        late_env[:late_onset] = 0.0
+        ir += late_noise * late_env * 0.35
 
-        return (wet * wet_sig + (1.0 - wet) * sig).astype(np.float32)
+        # Normalise IR to unity power
+        ir_power = np.sqrt(np.mean(ir ** 2))
+        if ir_power > 1e-12:
+            ir /= ir_power / 0.15  # target RMS of 0.15 to avoid clipping
+
+        # --- Convolve and mix ---
+        wet_sig = fftconvolve(sig_f64, ir, mode="full")[: len(sig_f64)]
+
+        # Normalise wet to match dry level
+        wet_peak = np.max(np.abs(wet_sig))
+        dry_peak = np.max(np.abs(sig_f64))
+        if wet_peak > 1e-9 and dry_peak > 1e-9:
+            wet_sig = wet_sig * (dry_peak / wet_peak)
+
+        return (wet * wet_sig + (1.0 - wet) * sig_f64).astype(np.float32)
 
     # ------------------------------------------------------------------
     # Delay
