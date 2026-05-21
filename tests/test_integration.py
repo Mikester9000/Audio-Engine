@@ -1024,6 +1024,12 @@ class TestRequestBatchPipeline:
         assert instrument_data["dualPathRole"] == "instrumental"
         assert vocal_data["dualPathRole"] == "vocal_ready"
         assert instrument_data["dualPathGroupId"] == vocal_data["dualPathGroupId"]
+        assert instrument_data["requestId"] == instrumental["request_id"]
+        assert vocal_data["requestId"] == vocal_ready["request_id"]
+        assert instrument_data["assetId"] == instrumental["asset_id"]
+        assert vocal_data["assetId"] == vocal_ready["asset_id"]
+        assert instrument_data["targetImportPath"].endswith("__instrumental.wav")
+        assert vocal_data["targetImportPath"].endswith("__vocal_ready.wav")
         assert instrument_data["pairedOutputPath"] == vocal_ready["file"]
         assert vocal_data["pairedOutputPath"] == instrumental["file"]
 
@@ -1910,9 +1916,10 @@ class TestRequestBatchExecution:
             fmt="wav",
         ):
             output_path = Path(output_path)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_bytes(b"dual-path")
-            return output_path.with_suffix(f".{fmt}")
+            written_path = output_path.with_suffix(f".{fmt}")
+            written_path.parent.mkdir(parents=True, exist_ok=True)
+            written_path.write_bytes(b"dual-path")
+            return written_path
 
         monkeypatch.setattr(MusicGen, "generate_to_file", _patched_generate_to_file)
 
@@ -1934,6 +1941,12 @@ class TestRequestBatchExecution:
         assert instrument_data["dualPathRole"] == "instrumental"
         assert vocal_data["dualPathRole"] == "vocal_ready"
         assert instrument_data["dualPathGroupId"] == vocal_data["dualPathGroupId"]
+        assert instrument_data["requestId"] == instrumental.request_id
+        assert vocal_data["requestId"] == vocal_ready.request_id
+        assert instrument_data["assetId"] == instrumental.asset_id
+        assert vocal_data["assetId"] == vocal_ready.asset_id
+        assert instrument_data["targetImportPath"].endswith("__instrumental.wav")
+        assert vocal_data["targetImportPath"].endswith("__vocal_ready.wav")
         assert instrument_data["pairedOutputPath"] == vocal_ready.output_path
         assert vocal_data["pairedOutputPath"] == instrumental.output_path
 

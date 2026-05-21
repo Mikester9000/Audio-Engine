@@ -270,6 +270,9 @@ def _write_provenance_sidecar(
     request: "GenerationRequest",
     output_path: Path,
     *,
+    provenance_request_id: str | None = None,
+    provenance_asset_id: str | None = None,
+    target_import_path: str | None = None,
     dual_path_group_id: str | None = None,
     dual_path_role: str | None = None,
     paired_output_path: str | None = None,
@@ -282,15 +285,15 @@ def _write_provenance_sidecar(
 
     provenance: dict = {
         "provenanceVersion": "1.0.0",
-        "requestId": request.request_id,
-        "assetId": request.asset_id,
+        "requestId": provenance_request_id or request.request_id,
+        "assetId": provenance_asset_id or request.asset_id,
         "type": request.type,
         "backend": request.backend,
         "seed": request.seed,
         "prompt": request.prompt,
         "styleFamily": request.style_family,
         "generatedOutputPath": str(output_path),
-        "targetImportPath": request.output.target_path,
+        "targetImportPath": target_import_path or request.output.target_path,
         "reviewStatus": request.qa.review_status,
         "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
@@ -311,6 +314,19 @@ def _write_provenance_sidecar(
     provenance_path = output_path.with_name(output_path.stem + ".provenance.json")
     provenance_path.write_text(json.dumps(provenance, indent=2), encoding="utf-8")
     return provenance_path
+
+
+def _dual_path_target_import_path(target_path: str, *, role: str) -> str:
+    suffix_map = {
+        "instrumental": _DUAL_PATH_INSTRUMENTAL_SUFFIX,
+        "vocal_ready": _DUAL_PATH_VOCAL_READY_SUFFIX,
+    }
+    try:
+        suffix = suffix_map[role]
+    except KeyError as exc:  # pragma: no cover - defensive branch for future call sites
+        raise ValueError(f"unsupported dual-path role: {role!r}") from exc
+    original = Path(target_path)
+    return str(original.with_name(original.stem + suffix + original.suffix))
 
 
 # ---------------------------------------------------------------------------
@@ -1022,6 +1038,12 @@ class AssetPipeline:
                         instrumental_sidecar = _write_provenance_sidecar(
                             request,
                             instrumental_exported,
+                            provenance_request_id=f"{request.request_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                            provenance_asset_id=f"{request.asset_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                            target_import_path=_dual_path_target_import_path(
+                                request.output.target_path,
+                                role="instrumental",
+                            ),
                             dual_path_group_id=dual_group,
                             dual_path_role="instrumental",
                             paired_output_path=str(vocal_ready_exported),
@@ -1029,6 +1051,12 @@ class AssetPipeline:
                         vocal_ready_sidecar = _write_provenance_sidecar(
                             request,
                             vocal_ready_exported,
+                            provenance_request_id=f"{request.request_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                            provenance_asset_id=f"{request.asset_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                            target_import_path=_dual_path_target_import_path(
+                                request.output.target_path,
+                                role="vocal_ready",
+                            ),
                             dual_path_group_id=dual_group,
                             dual_path_role="vocal_ready",
                             paired_output_path=str(instrumental_exported),
@@ -1530,6 +1558,12 @@ class RequestBatchPipeline:
                     self._write_provenance(
                         request,
                         actual_instrumental_path,
+                        provenance_request_id=f"{request.request_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                        provenance_asset_id=f"{request.asset_id}{_DUAL_PATH_INSTRUMENTAL_SUFFIX}",
+                        target_import_path=_dual_path_target_import_path(
+                            request.output.target_path,
+                            role="instrumental",
+                        ),
                         dual_path_group_id=dual_group,
                         dual_path_role="instrumental",
                         paired_output_path=str(actual_vocal_ready_path),
@@ -1537,6 +1571,12 @@ class RequestBatchPipeline:
                     self._write_provenance(
                         request,
                         actual_vocal_ready_path,
+                        provenance_request_id=f"{request.request_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                        provenance_asset_id=f"{request.asset_id}{_DUAL_PATH_VOCAL_READY_SUFFIX}",
+                        target_import_path=_dual_path_target_import_path(
+                            request.output.target_path,
+                            role="vocal_ready",
+                        ),
                         dual_path_group_id=dual_group,
                         dual_path_role="vocal_ready",
                         paired_output_path=str(actual_instrumental_path),
@@ -1742,6 +1782,9 @@ class RequestBatchPipeline:
         request: GenerationRequest,
         output_path: Path,
         *,
+        provenance_request_id: str | None = None,
+        provenance_asset_id: str | None = None,
+        target_import_path: str | None = None,
         dual_path_group_id: str | None = None,
         dual_path_role: str | None = None,
         paired_output_path: str | None = None,
@@ -1750,6 +1793,9 @@ class RequestBatchPipeline:
         _write_provenance_sidecar(
             request,
             output_path,
+            provenance_request_id=provenance_request_id,
+            provenance_asset_id=provenance_asset_id,
+            target_import_path=target_import_path,
             dual_path_group_id=dual_path_group_id,
             dual_path_role=dual_path_role,
             paired_output_path=paired_output_path,

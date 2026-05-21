@@ -138,15 +138,18 @@ def launch_studio() -> None:
         out_path = Path(music_out.get())
         out_path.parent.mkdir(parents=True, exist_ok=True)
         from audio_engine.ai.music_gen import MusicGen
-        MusicGen(sample_rate=44100, backend="procedural", seed=seed).generate_to_file(
+        return MusicGen(
+            sample_rate=44100,
+            backend="procedural",
+            seed=seed,
+            mastering_profile=music_profile.get(),
+        ).generate_to_file(
             prompt=prompt,
             output_path=out_path,
             duration=duration,
             loopable=True,
             fmt="wav",
-            mastering_profile=music_profile.get(),
         )
-        return out_path
 
     def _generate_music() -> None:
         nonlocal last_failed_action
