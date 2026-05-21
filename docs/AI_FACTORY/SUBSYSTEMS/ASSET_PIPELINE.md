@@ -32,6 +32,10 @@
 - Request format behavior is strict:
   - requested `.ogg` outputs must be produced as `.ogg`
   - no silent OGG→WAV fallback in request-batch execution paths
+- Dual-path music delivery mode is implemented for request-driven workflows:
+  - optional `musicDeliveryMode: "dual_vocal_instrumental"` on music requests
+  - writes paired `__instrumental` + `__vocal_ready` outputs deterministically
+  - provenance sidecars include linkage metadata (`dualPathGroupId`, `dualPathRole`, `pairedOutputPath`)
 
 ## Current constraints
 
@@ -43,9 +47,10 @@
 - On the legacy `--request-file` path, `--music-duration` and `--sfx-duration` remain fallback defaults for requests that omit `durationSeconds`.
 - On the legacy `--request-file` path, provenance sidecars are now additive/optional via `generate-request-batch --write-provenance`; result records include `provenance_path` when written.
 - On the legacy `--request-file` path, manifest parity is now additive and always written to `<output_dir>/batch_manifest.json`.
+- Dual-path mode currently applies only to music request records and is rejected for `sfx`/`voice`.
 - OGG export depends on `soundfile`; if unavailable, requests that specify `.ogg` fail.
 - Event-driven remaster note substitution requires instrument note files under `samples/orchestral/<instrument>/` that include note names in filenames (for example `violin_C4.wav`).
 
 ## Near-term goal
 
-Add the license compliance CI gate (SESSION-032) while preserving additive compatibility across existing generation and remaster command surfaces.
+Add end-to-end release-gate orchestration (SESSION-041) while preserving additive compatibility across existing generation/QA/compliance/export command surfaces.

@@ -12,6 +12,7 @@ from typing import Any
 _ALLOWED_REQUEST_TYPES = {"music", "sfx", "voice"}
 _ALLOWED_OUTPUT_FORMATS = {"wav", "ogg"}
 _ALLOWED_REVIEW_STATUSES = {"draft", "approved", "revise", "rejected", "overridden"}
+_ALLOWED_MUSIC_DELIVERY_MODES = {"dual_vocal_instrumental"}
 _VARIANT_SUFFIX_RE = re.compile(r"^(?P<stem>.+)_var(?P<index>\d{2})$")
 
 
@@ -90,6 +91,7 @@ class GenerationRequest:
     replace_existing: bool | None = None
     supersedes_request_id: str | None = None
     duration_seconds: float | None = None
+    music_delivery_mode: str | None = None
 
 
 @dataclass(frozen=True)
@@ -209,12 +211,13 @@ def _parse_generation_request(data: Any, *, index: int, source: str) -> Generati
     mapping = _require_mapping(data, context)
     output_data = _require_mapping(mapping.get("output"), f"{context}.output")
     qa_data = _require_mapping(mapping.get("qa"), f"{context}.qa")
+    request_type = _require_value_in_set(mapping.get("type"), "type", context, _ALLOWED_REQUEST_TYPES)
 
     return GenerationRequest(
         request_version=_require_str(mapping.get("requestVersion"), "requestVersion", context),
         request_id=_require_str(mapping.get("requestId"), "requestId", context),
         asset_id=_require_str(mapping.get("assetId"), "assetId", context),
-        type=_require_value_in_set(mapping.get("type"), "type", context, _ALLOWED_REQUEST_TYPES),
+        type=request_type,
         backend=_require_str(mapping.get("backend"), "backend", context),
         seed=_require_non_negative_int(mapping.get("seed"), "seed", context),
         prompt=_require_str(mapping.get("prompt"), "prompt", context),
@@ -223,6 +226,12 @@ def _parse_generation_request(data: Any, *, index: int, source: str) -> Generati
             mapping.get("durationSeconds"),
             "durationSeconds",
             context,
+        ),
+        music_delivery_mode=_optional_music_delivery_mode(
+            mapping.get("musicDeliveryMode"),
+            request_type=request_type,
+            field_name="musicDeliveryMode",
+            context=context,
         ),
         output=GenerationRequestOutput(
             target_path=_require_str(output_data.get("targetPath"), "targetPath", f"{context}.output"),
@@ -401,6 +410,21 @@ def _optional_str(value: Any, field_name: str, context: str) -> str | None:
     if value is None:
         return None
     return _require_str(value, field_name, context)
+
+
+def _optional_music_delivery_mode(
+    value: Any,
+    *,
+    request_type: str,
+    field_name: str,
+    context: str,
+) -> str | None:
+    if value is None:
+        return None
+    parsed = _require_value_in_set(value, field_name, context, _ALLOWED_MUSIC_DELIVERY_MODES)
+    if request_type != "music":
+        raise FactoryInputError(f"{context}.{field_name} is only valid for type 'music'")
+    return parsed
 
 
 def _require_bool(value: Any, field_name: str, context: str) -> bool:

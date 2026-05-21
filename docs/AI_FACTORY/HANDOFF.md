@@ -4,16 +4,31 @@
 
 ## Last completed change
 
-Completed SESSION-046 and SESSION-047 in one continuity-safe PR:
+Completed **SESSION-038** (dual-path vocal/instrumental workflow stabilization):
 
-- **SESSION-046** (taxonomy fixture expansion): Added 21 additive music testing requests to `docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json` for requested styles/moods/environments: driving, hopeful, romance, love, sailing, beach, snowy mountains, hot desert, high-tech city, elevator music, guitar solo, piano solo, cyberpunk, country, rock, emo, lo-fi, synth-pop, synth-rock, synth-wave, and grand opera. All new requests use deterministic IDs/seeds and explicit `durationSeconds`.
-- **SESSION-047** (continuity synchronization): Updated fixture-driven test expectations in `tests/test_integration.py` and synchronized continuity/session-control docs (`SESSION_QUEUE.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, `SESSION_HISTORY.md`, `CURRENT_STATE.md`, `ACTIVE_WORK.md`, `SUBSYSTEMS/MUSIC.md`).
+- Added additive request schema support in `audio_engine/integration/factory_inputs.py`:
+  - optional `musicDeliveryMode` field
+  - currently supported value: `dual_vocal_instrumental` (music requests only)
+- Implemented deterministic paired output generation in both request-batch execution paths:
+  - `RequestBatchPipeline.execute(...)`
+  - `AssetPipeline.execute_request_batch(...)`
+- Dual-path mode now produces paired files with stable suffixes:
+  - `__instrumental`
+  - `__vocal_ready`
+- Added explicit provenance linkage metadata for both paired outputs:
+  - `dualPathGroupId`
+  - `dualPathRole`
+  - `pairedOutputPath`
+- Added focused parser/pipeline tests in `tests/test_integration.py` for:
+  - `musicDeliveryMode` parsing/validation
+  - dual-path paired output generation
+  - provenance linkage correctness
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_integration.py -k "load_generation_request_fixture or expanded_style_piece_requests"
+python -m pytest tests/test_ai_pipeline.py tests/test_integration.py -k "voice or dual_path or music_delivery_mode"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
@@ -21,13 +36,14 @@ python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
 ```
 
 Observed result:
-- Full test suite passes (978 tests)
+- Targeted dual-path/voice integration slice passes (28 selected tests)
+- Full test suite passes (1048 tests)
 - Asset manifest validation passes
 - Session-control JSON files parse cleanly
 
 ## Immediate next best task
 
-Execute **SESSION-032** (license compliance CI gate), then **SESSION-029b** (studio creation-tooling UX follow-up).
+Execute **SESSION-041** (end-to-end vertical-slice release gate automation).
 
 ## Files future agents should read first
 

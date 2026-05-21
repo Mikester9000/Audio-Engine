@@ -164,7 +164,7 @@
 - Added additive legacy `batch_manifest.json` writing for `generate-request-batch --request-file` / `AssetPipeline.execute_request_batch` with deterministic per-request records aligned to existing request/result metadata.
 - Preserved compatibility by leaving `request_batch_result.json` behavior unchanged and added focused integration/CLI coverage for the new legacy manifest output.
 
-## Current next session
+## Recently completed priority sessions
 
 ### SESSION-027 — Define and queue the next executable implementation session
 
@@ -203,10 +203,10 @@
 
 ### SESSION-029b — Expand creation tooling / studio workflow
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `cli + ui`
 - **Objective:** Add post-MVP creation tooling improvements for the local studio workflow (presets, profile loading, batch generation shortcuts, and error-recovery UX).
-- **Notes:** Keep Tkinter/local-offline constraints and preserve existing CLI command compatibility.
+- **Notes:** Added studio preset save/load JSON controls, music mastering-profile selection in studio, one-click "Generate All" shortcut, and retry-last-error recovery button while preserving CLI compatibility.
 
 ### SESSION-030 — Add strict WAV sample-folder ingestion contract
 
@@ -326,6 +326,24 @@
 
 ## Remaining planned sessions (post-baseline)
 
+## Current next session
+
+### SESSION-041 — End-to-end vertical slice release gate automation
+
+- **Status:** `planned`
+- **Task type:** `orchestration`
+- **Objective:** Add one deterministic command that executes vertical-slice generation, QA, compliance checks, and export handoff with machine-readable gate artifacts.
+- **Notes:** Preserve existing command compatibility; wire together existing gates additively instead of replacing current command surfaces.
+
+### Recently completed session context
+
+### SESSION-038 — Stabilize dual-path vocal and instrumental workflow
+
+- **Status:** `completed`
+- **Task type:** `pipeline + voice`
+- **Objective:** Support deterministic generation/export of paired instrumental and vocal-production-ready variants with explicit provenance linkage.
+- **Notes:** Added additive `musicDeliveryMode: dual_vocal_instrumental` support for music requests, deterministic paired `__instrumental` + `__vocal_ready` outputs in both request-batch execution paths, and provenance linkage fields (`dualPathGroupId`, `dualPathRole`, `pairedOutputPath`).
+
 ### SESSION-028b — Sample library scanner and pitch-shift engine
 
 - **Status:** `completed`
@@ -342,10 +360,10 @@
 
 ### SESSION-029b — Expand creation tooling / studio workflow
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `cli + ui`
 - **Objective:** Add post-MVP creation tooling improvements for the local studio workflow (presets, profile loading, batch generation shortcuts, and error-recovery UX).
-- **Notes:** Keep Tkinter/local-offline constraints and preserve existing CLI command compatibility.
+- **Notes:** Added studio preset save/load JSON controls, music mastering-profile selection in studio, one-click "Generate All" shortcut, and retry-last-error recovery button while preserving CLI compatibility.
 
 ### SESSION-031 — Complete batch remaster pipeline wiring
 
