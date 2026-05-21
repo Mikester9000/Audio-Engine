@@ -40,6 +40,30 @@ def _vibrato_phase(freq: float, dur: float, sr: int, rate_hz: float, depth_semit
     return 2.0 * np.pi * np.cumsum(freq_mod / sr)
 
 
+def _bl_saw_from_phase(phase: np.ndarray, freq: float, sr: int) -> np.ndarray:
+    """Generate a band-limited sawtooth from a precomputed phase accumulator.
+
+    Uses the same Lanczos-windowed additive synthesis as
+    :meth:`Oscillator.bl_sawtooth`, but accepts a time-varying phase track so
+    that the oscillator frequency can be modulated sample-by-sample (true pitch
+    vibrato / FM rather than amplitude modulation / tremolo).
+    """
+    nyquist = sr / 2.0
+    n_harmonics = min(int(nyquist / max(freq, 1.0)), 40)
+    n_harmonics = max(n_harmonics, 1)
+    N = float(n_harmonics)
+    k = np.arange(1, n_harmonics + 1, dtype=np.float64)
+    sigma = np.sinc(k / (N + 1.0))
+    coeff = ((-1.0) ** (k + 1) / k) * sigma  # shape: (n_harmonics,)
+    # phase shape: (n,);  broadcast to (n_harmonics, n) for vectorised sum
+    out = np.sum(coeff[:, None] * np.sin(k[:, None] * phase[None, :]), axis=0)
+    out *= 2.0 / np.pi
+    peak = np.max(np.abs(out))
+    if peak > 1e-9:
+        out /= peak
+    return out.astype(np.float32)
+
+
 @dataclass
 class Instrument:
     """A complete synthesised voice.
@@ -141,14 +165,16 @@ def _strings(sr: int = 44100) -> Instrument:
         n = max(1, int(dur * sr))
         rate_hz = 5.0
         t = np.arange(n, dtype=np.float64) / sr
-        # Per-voice vibrato modulation factors
-        vib_c  = 1.0 + (_cents_to_ratio(0.5) - 1.0) * np.sin(2.0 * np.pi * rate_hz * t)
-        vib_u  = 1.0 + (_cents_to_ratio(0.45) - 1.0) * np.sin(2.0 * np.pi * 5.1 * t)
-        vib_l  = 1.0 + (_cents_to_ratio(0.45) - 1.0) * np.sin(2.0 * np.pi * 4.9 * t)
-        # BL sawtooth: cheaper to compute once and pitch-warp via the modulation
-        body_c = osc.bl_sawtooth(freq, dur) * vib_c.astype(np.float32)
-        body_u = osc.bl_sawtooth(freq * _cents_to_ratio(3.0), dur) * vib_u.astype(np.float32)
-        body_l = osc.bl_sawtooth(freq * _cents_to_ratio(-3.0), dur) * vib_l.astype(np.float32)
+        # Per-voice pitch vibrato via frequency modulation (phase accumulation)
+        f_c = freq * (1.0 + (_cents_to_ratio(0.5) - 1.0) * np.sin(2.0 * np.pi * rate_hz * t))
+        f_u = freq * _cents_to_ratio(3.0) * (1.0 + (_cents_to_ratio(0.45) - 1.0) * np.sin(2.0 * np.pi * 5.1 * t))
+        f_l = freq * _cents_to_ratio(-3.0) * (1.0 + (_cents_to_ratio(0.45) - 1.0) * np.sin(2.0 * np.pi * 4.9 * t))
+        phase_c = 2.0 * np.pi * np.cumsum(f_c / sr)
+        phase_u = 2.0 * np.pi * np.cumsum(f_u / sr)
+        phase_l = 2.0 * np.pi * np.cumsum(f_l / sr)
+        body_c = _bl_saw_from_phase(phase_c, freq, sr)
+        body_u = _bl_saw_from_phase(phase_u, freq * _cents_to_ratio(3.0), sr)
+        body_l = _bl_saw_from_phase(phase_l, freq * _cents_to_ratio(-3.0), sr)
         body = 0.46 * body_c + 0.30 * body_u + 0.24 * body_l
         noise = np.random.default_rng(_STRINGS_BOW_NOISE_SEED).standard_normal(n).astype(np.float32)
         noise = Filter(sr).band_pass(noise, 200.0, 2000.0)
@@ -177,10 +203,12 @@ def _brass(sr: int = 44100) -> Instrument:
         n = max(1, int(dur * sr))
         t = np.arange(n, dtype=np.float64) / sr
         # Lip buzz: slight pitch wobble on attack (simulates embouchure settling)
-        pitch_settle = 1.0 + 0.008 * np.exp(-12.0 * t)
-        base = osc.bl_sawtooth(freq, dur)
+        # Modulate frequency (phase accumulation) for true pitch variation
+        pitch_freq = freq * (1.0 + 0.008 * np.exp(-12.0 * t))
+        phase = 2.0 * np.pi * np.cumsum(pitch_freq / sr)
+        base = _bl_saw_from_phase(phase, freq, sr)
         # Mild tanh overdrive for brass harmonic saturation (growl on loud notes)
-        driven = np.tanh(base.astype(np.float64) * 1.6) * pitch_settle
+        driven = np.tanh(base.astype(np.float64) * 1.6)
         return driven.astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
@@ -239,14 +267,17 @@ def _choir(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
         t = np.arange(n, dtype=np.float64) / sr
-        # Ensemble vibrato: slight detuning between singers
-        vib1 = 1.0 + 0.003 * np.sin(2.0 * np.pi * 5.2 * t)
-        vib2 = 1.0 + 0.003 * np.sin(2.0 * np.pi * 5.0 * t + 0.8)
-        vib3 = 1.0 + 0.003 * np.sin(2.0 * np.pi * 4.8 * t + 1.6)
+        # Ensemble vibrato / pitch detuning via frequency modulation (phase accumulation)
+        f1 = freq * (1.0 + 0.003 * np.sin(2.0 * np.pi * 5.2 * t))
+        f2 = freq * _cents_to_ratio(5.0) * (1.0 + 0.003 * np.sin(2.0 * np.pi * 5.0 * t + 0.8))
+        f3 = freq * _cents_to_ratio(-5.0) * (1.0 + 0.003 * np.sin(2.0 * np.pi * 4.8 * t + 1.6))
+        phase1 = 2.0 * np.pi * np.cumsum(f1 / sr)
+        phase2 = 2.0 * np.pi * np.cumsum(f2 / sr)
+        phase3 = 2.0 * np.pi * np.cumsum(f3 / sr)
         # Glottal source: band-limited sawtooth (good model of vocal folds)
-        g1 = osc.bl_sawtooth(freq, dur).astype(np.float64) * vib1
-        g2 = osc.bl_sawtooth(freq * _cents_to_ratio(5.0), dur).astype(np.float64) * vib2
-        g3 = osc.bl_sawtooth(freq * _cents_to_ratio(-5.0), dur).astype(np.float64) * vib3
+        g1 = _bl_saw_from_phase(phase1, freq, sr).astype(np.float64)
+        g2 = _bl_saw_from_phase(phase2, freq * _cents_to_ratio(5.0), sr).astype(np.float64)
+        g3 = _bl_saw_from_phase(phase3, freq * _cents_to_ratio(-5.0), sr).astype(np.float64)
         source = 0.5 * g1 + 0.27 * g2 + 0.23 * g3
         return source.astype(np.float32)
 
@@ -678,10 +709,11 @@ def _oboe(sr: int = 44100) -> Instrument:
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
-        # Slight vibrato on the carrier using a band-limited sawtooth base
+        # Slight vibrato on the carrier via frequency modulation (phase accumulation)
         t = np.arange(n, dtype=np.float64) / sr
-        vib_mod = 1.0 + 0.004 * np.sin(2.0 * np.pi * 5.5 * t)
-        carrier = osc.bl_sawtooth(freq, dur).astype(np.float64) * vib_mod
+        carrier_freq = freq * (1.0 + 0.004 * np.sin(2.0 * np.pi * 5.5 * t))
+        phase = 2.0 * np.pi * np.cumsum(carrier_freq / sr)
+        carrier = _bl_saw_from_phase(phase, freq, sr).astype(np.float64)
         # Add weak reed buzz via high-frequency FM modulation
         mod_phase = 2.0 * np.pi * freq * 2.0 * np.arange(n, dtype=np.float64) / sr
         buzz = (0.18 * np.sin(mod_phase + 1.6 * np.sin(mod_phase * 0.5))).astype(np.float32)
@@ -793,12 +825,16 @@ def _cello(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
         t = np.arange(n, dtype=np.float64) / sr
-        vib_c = 1.0 + 0.003 * np.sin(2.0 * np.pi * 4.5 * t)
-        vib_u = 1.0 + 0.003 * np.sin(2.0 * np.pi * 4.6 * t + 0.5)
-        vib_l = 1.0 + 0.003 * np.sin(2.0 * np.pi * 4.4 * t + 1.0)
-        body_c = osc.bl_sawtooth(freq, dur).astype(np.float64) * vib_c
-        body_u = osc.bl_sawtooth(freq * _cents_to_ratio(4.0), dur).astype(np.float64) * vib_u
-        body_l = osc.bl_sawtooth(freq * _cents_to_ratio(-4.0), dur).astype(np.float64) * vib_l
+        # Pitch vibrato via frequency modulation (phase accumulation)
+        f_c = freq * (1.0 + 0.003 * np.sin(2.0 * np.pi * 4.5 * t))
+        f_u = freq * _cents_to_ratio(4.0) * (1.0 + 0.003 * np.sin(2.0 * np.pi * 4.6 * t + 0.5))
+        f_l = freq * _cents_to_ratio(-4.0) * (1.0 + 0.003 * np.sin(2.0 * np.pi * 4.4 * t + 1.0))
+        phase_c = 2.0 * np.pi * np.cumsum(f_c / sr)
+        phase_u = 2.0 * np.pi * np.cumsum(f_u / sr)
+        phase_l = 2.0 * np.pi * np.cumsum(f_l / sr)
+        body_c = _bl_saw_from_phase(phase_c, freq, sr).astype(np.float64)
+        body_u = _bl_saw_from_phase(phase_u, freq * _cents_to_ratio(4.0), sr).astype(np.float64)
+        body_l = _bl_saw_from_phase(phase_l, freq * _cents_to_ratio(-4.0), sr).astype(np.float64)
         body = 0.55 * body_c + 0.25 * body_u + 0.20 * body_l
         noise = np.random.default_rng(_STRINGS_BOW_NOISE_SEED + 3).standard_normal(n).astype(np.float32)
         noise = Filter(sr).band_pass(noise, 100.0, 1200.0)

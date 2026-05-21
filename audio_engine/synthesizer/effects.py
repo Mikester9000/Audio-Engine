@@ -74,6 +74,8 @@ class Effects:
         room_size = float(np.clip(room_size, 0.01, 1.0))
         if len(signal) == 0:
             return signal.astype(np.float32)
+        if wet == 0.0:
+            return signal.astype(np.float32)
 
         sr = self.sample_rate
         sig_f64 = signal.astype(np.float64)

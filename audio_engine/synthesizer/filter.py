@@ -75,7 +75,7 @@ class Filter:
             Q-factor / resonance amount.  Values 0.5–4.0 are useful;
             higher values emphasise the cutoff frequency (PS2-era warmth).
         """
-        from scipy.signal import sosfilt, zpk2sos  # type: ignore[import]
+        from scipy.signal import sosfilt  # type: ignore[import]
 
         nyq = self.sample_rate / 2.0
         wn = float(np.clip(cutoff / nyq, 1e-4, 0.9999))

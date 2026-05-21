@@ -164,8 +164,11 @@ class Oscillator:
     ) -> np.ndarray:
         """Band-limited square / pulse wave via additive synthesis.
 
-        Only odd harmonics are included (up to Nyquist).  Lanczos sigma
-        correction suppresses ringing at the waveform edges.
+        Harmonics up to the Nyquist frequency are included.  For
+        ``duty_cycle == 0.5`` the series contains only odd harmonics (symmetric
+        square wave); other values introduce even harmonics as expected for a
+        general band-limited pulse wave.  Lanczos sigma correction suppresses
+        ringing at the waveform edges.
         Uses fully-vectorised NumPy operations for CPU efficiency.
         """
         frequency = max(frequency, 1.0)
@@ -226,13 +229,14 @@ class Oscillator:
         self,
         frequency: float,
         duration: float,
-        harmonics: list[tuple[int, float]],
+        harmonics: list[tuple[float, float]],
         amplitude: float = 1.0,
     ) -> np.ndarray:
         """Additive synthesis from a list of (harmonic_number, relative_amplitude) pairs.
 
-        Only harmonics below the Nyquist frequency are included, preventing
-        aliasing when high harmonic numbers are requested.
+        *harmonic_number* may be fractional (e.g. 4.03) to produce inharmonic
+        partials.  Only harmonics below the Nyquist frequency are included,
+        preventing aliasing when high harmonic numbers are requested.
 
         Example
         -------

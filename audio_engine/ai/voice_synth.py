@@ -126,7 +126,7 @@ def _glottal_excitation(f0: float, duration: float, sr: int, jitter: float, rng:
     n_harmonics = min(int(nyquist / max(f0, 1.0)), 40)  # cap at 40 for speed
     glottal = np.zeros(n, dtype=np.float64)
     for k in range(1, n_harmonics + 1):
-        # Glottal spectral tilt: 1/k amplitude with slight boost at low harmonics
+        # Glottal spectral tilt: 1/k amplitude (natural roll-off of vocal source)
         amp = 1.0 / k
         glottal += amp * np.sin(k * phase)
     # Sub-harmonic gives the "chest register" richness
