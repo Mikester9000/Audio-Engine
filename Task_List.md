@@ -1,6 +1,6 @@
 # Task List
 
-Absolute repository paths are used intentionally in this file to match the task requirement for file references.
+Absolute repository paths are used intentionally in this file because the task explicitly required repository file references to use absolute paths.
 
 Ordered one-file-at-a-time tasks to move `/home/runner/work/Audio-Engine/Audio-Engine` toward a full `GameRewritten` audio-delivery program.
 
