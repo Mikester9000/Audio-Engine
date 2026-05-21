@@ -24,7 +24,7 @@ Validation run during review:
 
 ## Executive summary
 
-`/home/runner/work/Audio-Engine/Audio-Engine` is already a strong **audio factory**, but it is **not yet a complete game-audio delivery program** for `Mikester9000/GameRewritten`.
+The repository is already a strong **audio factory**, but it is **not yet a complete game-audio delivery program** for `Mikester9000/GameRewritten`.
 
 The repo is strongest in:
 
