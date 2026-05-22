@@ -161,6 +161,9 @@
 #include <string>
 #include <unordered_map>
 #include <filesystem>
+#include <array>
+#include <algorithm>
+#include <utility>
 
 // Pull in the engine's GameState enum (already defined in Types.hpp).
 #include "../core/Types.hpp"
@@ -287,6 +290,7 @@ public:
 #ifndef AUDIO_ENGINE_NO_AUDIO
         if (!m_initialised) return;
         StopAll();
+        _UnloadMusic();
         _UnloadSFX();
         if (m_engineInit) {
             ma_engine_uninit(&m_engine);
@@ -337,9 +341,24 @@ public:
      */
     void PlayMusic(const std::string& filename) {
         if (!m_initialised) return;
-        std::string path = m_assetsDir + "/music/" + filename;
+        if (filename.empty()) return;
+        if (filename == m_currentTrack && !m_isCrossfading) return;
 #ifndef AUDIO_ENGINE_NO_AUDIO
-        ma_engine_play_sound(&m_engine, path.c_str(), nullptr);
+        const std::string path = _MakeMusicPath(filename);
+        if (!_StartMusicTrack(m_pendingMusicSlot, path, 0.0f)) {
+            return;
+        }
+
+        if (!m_musicSoundInit[m_activeMusicSlot]) {
+            ma_sound_set_volume(&m_musicSounds[m_pendingMusicSlot], m_muted ? 0.0f : m_musicVolume);
+            m_musicSoundInit[m_activeMusicSlot] = true;
+            std::swap(m_activeMusicSlot, m_pendingMusicSlot);
+            m_isCrossfading = false;
+            m_crossfadeProgress = 0.0f;
+        } else {
+            _BeginMusicCrossfade(filename);
+            return;
+        }
 #endif
         m_currentTrack = filename;
     }
@@ -349,6 +368,9 @@ public:
      */
     void StopMusic() {
         if (!m_initialised) return;
+#ifndef AUDIO_ENGINE_NO_AUDIO
+        _UnloadMusic();
+#endif
         m_currentTrack.clear();
     }
 
@@ -359,8 +381,10 @@ public:
     void SetMusicVolume(float volume) {
         m_musicVolume = std::clamp(volume, 0.0f, 1.0f);
 #ifndef AUDIO_ENGINE_NO_AUDIO
-        if (m_initialised) {
-            ma_engine_set_volume(&m_engine, m_musicVolume);
+        if (!m_initialised) return;
+        _ApplyMusicVolumes();
+        if (!m_musicSoundInit[m_activeMusicSlot] && !m_musicSoundInit[m_pendingMusicSlot]) {
+            ma_engine_set_volume(&m_engine, m_muted ? 0.0f : m_musicVolume);
         }
 #endif
     }
@@ -578,6 +602,78 @@ private:
         return it != kMap.end() ? it->second : kEmpty;
     }
 
+    std::string _MakeMusicPath(const std::string& filename) const {
+        return m_assetsDir + "/music/" + filename;
+    }
+
+    bool _StartMusicTrack(int slot, const std::string& path, float initialVolume) {
+#ifndef AUDIO_ENGINE_NO_AUDIO
+        _StopAndUnloadMusicSlot(slot);
+        if (ma_sound_init_from_file(&m_engine, path.c_str(), MA_SOUND_FLAG_STREAM, nullptr, nullptr, &m_musicSounds[slot]) != MA_SUCCESS) {
+            m_musicSoundInit[slot] = false;
+            return false;
+        }
+        m_musicSoundInit[slot] = true;
+        ma_sound_set_looping(&m_musicSounds[slot], MA_TRUE);
+        ma_sound_set_volume(&m_musicSounds[slot], initialVolume);
+        if (ma_sound_start(&m_musicSounds[slot]) != MA_SUCCESS) {
+            _StopAndUnloadMusicSlot(slot);
+            return false;
+        }
+#else
+        (void)slot;
+        (void)path;
+        (void)initialVolume;
+#endif
+        return true;
+    }
+
+    void _StopAndUnloadMusicSlot(int slot) {
+#ifndef AUDIO_ENGINE_NO_AUDIO
+        if (!m_musicSoundInit[slot]) return;
+        ma_sound_stop(&m_musicSounds[slot]);
+        ma_sound_uninit(&m_musicSounds[slot]);
+#endif
+        m_musicSoundInit[slot] = false;
+    }
+
+    void _UnloadMusic() {
+        _StopAndUnloadMusicSlot(m_activeMusicSlot);
+        _StopAndUnloadMusicSlot(m_pendingMusicSlot);
+        m_isCrossfading = false;
+        m_crossfadeProgress = 0.0f;
+    }
+
+    void _BeginMusicCrossfade(const std::string& targetTrack) {
+        m_pendingTrack = targetTrack;
+        m_isCrossfading = true;
+        m_crossfadeProgress = 0.0f;
+        _ApplyMusicVolumes();
+    }
+
+    void _ApplyMusicVolumes() {
+#ifndef AUDIO_ENGINE_NO_AUDIO
+        const float targetVolume = m_muted ? 0.0f : m_musicVolume;
+        if (!m_isCrossfading) {
+            if (m_musicSoundInit[m_activeMusicSlot]) {
+                ma_sound_set_volume(&m_musicSounds[m_activeMusicSlot], targetVolume);
+            }
+            if (m_musicSoundInit[m_pendingMusicSlot]) {
+                ma_sound_set_volume(&m_musicSounds[m_pendingMusicSlot], 0.0f);
+            }
+            return;
+        }
+
+        const float clampedProgress = std::clamp(m_crossfadeProgress, 0.0f, 1.0f);
+        if (m_musicSoundInit[m_activeMusicSlot]) {
+            ma_sound_set_volume(&m_musicSounds[m_activeMusicSlot], targetVolume * (1.0f - clampedProgress));
+        }
+        if (m_musicSoundInit[m_pendingMusicSlot]) {
+            ma_sound_set_volume(&m_musicSounds[m_pendingMusicSlot], targetVolume * clampedProgress);
+        }
+#endif
+    }
+
     void _PreloadSFX() {
         // miniaudio supports streaming sounds for music and buffered sounds
         // for SFX.  For a teaching engine we keep it simple and use the
@@ -589,13 +685,26 @@ private:
         // No pre-loaded buffers in the streaming-only implementation.
     }
 
-    void _UpdateCrossfade(float /*dt*/) {
-        // TEACHING NOTE — A full crossfade would:
-        //   1. Keep the old track playing at decreasing volume.
-        //   2. Start the new track at zero volume.
-        //   3. Increase the new track's volume over kCrossfadeDuration seconds.
-        //   4. Stop the old track when its volume reaches 0.
-        // Implementing this is left as an exercise.
+    void _UpdateCrossfade(float dt) {
+        if (!m_isCrossfading) return;
+        if (kCrossfadeDuration <= 0.0f) {
+            m_crossfadeProgress = 1.0f;
+        } else {
+            const float delta = std::max(0.0f, dt) / kCrossfadeDuration;
+            m_crossfadeProgress = std::clamp(m_crossfadeProgress + delta, 0.0f, 1.0f);
+        }
+
+        _ApplyMusicVolumes();
+
+        if (m_crossfadeProgress < 1.0f) return;
+
+        _StopAndUnloadMusicSlot(m_activeMusicSlot);
+        std::swap(m_activeMusicSlot, m_pendingMusicSlot);
+        m_isCrossfading = false;
+        m_crossfadeProgress = 0.0f;
+        m_currentTrack = m_pendingTrack.empty() ? m_currentTrack : m_pendingTrack;
+        m_pendingTrack.clear();
+        _ApplyMusicVolumes();
     }
 
     static AudioSystem* _GetFromLua(lua_State* L) {
@@ -615,13 +724,20 @@ private:
 #ifndef AUDIO_ENGINE_NO_AUDIO
     ma_engine   m_engine{};
     bool        m_engineInit = false;
+    std::array<ma_sound, 2> m_musicSounds{};
+    std::array<bool, 2> m_musicSoundInit{false, false};
+    int m_activeMusicSlot = 0;
+    int m_pendingMusicSlot = 1;
 #endif
 
     bool  m_initialised  = false;
     bool  m_muted        = false;
+    bool  m_isCrossfading = false;
     float m_musicVolume  = kDefaultMusicVolume;
     float m_sfxVolume    = kDefaultSFXVolume;
     float m_voiceVolume  = kDefaultVoiceVolume;
+    float m_crossfadeProgress = 0.0f;
 
     std::string m_currentTrack;
+    std::string m_pendingTrack;
 };
