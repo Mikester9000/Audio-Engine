@@ -4,8 +4,11 @@ Tests for the AI pipeline: prompt parser, backends, and high-level generators.
 
 from __future__ import annotations
 
+import json
 import sys
 import types
+import wave
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -63,6 +66,9 @@ class TestPromptParser:
             "explore adventure journey": "exploration",
             "calm atmosphere ambience": "ambient",
             "victory triumph fanfare": "victory",
+            "low profile stealth infiltration": "stealth",
+            "mystery puzzle ruins atmosphere": "mystery",
+            "ending credits finale cue": "ending",
         }
         for prompt, expected in styles.items():
             plan = self.parser.parse_music(prompt)
@@ -86,6 +92,16 @@ class TestPromptParser:
         assert isinstance(plan, SFXPlan)
         # Should default to "generic"
         assert plan.sfx_type == "generic"
+
+    def test_parse_sfx_surface_specific_footstep(self):
+        plan = self.parser.parse_sfx("footstep grass variant")
+        assert plan.sfx_type == "footstep_grass"
+
+    def test_parse_sfx_specialised_spell_types(self):
+        holy = self.parser.parse_sfx("holy light spell chime")
+        summon = self.parser.parse_sfx("summon charge energy build")
+        assert holy.sfx_type == "spell_holy"
+        assert summon.sfx_type == "summon_charge"
 
     def test_parse_voice_basic(self):
         plan = self.parser.parse_voice("Hello world", voice_preset="narrator")
@@ -423,6 +439,82 @@ class TestMusicGen:
         for style in ["battle", "ambient", "exploration", "boss", "victory", "menu"]:
             audio = self.gen.generate(style, duration=1.0)
             assert audio.ndim == 2, f"Style '{style}' should produce stereo"
+
+    def test_generate_with_region_appends_hint(self, monkeypatch):
+        captured: dict[str, str] = {}
+        original = self.gen._parser.parse_music
+
+        def _capture(prompt: str, *args, **kwargs):
+            captured["prompt"] = prompt
+            return original(prompt, *args, **kwargs)
+
+        monkeypatch.setattr(self.gen._parser, "parse_music", _capture)
+        self.gen.generate("open world journey", duration=1.0, region="forest")
+        assert "forest canopy" in captured["prompt"]
+
+    def test_generate_to_file_writes_layer_bundle(self, tmp_path):
+        out = tmp_path / "region_theme.wav"
+        layer_dir = tmp_path / "layers"
+        self.gen.generate_to_file(
+            "regional travel cue",
+            str(out),
+            duration=1.0,
+            region="plains",
+            adaptive_intensity=True,
+            layer_output_dir=layer_dir,
+        )
+        for layer_name in ("region_theme_layer_base.wav", "region_theme_layer_calm.wav", "region_theme_layer_intense.wav"):
+            layer_path = layer_dir / layer_name
+            assert layer_path.exists()
+            assert layer_path.stat().st_size > 0
+            with wave.open(str(layer_path), "rb") as wf:
+                assert wf.getnchannels() == 2
+                assert wf.getframerate() == SR
+                assert wf.getnframes() > 0
+        with wave.open(str(layer_dir / "region_theme_layer_base.wav"), "rb") as wf:
+            base_peak = np.max(np.abs(np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)))
+        with wave.open(str(layer_dir / "region_theme_layer_calm.wav"), "rb") as wf:
+            calm_peak = np.max(np.abs(np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)))
+        with wave.open(str(layer_dir / "region_theme_layer_intense.wav"), "rb") as wf:
+            intense_peak = np.max(np.abs(np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)))
+        assert calm_peak <= base_peak
+        assert intense_peak >= calm_peak
+        metadata = json.loads((layer_dir / "region_theme_layers.json").read_text(encoding="utf-8"))
+        assert metadata["region"] == "plains"
+        assert metadata["adaptiveIntensityEnabled"] is True
+        assert metadata["mainMixPath"] == "../region_theme.wav"
+        assert all(not Path(layer["path"]).is_absolute() for layer in metadata["layers"])
+
+    def test_generate_from_plan_region_and_adaptive_intensity_are_forwarded(self, monkeypatch):
+        gen = MusicGen(sample_rate=SR, seed=0, apply_mastering=False)
+        calls: list[dict[str, object]] = []
+
+        def _fake_generate_music_audio(style: str, duration: float, bpm: float | None = None, **kwargs):
+            calls.append(
+                {
+                    "style": style,
+                    "duration": duration,
+                    "bpm": bpm,
+                    "kwargs": kwargs,
+                }
+            )
+            return np.ones((32, 2), dtype=np.float32) * 0.5
+
+        monkeypatch.setattr(gen._backend, "generate_music_audio", _fake_generate_music_audio)
+        plan = MusicPlan(prompt="exploration cue", duration=1.0, output_path="music.wav", style="exploration", bpm=92.0)
+        adaptive_audio = gen.generate_from_plan(plan, region="forest", adaptive_intensity=True)
+        baseline_audio = gen.generate_from_plan(plan, region="forest", adaptive_intensity=False)
+
+        assert calls[0]["style"] == "exploration_forest"
+        assert calls[1]["style"] == "exploration_forest"
+        kwargs0 = calls[0]["kwargs"]
+        kwargs1 = calls[1]["kwargs"]
+        assert isinstance(kwargs0, dict)
+        assert isinstance(kwargs1, dict)
+        assert kwargs0["adaptive_intensity"] is True
+        assert kwargs1["adaptive_intensity"] is False
+        assert "forest canopy" in kwargs0["prompt"]
+        assert float(np.max(adaptive_audio)) > float(np.max(baseline_audio))
 
 
 # ---------------------------------------------------------------------------

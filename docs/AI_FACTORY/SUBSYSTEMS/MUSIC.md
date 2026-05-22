@@ -4,6 +4,8 @@
 
 - style-based generation through `AudioEngine.generate_track()`
 - prompt-driven generation through `MusicGen`
+- expanded narrative/region style presets (`stealth`, `memorial`, `mystery`, `underscore`, `ending`, and regional exploration variants) in `audio_engine/ai/generator.py`
+- region-aware prompt shaping and optional adaptive layer bundle export (`layer_output_dir`) in `MusicGen.generate_to_file()`
 - structured phrase planning + motif variation via `audio_engine/composer/phrase.py` (`SectionPlanner`, `MotifBank`)
 - cadence-aware, loop-friendly 8-layer procedural arrangement in `audio_engine/ai/generator.py`
 - mastering through `OfflineBounce`
@@ -15,7 +17,7 @@
 
 ## What is missing
 
-- richer style-preset registry beyond current built-in styles
+- broader style-keyword resolver coverage for every advanced preset family
 - verified non-procedural backend quality benchmarks using real downloaded model weights
 - full studio-side profile/preset lifecycle management (beyond current save/load + profile selection)
 - full release-gate orchestration that consumes dual-path outputs end-to-end (SESSION-041 planned)

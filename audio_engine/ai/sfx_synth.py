@@ -644,6 +644,172 @@ def _sfx_footstep_grass(duration: float, pitch_hz: float | None, sr: int, rng: n
     return (0.65 * rustle * rustle_env + 0.35 * body[:n] * body_env).astype(np.float32)
 
 
+def _sfx_footstep_dirt(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Dirt footstep — dry crunch with muted low thump."""
+    d = max(duration, 0.12)
+    n = int(d * sr)
+    crunch = _band_noise(n, 250.0, 2800.0, sr, rng)
+    crunch_env = _adsr(n, sr, attack_ms=0.7, decay_ms=22.0, sustain=0.0, release_ms=30.0)
+    thump = _sine(85.0, d, sr, amp=0.35)
+    thump_env = _adsr(n, sr, attack_ms=1.0, decay_ms=18.0, sustain=0.0, release_ms=26.0)
+    return (0.58 * crunch * crunch_env + 0.42 * thump[:n] * thump_env).astype(np.float32)
+
+
+def _sfx_footstep_wood(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Wood footstep — resonant knock with short creak."""
+    d = max(duration, 0.12)
+    n = int(d * sr)
+    knock = _sine(220.0, d, sr, amp=0.55) * _exp_env(n, 16.0)
+    creak = _band_noise(n, 400.0, 2200.0, sr, rng)
+    creak_env = _adsr(n, sr, attack_ms=1.0, decay_ms=30.0, sustain=0.0, release_ms=36.0)
+    return (0.62 * knock[:n] + 0.38 * creak * creak_env).astype(np.float32)
+
+
+def _sfx_footstep_metal(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Metal footstep — bright clank with ringing overtone."""
+    d = max(duration, 0.12)
+    n = int(d * sr)
+    clank_noise = _band_noise(n, 700.0, 7000.0, sr, rng)
+    clank_env = _adsr(n, sr, attack_ms=0.3, decay_ms=18.0, sustain=0.0, release_ms=24.0)
+    ring = (
+        _sine(1300.0, d, sr, amp=0.3)
+        + _sine(2200.0, d, sr, amp=0.16)
+    ) * _exp_env(n, 20.0)
+    dry = (0.55 * clank_noise * clank_env + 0.45 * ring[:n]).astype(np.float32)
+    rev = _reverb(dry, sr, room_seconds=0.18, decay=3.5, seed=int(rng.integers(0, 2**31 - 1)))
+    return (0.85 * dry + 0.15 * rev).astype(np.float32)
+
+
+def _sfx_footstep_water(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Shallow water footstep — splash transient with watery tail."""
+    d = max(duration, 0.16)
+    n = int(d * sr)
+    splash = _band_noise(n, 500.0, 9000.0, sr, rng)
+    splash_env = _adsr(n, sr, attack_ms=0.5, decay_ms=28.0, sustain=0.0, release_ms=45.0)
+    body = _band_noise(n, 80.0, 600.0, sr, rng)
+    body_env = _adsr(n, sr, attack_ms=2.0, decay_ms=38.0, sustain=0.0, release_ms=55.0)
+    return (0.58 * splash * splash_env + 0.42 * body * body_env).astype(np.float32)
+
+
+def _sfx_dodge_evade(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Dodge/evade cue — fast directional whoosh."""
+    d = max(duration, 0.18)
+    n = int(d * sr)
+    sweep = _freq_sweep(600.0, 220.0, d, sr)
+    hiss = _moving_band_noise(n, 1800.0, 600.0, bandwidth=1300.0, sr=sr, rng=rng)
+    env = np.sin(np.linspace(0.0, np.pi, n, dtype=np.float64)).astype(np.float32)
+    return (0.45 * sweep[:n] * env + 0.55 * hiss * env).astype(np.float32)
+
+
+def _sfx_damage_taken(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Damage taken cue — short body thud + breathy noise."""
+    d = max(duration, 0.22)
+    n = int(d * sr)
+    thud = _sine(95.0, d, sr, amp=0.7) * _exp_env(n, 12.0)
+    grit = _band_noise(n, 300.0, 3000.0, sr, rng) * _exp_env(n, 18.0)
+    return (0.62 * thud[:n] + 0.38 * grit).astype(np.float32)
+
+
+def _sfx_critical_hit(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Critical hit cue — impact base with bright splash."""
+    base = _sfx_hit(max(duration, 0.35), pitch_hz, sr, rng)
+    n = len(base)
+    sparkle = _band_noise(n, 3000.0, 12000.0, sr, rng) * _exp_env(n, 26.0) * 0.28
+    ring = (_sine(2800.0, n / sr, sr, amp=0.2) * _exp_env(n, 14.0))[:n]
+    return (base + sparkle + ring).astype(np.float32)
+
+
+def _sfx_spell_holy(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Holy/light spell — ascending chimes with warm hall tail."""
+    d = max(duration, 0.75)
+    n = int(d * sr)
+    base = pitch_hz or 740.0
+    t = np.arange(n, dtype=np.float64) / sr
+    chord = (
+        0.42 * np.sin(2.0 * np.pi * base * t)
+        + 0.28 * np.sin(2.0 * np.pi * base * 1.5 * t)
+        + 0.20 * np.sin(2.0 * np.pi * base * 2.0 * t)
+    )
+    rise = np.linspace(0.6, 1.2, n, dtype=np.float64)
+    shimmer = _band_noise(n, 2500.0, 10000.0, sr, rng) * 0.18
+    env = _adsr(n, sr, attack_ms=15.0, decay_ms=120.0, sustain=0.40, release_ms=260.0)
+    dry = ((chord * rise).astype(np.float32) + shimmer) * env
+    wet = _reverb(dry.astype(np.float32), sr, room_seconds=1.3, decay=4.6, seed=int(rng.integers(0, 2**31 - 1)))
+    return (0.58 * dry + 0.42 * wet).astype(np.float32)
+
+
+def _sfx_spell_buff_shield(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Buff/shield cue — upward shimmer and gentle protective ring."""
+    d = max(duration, 0.6)
+    n = int(d * sr)
+    rise = _freq_sweep(260.0, 960.0, d, sr)
+    shimmer = _band_noise(n, 1800.0, 9000.0, sr, rng)
+    env = _adsr(n, sr, attack_ms=20.0, decay_ms=100.0, sustain=0.35, release_ms=220.0)
+    ring = _sine(1200.0, d, sr, amp=0.22) * _exp_env(n, 10.0)
+    return (0.45 * rise[:n] * env + 0.35 * shimmer * env + 0.20 * ring[:n]).astype(np.float32)
+
+
+def _sfx_spell_debuff_poison(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Debuff/poison cue — descending unstable hiss with low gurgle."""
+    d = max(duration, 0.65)
+    n = int(d * sr)
+    hiss = _moving_band_noise(n, 5000.0, 900.0, bandwidth=2200.0, sr=sr, rng=rng)
+    gurgle = _band_noise(n, 120.0, 700.0, sr, rng)
+    env = _adsr(n, sr, attack_ms=8.0, decay_ms=110.0, sustain=0.42, release_ms=250.0)
+    return (0.6 * hiss * env + 0.4 * gurgle * env).astype(np.float32)
+
+
+def _sfx_chest_open(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Chest open cue — hinge creak and latch click."""
+    d = max(duration, 0.5)
+    n = int(d * sr)
+    creak = _moving_band_noise(n, 180.0, 520.0, bandwidth=260.0, sr=sr, rng=rng)
+    creak_env = _adsr(n, sr, attack_ms=10.0, decay_ms=180.0, sustain=0.0, release_ms=160.0)
+    click_n = max(1, int(0.03 * sr))
+    click = _band_noise(click_n, 1200.0, 9000.0, sr, rng) * _exp_env(click_n, 35.0)
+    out = (creak * creak_env).astype(np.float32)
+    out[:click_n] += click.astype(np.float32)
+    return out
+
+
+def _sfx_dialogue_blip(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Dialogue blip — very short text-advance tick."""
+    d = max(0.05, min(max(duration, 0.07), 0.12))
+    n = int(d * sr)
+    tone = _sine(pitch_hz or 700.0, d, sr, amp=0.55)
+    noise = _band_noise(n, 1500.0, 6000.0, sr, rng) * 0.22
+    env = _exp_env(n, 40.0)
+    return (tone[:n] * env + noise * env).astype(np.float32)
+
+
+def _sfx_transition_whoosh(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Transition whoosh — broad sweep for scene/battle transitions."""
+    d = max(duration, 0.6)
+    n = int(d * sr)
+    sweep = _moving_band_noise(n, 2200.0, 260.0, bandwidth=1900.0, sr=sr, rng=rng)
+    low = _freq_sweep(320.0, 120.0, d, sr)
+    env = np.sin(np.linspace(0.0, np.pi, n, dtype=np.float64)).astype(np.float32)
+    dry = (0.7 * sweep * env + 0.3 * low[:n] * env).astype(np.float32)
+    wet = _reverb(dry, sr, room_seconds=0.6, decay=3.6, seed=int(rng.integers(0, 2**31 - 1)))
+    return (0.75 * dry + 0.25 * wet).astype(np.float32)
+
+
+def _sfx_summon_charge(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Summon charge cue — long magical build-up."""
+    d = max(duration, 2.0)
+    n = int(d * sr)
+    base = pitch_hz or 180.0
+    t = np.arange(n, dtype=np.float64) / sr
+    rise = np.linspace(0.9, 2.8, n, dtype=np.float64)
+    body = np.sin(2.0 * np.pi * base * rise * t)
+    choirish = np.sin(2.0 * np.pi * (base * 2.0) * t + 0.6) * 0.45
+    noise = _moving_band_noise(n, 600.0, 4200.0, bandwidth=2600.0, sr=sr, rng=rng) * 0.24
+    env = np.linspace(0.08, 1.0, n, dtype=np.float64).astype(np.float32)
+    dry = ((body + choirish).astype(np.float32) * env + noise.astype(np.float32) * env).astype(np.float32)
+    wet = _reverb(dry, sr, room_seconds=2.2, decay=6.4, seed=int(rng.integers(0, 2**31 - 1)))
+    return (0.52 * dry + 0.48 * wet).astype(np.float32)
+
+
 def _sfx_menu_navigate(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
     """UI menu navigation — crisp, short, distinct from confirm/cancel."""
     d = max(duration, 0.06)
@@ -748,6 +914,12 @@ _SFX_FUNCTIONS: dict[str, Callable[[float, float | None, int, np.random.Generato
     "footstep": _sfx_footstep,
     "footstep_stone": _sfx_footstep_stone,
     "footstep_grass": _sfx_footstep_grass,
+    "footstep_dirt": _sfx_footstep_dirt,
+    "footstep_wood": _sfx_footstep_wood,
+    "footstep_metal": _sfx_footstep_metal,
+    "footstep_water": _sfx_footstep_water,
+    "footstep_water_shallow": _sfx_footstep_water,
+    "footstep_water_var01": _sfx_footstep_water,
     "footstep_hard": _sfx_footstep_stone,
     "footstep_soft": _sfx_footstep_grass,
     "hit": _sfx_hit,
@@ -770,6 +942,21 @@ _SFX_FUNCTIONS: dict[str, Callable[[float, float | None, int, np.random.Generato
     "spell_wind": _sfx_spell_wind,
     "spell_earth": _sfx_spell_earth,
     "spell_dark": _sfx_spell_dark,
+    "spell_holy": _sfx_spell_holy,
+    "holy_light": _sfx_spell_holy,
+    "light_spell": _sfx_spell_holy,
+    "dark_curse": _sfx_spell_dark,
+    "curse": _sfx_spell_dark,
+    "spell_buff": _sfx_spell_buff_shield,
+    "buff": _sfx_spell_buff_shield,
+    "shield_activate": _sfx_spell_buff_shield,
+    "aura": _sfx_spell_buff_shield,
+    "spell_debuff": _sfx_spell_debuff_poison,
+    "debuff": _sfx_spell_debuff_poison,
+    "poison": _sfx_spell_debuff_poison,
+    "status_ailment": _sfx_spell_debuff_poison,
+    "summon_charge": _sfx_summon_charge,
+    "limit_break_charge": _sfx_summon_charge,
     "heal": _sfx_cure,
     "cure": _sfx_cure,
     "summon": _sfx_summon,
@@ -786,6 +973,13 @@ _SFX_FUNCTIONS: dict[str, Callable[[float, float | None, int, np.random.Generato
     "defeat": _sfx_game_over,
     "parry": _sfx_parry,
     "block": _sfx_parry,
+    "block_parry": _sfx_parry,
+    "dodge": _sfx_dodge_evade,
+    "evade": _sfx_dodge_evade,
+    "dodge_evade": _sfx_dodge_evade,
+    "damage_taken": _sfx_damage_taken,
+    "hurt": _sfx_damage_taken,
+    "critical_hit": _sfx_critical_hit,
     "sword": _sfx_sword,
     "sword_swing": _sfx_sword,
     "slash": _sfx_sword,
@@ -835,6 +1029,16 @@ _SFX_FUNCTIONS: dict[str, Callable[[float, float | None, int, np.random.Generato
     "dark": _sfx_spell_dark,
     "shadow": _sfx_spell_dark,
     "beep": _sfx_confirm,
+    "chest_open": _sfx_chest_open,
+    "treasure_open": _sfx_chest_open,
+    "dialogue_blip": _sfx_dialogue_blip,
+    "text_advance": _sfx_dialogue_blip,
+    "transition": _sfx_transition_whoosh,
+    "transition_whoosh": _sfx_transition_whoosh,
+    "scene_transition": _sfx_transition_whoosh,
+    "battle_start_sting": _sfx_transition_whoosh,
+    "teleport": _sfx_transition_whoosh,
+    "warp": _sfx_transition_whoosh,
     "generic": _sfx_generic,
 }
 

@@ -6,6 +6,8 @@
 
 The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-only offline neural path, sample drop-in folder scaffolding, upgraded synth/mastering/DSP quality surfaces, and an implemented procedural quality-overhaul pass (structured composition + recipe-driven SFX + improved voice + studio UI).
 
+Latest additive work extended procedural music coverage with new narrative/region presets and added region-aware + adaptive layer-bundle output options in `MusicGen`.
+
 ## Now
 
 - [x] Establish AI-first mission/state/handoff docs
@@ -69,6 +71,7 @@ The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-
 - [x] Execute SESSION-047 — synchronize continuity/session-control docs after SESSION-046
 - [x] Execute SESSION-029b — expand studio creation tooling with presets/profile loading/batch shortcut/retry UX
 - [x] Execute SESSION-038 — stabilize dual-path vocal/instrumental production outputs with provenance linkage
+- [x] Complete ordered task-list batch continuation: Task 04 (music style preset expansion) + Task 05 (region-aware/adaptive `MusicGen` output options)
 
 ## Recommended next PRs
 

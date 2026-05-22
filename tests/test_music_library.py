@@ -42,6 +42,9 @@ ALL_LIBRARY_STYLES = [
     "ff8_battle", "ff8_ballad",
     # Shared
     "prelude", "world_map", "dungeon", "healing", "tension",
+    "stealth", "memorial", "mystery", "underscore", "ending",
+    "exploration_plains", "exploration_forest", "exploration_coast", "exploration_arid",
+    "transition_sting",
     # FF1-FF6
     "ff1_battle", "ff1_overworld", "ff4_battle", "ff4_theme",
     "ff6_battle", "ff6_opera", "ff6_sad",
