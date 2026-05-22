@@ -62,6 +62,10 @@ TrackStyle = Literal[
     "ff8_battle", "ff8_ballad",
     # Shared retro-RPG styles
     "prelude", "world_map", "dungeon", "healing", "tension",
+    # Narrative + regional extension presets
+    "stealth", "memorial", "mystery", "underscore", "ending",
+    "exploration_plains", "exploration_forest", "exploration_coast", "exploration_arid",
+    "transition_sting",
     # FF1–FF6 (NES/SNES era) styles
     "ff1_battle", "ff1_overworld", "ff4_battle", "ff4_theme",
     "ff6_battle", "ff6_opera", "ff6_sad",
@@ -391,6 +395,166 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         melody_pattern="battle",
         chord_pattern="syncopated",
         bars=8,
+    ),
+
+    "stealth": _StyleDef(
+        # Low-visibility stealth movement, sparse and pulse-driven.
+        bpm=86,
+        scale_name="natural_minor",
+        root="D",
+        octave=3,
+        progression_name="i_bVI_bVII_i",
+        instruments=["synth_pad", "ff7_strings"],
+        accompaniment=["synth_pad"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="ambient",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "memorial": _StyleDef(
+        # Reflective memorial cue, piano-forward with restrained strings.
+        bpm=62,
+        scale_name="major",
+        root="E",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["piano", "flute"],
+        accompaniment=["ff7_strings", "choir"],
+        bass_instrument="synth_pad",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "mystery": _StyleDef(
+        # Puzzle / unknown-space atmosphere with crystalline uncertainty.
+        bpm=74,
+        scale_name="natural_minor",
+        root="B",
+        octave=3,
+        progression_name="i_VI_III_VII",
+        instruments=["celesta", "synth_pad"],
+        accompaniment=["choir", "synth_pad"],
+        bass_instrument="synth_pad",
+        percussion_instrument=None,
+        melody_pattern="ambient",
+        chord_pattern="ambient",
+        bars=8,
+    ),
+
+    "underscore": _StyleDef(
+        # Cinematic dialogue/cutscene underscore with motion but low foreground density.
+        bpm=80,
+        scale_name="major",
+        root="G",
+        octave=3,
+        progression_name="I_vi_IV_V",
+        instruments=["strings", "oboe"],
+        accompaniment=["synth_pad", "choir"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "ending": _StyleDef(
+        # Credits/ending suite with broader, hopeful cadence.
+        bpm=72,
+        scale_name="major",
+        root="C",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["piano", "ff7_strings"],
+        accompaniment=["choir", "strings"],
+        bass_instrument="ff7_bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=16,
+    ),
+
+    "exploration_plains": _StyleDef(
+        # Wide-open plains travel identity.
+        bpm=92,
+        scale_name="major",
+        root="G",
+        octave=4,
+        progression_name="I_V_vi_IV",
+        instruments=["flute", "strings"],
+        accompaniment=["choir", "strings"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="eighth_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "exploration_forest": _StyleDef(
+        # Forest traversal with woodwind-led movement and shimmer.
+        bpm=88,
+        scale_name="major",
+        root="D",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["oboe", "flute"],
+        accompaniment=["strings", "choir"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="eighth_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "exploration_coast": _StyleDef(
+        # Coastline travel identity with airy pad and broad harmonic space.
+        bpm=86,
+        scale_name="major",
+        root="A",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["flute", "celesta"],
+        accompaniment=["synth_pad", "choir"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="eighth_notes",
+        chord_pattern="half_notes",
+        bars=8,
+    ),
+
+    "exploration_arid": _StyleDef(
+        # Dry frontier / arid zone with sparse rhythmic drive.
+        bpm=84,
+        scale_name="dorian",
+        root="E",
+        octave=3,
+        progression_name="i_bVII_bVI_V",
+        instruments=["oboe", "strings"],
+        accompaniment=["synth_pad", "strings"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="half_notes",
+        chord_pattern="syncopated",
+        bars=8,
+    ),
+
+    "transition_sting": _StyleDef(
+        # Short dramatic transition cue for reveals/battle entry.
+        bpm=126,
+        scale_name="harmonic_minor",
+        root="A",
+        octave=4,
+        progression_name="i_iv_v_i",
+        instruments=["brass", "choir"],
+        accompaniment=["strings", "brass"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="percussion",
+        melody_pattern="battle",
+        chord_pattern="four_on_the_floor",
+        bars=2,
     ),
 
     "ff8_ballad": _StyleDef(

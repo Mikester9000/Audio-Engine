@@ -4,7 +4,20 @@
 
 ## Last completed change
 
-Completed **SESSION-038** (dual-path vocal/instrumental workflow stabilization):
+Completed ordered Task-List continuation batch (**Task 04 + Task 05**):
+
+- Added new style presets in `audio_engine/ai/generator.py`:
+  - `stealth`, `memorial`, `mystery`, `underscore`, `ending`
+  - `exploration_plains`, `exploration_forest`, `exploration_coast`, `exploration_arid`
+  - `transition_sting`
+- Extended prompt style keyword routing in `audio_engine/ai/prompt.py` for the new presets.
+- Extended `MusicGen` (`audio_engine/ai/music_gen.py`) with additive options:
+  - region-aware prompt shaping (`region=...`)
+  - adaptive-intensity backend hint (`adaptive_intensity=...`)
+  - optional adaptive layer-bundle export (`layer_output_dir=...`) that writes deterministic layer files + JSON metadata.
+- Added focused test coverage in `tests/test_ai_pipeline.py` and expanded style-coverage list in `tests/test_music_library.py`.
+
+Previously completed **SESSION-038** (dual-path vocal/instrumental workflow stabilization):
 
 - Added additive request schema support in `audio_engine/integration/factory_inputs.py`:
   - optional `musicDeliveryMode` field
@@ -28,18 +41,15 @@ Completed **SESSION-038** (dual-path vocal/instrumental workflow stabilization):
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_ai_pipeline.py tests/test_integration.py -k "voice or dual_path or music_delivery_mode"
+python -m pytest tests/test_ai_pipeline.py tests/test_music_library.py tests/test_generator.py
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
-python -m json.tool docs/AI_FACTORY/SESSION_STATE.json
-python -m json.tool docs/AI_FACTORY/CURRENT_SESSION.json
 ```
 
 Observed result:
-- Targeted dual-path/voice integration slice passes (28 selected tests)
-- Full test suite passes (1048 tests)
+- Targeted style/music-gen test slice passes (369 tests)
+- Full test suite passes (1066 tests)
 - Asset manifest validation passes
-- Session-control JSON files parse cleanly
 
 ## Immediate next best task
 

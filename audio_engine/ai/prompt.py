@@ -147,6 +147,16 @@ _STYLE_KEYWORDS: dict[str, list[str]] = {
     "dungeon":        ["dungeon", "cave", "underground", "dark corridor"],
     "healing":        ["healing", "inn", "rest", "recovery", "save"],
     "tension":        ["tension", "suspense", "pre-battle", "buildup", "ominous"],
+    "stealth":        ["stealth", "sneak", "infiltration", "hidden"],
+    "memorial":       ["memorial", "mourning", "grief", "farewell"],
+    "mystery":        ["mystery", "enigmatic", "puzzle", "unknown"],
+    "underscore":     ["underscore", "cutscene", "dialogue underscore", "cinematic underscore"],
+    "ending":         ["ending", "credits", "finale", "epilogue"],
+    "exploration_plains": ["plains exploration", "grassland travel", "open plains"],
+    "exploration_forest": ["forest exploration", "woodland travel", "forest theme"],
+    "exploration_coast": ["coast exploration", "shoreline travel", "coastal theme"],
+    "exploration_arid": ["arid exploration", "desert travel", "wasteland journey"],
+    "transition_sting": ["transition sting", "battle intro sting", "dramatic reveal sting"],
 }
 
 _SFX_KEYWORDS: list[str] = [

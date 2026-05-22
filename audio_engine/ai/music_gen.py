@@ -16,6 +16,7 @@ Usage
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Literal
 
@@ -27,6 +28,14 @@ from audio_engine.export.audio_exporter import AudioExporter
 from audio_engine.render.loop_exporter import bake_crossfade_loop
 
 __all__ = ["MusicGen"]
+
+_REGION_PROMPT_HINTS: dict[str, str] = {
+    "plains": "wide open plains travel identity with clear heroic momentum",
+    "forest": "layered forest canopy texture with woodwind shimmer",
+    "coast": "coastal breeze texture with airy harmonic space",
+    "ruins": "ancient ruins atmosphere with mystery and reverent tension",
+    "arid": "arid frontier tone with sparse rhythmic pulse",
+}
 
 
 class MusicGen:
@@ -59,10 +68,15 @@ class MusicGen:
         seed: int | None = None,
         apply_mastering: bool = True,
         mastering_profile: str = "game",
+        region_prompt_hints: dict[str, str] | None = None,
     ) -> None:
         self.sample_rate = sample_rate
+        self._seed = seed
         self.apply_mastering = apply_mastering
         self.mastering_profile = mastering_profile
+        self._region_prompt_hints = dict(_REGION_PROMPT_HINTS)
+        if region_prompt_hints:
+            self._region_prompt_hints.update(region_prompt_hints)
         self._parser = PromptParser()
         self._exporter = AudioExporter(sample_rate=sample_rate)
 
@@ -76,6 +90,8 @@ class MusicGen:
         prompt: str,
         duration: float = 30.0,
         loopable: bool = False,
+        region: str | None = None,
+        adaptive_intensity: bool = False,
     ) -> np.ndarray:
         """Generate a music track from a text prompt.
 
@@ -94,12 +110,22 @@ class MusicGen:
         np.ndarray
             Stereo float32 array ``(N, 2)``.
         """
-        plan = self._parser.parse_music(prompt, duration=duration)
+        shaped_prompt = self._prompt_with_region(prompt, region)
+        plan = self._parser.parse_music(shaped_prompt, duration=duration)
         if loopable:
             plan.loopable = True
-        return self._generate_from_plan(plan)
+        return self._generate_from_plan(
+            plan,
+            region=region,
+            adaptive_intensity=adaptive_intensity,
+        )
 
-    def generate_from_plan(self, plan: MusicPlan) -> np.ndarray:
+    def generate_from_plan(
+        self,
+        plan: MusicPlan,
+        region: str | None = None,
+        adaptive_intensity: bool = False,
+    ) -> np.ndarray:
         """Generate music from a pre-built :class:`~audio_engine.ai.prompt.MusicPlan`.
 
         Parameters
@@ -112,7 +138,11 @@ class MusicGen:
         np.ndarray
             Stereo float32 array ``(N, 2)``.
         """
-        return self._generate_from_plan(plan)
+        return self._generate_from_plan(
+            plan,
+            region=region,
+            adaptive_intensity=adaptive_intensity,
+        )
 
     def generate_to_file(
         self,
@@ -121,6 +151,9 @@ class MusicGen:
         duration: float = 30.0,
         loopable: bool = False,
         fmt: Literal["wav", "ogg"] = "wav",
+        region: str | None = None,
+        adaptive_intensity: bool = False,
+        layer_output_dir: str | Path | None = None,
     ) -> Path:
         """Generate music and save to *output_path*.
 
@@ -142,7 +175,13 @@ class MusicGen:
         Path
             Written file path.
         """
-        audio = self.generate(prompt, duration=duration, loopable=loopable)
+        audio = self.generate(
+            prompt,
+            duration=duration,
+            loopable=loopable,
+            region=region,
+            adaptive_intensity=adaptive_intensity,
+        )
         if loopable:
             audio = bake_crossfade_loop(audio, self.sample_rate, crossfade_ms=500)
         path = self._exporter.export(audio, output_path, fmt=fmt)
@@ -152,14 +191,30 @@ class MusicGen:
             total_samples = audio.shape[0]
             self._exporter.write_loop_points(path, 0, total_samples - 1)
 
+        if layer_output_dir is not None:
+            self._export_adaptive_layers(
+                audio=audio,
+                output_path=path,
+                layer_output_dir=layer_output_dir,
+                region=region,
+                adaptive_intensity=adaptive_intensity,
+            )
+
         return path
 
-    def _generate_from_plan(self, plan: MusicPlan) -> np.ndarray:
+    def _generate_from_plan(
+        self,
+        plan: MusicPlan,
+        region: str | None = None,
+        adaptive_intensity: bool = False,
+    ) -> np.ndarray:
         """Internal: execute the plan and optionally master the result."""
         audio = self._backend.generate_music_audio(
             style=plan.style,
             duration=plan.duration,
             bpm=plan.bpm,
+            region=region,
+            adaptive_intensity=adaptive_intensity,
         )
 
         if self.apply_mastering:
@@ -178,3 +233,49 @@ class MusicGen:
             profile=self.mastering_profile,
         )
         return bounce.process(audio)
+
+    def _prompt_with_region(self, prompt: str, region: str | None) -> str:
+        if not region:
+            return prompt
+        hint = self._region_prompt_hints.get(region.lower())
+        if not hint:
+            return prompt
+        return f"{prompt}, {hint}"
+
+    def _export_adaptive_layers(
+        self,
+        audio: np.ndarray,
+        output_path: Path,
+        layer_output_dir: str | Path,
+        region: str | None,
+        adaptive_intensity: bool,
+    ) -> None:
+        layer_dir = Path(layer_output_dir)
+        layer_dir.mkdir(parents=True, exist_ok=True)
+        stem = output_path.stem
+        base_path = layer_dir / f"{stem}_layer_base.wav"
+        calm_path = layer_dir / f"{stem}_layer_calm.wav"
+        intense_path = layer_dir / f"{stem}_layer_intense.wav"
+
+        calm_audio = (audio * 0.82).astype(np.float32)
+        intense_audio = np.clip(audio * 1.18, -1.0, 1.0).astype(np.float32)
+
+        self._exporter.export(audio, base_path, fmt="wav")
+        self._exporter.export(calm_audio, calm_path, fmt="wav")
+        self._exporter.export(intense_audio, intense_path, fmt="wav")
+
+        metadata = {
+            "mainMixPath": str(Path(output_path).resolve()),
+            "region": region,
+            "adaptiveIntensityEnabled": bool(adaptive_intensity),
+            "layers": [
+                {"name": "base", "path": str(base_path.resolve())},
+                {"name": "calm", "path": str(calm_path.resolve())},
+                {"name": "intense", "path": str(intense_path.resolve())},
+            ],
+            "seed": self._seed,
+        }
+        (layer_dir / f"{stem}_layers.json").write_text(
+            json.dumps(metadata, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )

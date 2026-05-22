@@ -4,6 +4,7 @@ Tests for the AI pipeline: prompt parser, backends, and high-level generators.
 
 from __future__ import annotations
 
+import json
 import sys
 import types
 
@@ -63,6 +64,9 @@ class TestPromptParser:
             "explore adventure journey": "exploration",
             "calm atmosphere ambience": "ambient",
             "victory triumph fanfare": "victory",
+            "low profile stealth infiltration": "stealth",
+            "mystery puzzle ruins atmosphere": "mystery",
+            "ending credits finale cue": "ending",
         }
         for prompt, expected in styles.items():
             plan = self.parser.parse_music(prompt)
@@ -423,6 +427,36 @@ class TestMusicGen:
         for style in ["battle", "ambient", "exploration", "boss", "victory", "menu"]:
             audio = self.gen.generate(style, duration=1.0)
             assert audio.ndim == 2, f"Style '{style}' should produce stereo"
+
+    def test_generate_with_region_appends_hint(self, monkeypatch):
+        captured: dict[str, str] = {}
+        original = self.gen._parser.parse_music
+
+        def _capture(prompt: str, *args, **kwargs):
+            captured["prompt"] = prompt
+            return original(prompt, *args, **kwargs)
+
+        monkeypatch.setattr(self.gen._parser, "parse_music", _capture)
+        self.gen.generate("open world journey", duration=1.0, region="forest")
+        assert "forest canopy" in captured["prompt"]
+
+    def test_generate_to_file_writes_layer_bundle(self, tmp_path):
+        out = tmp_path / "region_theme.wav"
+        layer_dir = tmp_path / "layers"
+        self.gen.generate_to_file(
+            "regional travel cue",
+            str(out),
+            duration=1.0,
+            region="plains",
+            adaptive_intensity=True,
+            layer_output_dir=layer_dir,
+        )
+        assert (layer_dir / "region_theme_layer_base.wav").exists()
+        assert (layer_dir / "region_theme_layer_calm.wav").exists()
+        assert (layer_dir / "region_theme_layer_intense.wav").exists()
+        metadata = json.loads((layer_dir / "region_theme_layers.json").read_text(encoding="utf-8"))
+        assert metadata["region"] == "plains"
+        assert metadata["adaptiveIntensityEnabled"] is True
 
 
 # ---------------------------------------------------------------------------
