@@ -17,6 +17,7 @@ Usage
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -38,6 +39,13 @@ _REGION_PROMPT_HINTS: dict[str, str] = {
 }
 _CALM_LAYER_GAIN = 0.82
 _INTENSE_LAYER_GAIN = 1.18
+_ADAPTIVE_INTENSITY_GAIN = 1.08
+_REGION_STYLE_OVERRIDES: dict[str, str] = {
+    "plains": "exploration_plains",
+    "forest": "exploration_forest",
+    "coast": "exploration_coast",
+    "arid": "exploration_arid",
+}
 
 
 class MusicGen:
@@ -118,6 +126,8 @@ class MusicGen:
             plan.loopable = True
         return self._generate_from_plan(
             plan,
+            region=region,
+            adaptive_intensity=adaptive_intensity,
         )
 
     def generate_from_plan(
@@ -138,8 +148,12 @@ class MusicGen:
         np.ndarray
             Stereo float32 array ``(N, 2)``.
         """
+        shaped_prompt = self._prompt_with_region(plan.prompt, region)
         return self._generate_from_plan(
             plan,
+            region=region,
+            adaptive_intensity=adaptive_intensity,
+            prompt_override=shaped_prompt,
         )
 
     def generate_to_file(
@@ -203,13 +217,22 @@ class MusicGen:
     def _generate_from_plan(
         self,
         plan: MusicPlan,
+        region: str | None = None,
+        adaptive_intensity: bool = False,
+        prompt_override: str | None = None,
     ) -> np.ndarray:
         """Internal: execute the plan and optionally master the result."""
+        style = self._style_with_region(plan.style, region)
+        prompt = plan.prompt if prompt_override is None else prompt_override
         audio = self._backend.generate_music_audio(
-            style=plan.style,
+            style=style,
             duration=plan.duration,
             bpm=plan.bpm,
+            prompt=prompt,
+            adaptive_intensity=adaptive_intensity,
         )
+        if adaptive_intensity:
+            audio = np.clip(audio * _ADAPTIVE_INTENSITY_GAIN, -1.0, 1.0).astype(np.float32)
 
         if self.apply_mastering:
             audio = self._master(audio)
@@ -236,6 +259,11 @@ class MusicGen:
             return prompt
         return f"{prompt}, {hint}"
 
+    def _style_with_region(self, style: str, region: str | None) -> str:
+        if style != "exploration" or not region:
+            return style
+        return _REGION_STYLE_OVERRIDES.get(region.lower(), style)
+
     def _export_adaptive_layers(
         self,
         audio: np.ndarray,
@@ -258,14 +286,15 @@ class MusicGen:
         self._exporter.export(calm_audio, calm_path, fmt="wav")
         self._exporter.export(intense_audio, intense_path, fmt="wav")
 
+        main_mix_path = Path(os.path.relpath(output_path, start=layer_dir))
         metadata = {
-            "mainMixPath": str(Path(output_path).resolve()),
+            "mainMixPath": str(main_mix_path),
             "region": region,
             "adaptiveIntensityEnabled": bool(adaptive_intensity),
             "layers": [
-                {"name": "base", "path": str(base_path.resolve())},
-                {"name": "calm", "path": str(calm_path.resolve())},
-                {"name": "intense", "path": str(intense_path.resolve())},
+                {"name": "base", "path": str(base_path.relative_to(layer_dir))},
+                {"name": "calm", "path": str(calm_path.relative_to(layer_dir))},
+                {"name": "intense", "path": str(intense_path.relative_to(layer_dir))},
             ],
             "seed": self._seed,
         }

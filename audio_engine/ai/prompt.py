@@ -160,11 +160,26 @@ _STYLE_KEYWORDS: dict[str, list[str]] = {
 }
 
 _SFX_KEYWORDS: list[str] = [
+    "footstep grass", "footstep dirt", "footstep stone", "footstep wood", "footstep metal", "footstep water",
+    "summon charge", "holy light", "dark curse", "buff shield", "debuff poison",
     "explosion", "footstep", "parry", "block", "click", "tick", "beep", "hit", "impact",
     "whoosh", "laser", "coin", "pickup", "jump", "land",
     "door", "open", "close", "ping", "alert", "notification",
     "magic", "spell", "fire", "water", "wind", "rain",
 ]
+_SFX_KEYWORD_TYPE_OVERRIDES: dict[str, str] = {
+    "footstep grass": "footstep_grass",
+    "footstep dirt": "footstep_dirt",
+    "footstep stone": "footstep_stone",
+    "footstep wood": "footstep_wood",
+    "footstep metal": "footstep_metal",
+    "footstep water": "footstep_water",
+    "summon charge": "summon_charge",
+    "holy light": "spell_holy",
+    "dark curse": "spell_dark",
+    "buff shield": "spell_buff",
+    "debuff poison": "spell_debuff",
+}
 
 _VOICE_PRESETS: dict[str, list[str]] = {
     "narrator":   ["narrator", "narrate", "story", "tale"],
@@ -295,7 +310,7 @@ class PromptParser:
         sfx_type = "generic"
         for kw in _SFX_KEYWORDS:
             if kw in pl:
-                sfx_type = kw
+                sfx_type = _SFX_KEYWORD_TYPE_OVERRIDES.get(kw, kw)
                 break
         dur = _extract_duration(prompt) or duration
 

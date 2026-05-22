@@ -329,7 +329,7 @@ public:
     void OnStateChange(GameState state) {
         const std::string& track = _TrackForState(state);
         if (track.empty()) return;
-        PlayMusic(track);
+        PlayMusic(track, true);
     }
 
     /**
@@ -339,13 +339,13 @@ public:
      *
      * @param filename  E.g. ``"music_combat.wav"``
      */
-    void PlayMusic(const std::string& filename) {
+    void PlayMusic(const std::string& filename, bool loop = true) {
         if (!m_initialised) return;
         if (filename.empty()) return;
         if (filename == m_currentTrack && !m_isCrossfading) return;
 #ifndef AUDIO_ENGINE_NO_AUDIO
         const std::string path = _MakeMusicPath(filename);
-        if (!_StartMusicTrack(m_pendingMusicSlot, path, 0.0f)) {
+        if (!_StartMusicTrack(m_pendingMusicSlot, path, 0.0f, loop)) {
             return;
         }
 
@@ -383,9 +383,6 @@ public:
 #ifndef AUDIO_ENGINE_NO_AUDIO
         if (!m_initialised) return;
         _ApplyMusicVolumes();
-        if (!m_musicSoundInit[m_activeMusicSlot] && !m_musicSoundInit[m_pendingMusicSlot]) {
-            ma_engine_set_volume(&m_engine, m_muted ? 0.0f : m_musicVolume);
-        }
 #endif
     }
 
@@ -417,6 +414,10 @@ public:
      */
     void SetSFXVolume(float volume) {
         m_sfxVolume = std::clamp(volume, 0.0f, 1.0f);
+#ifndef AUDIO_ENGINE_NO_AUDIO
+        if (!m_initialised) return;
+        _ApplyOneShotVolumes();
+#endif
     }
 
 
@@ -447,6 +448,10 @@ public:
      */
     void SetVoiceVolume(float volume) {
         m_voiceVolume = std::clamp(volume, 0.0f, 1.0f);
+#ifndef AUDIO_ENGINE_NO_AUDIO
+        if (!m_initialised) return;
+        _ApplyOneShotVolumes();
+#endif
     }
 
 
@@ -463,7 +468,11 @@ public:
     /** @brief Mute / unmute all audio. */
     void SetMuted(bool muted) {
         m_muted = muted;
-        SetMusicVolume(muted ? 0.0f : m_musicVolume);
+#ifndef AUDIO_ENGINE_NO_AUDIO
+        if (!m_initialised) return;
+        _ApplyMusicVolumes();
+        _ApplyOneShotVolumes();
+#endif
     }
 
     bool IsMuted() const { return m_muted; }
@@ -544,7 +553,11 @@ public:
         AudioSystem* sys = _GetFromLua(L);
         if (!sys) return 0;
         const char* filename = luaL_checkstring(L, 1);
-        sys->PlayMusic(filename);
+        bool loop = true;
+        if (lua_gettop(L) >= 2) {
+            loop = lua_toboolean(L, 2) != 0;
+        }
+        sys->PlayMusic(filename, loop);
         return 0;
     }
 
@@ -606,7 +619,7 @@ private:
         return m_assetsDir + "/music/" + filename;
     }
 
-    bool _StartMusicTrack(int slot, const std::string& path, float initialVolume) {
+    bool _StartMusicTrack(int slot, const std::string& path, float initialVolume, bool loop) {
 #ifndef AUDIO_ENGINE_NO_AUDIO
         _StopAndUnloadMusicSlot(slot);
         if (ma_sound_init_from_file(&m_engine, path.c_str(), MA_SOUND_FLAG_STREAM, nullptr, nullptr, &m_musicSounds[slot]) != MA_SUCCESS) {
@@ -614,7 +627,7 @@ private:
             return false;
         }
         m_musicSoundInit[slot] = true;
-        ma_sound_set_looping(&m_musicSounds[slot], MA_TRUE);
+        ma_sound_set_looping(&m_musicSounds[slot], loop ? MA_TRUE : MA_FALSE);
         ma_sound_set_volume(&m_musicSounds[slot], initialVolume);
         if (ma_sound_start(&m_musicSounds[slot]) != MA_SUCCESS) {
             _StopAndUnloadMusicSlot(slot);
@@ -657,6 +670,13 @@ private:
         if (!m_isCrossfading) {
             if (m_musicSoundInit[m_activeMusicSlot]) {
                 ma_sound_set_volume(&m_musicSounds[m_activeMusicSlot], targetVolume);
+            }
+
+            void _ApplyOneShotVolumes() {
+#ifndef AUDIO_ENGINE_NO_AUDIO
+                const float targetVolume = m_muted ? 0.0f : std::max(m_sfxVolume, m_voiceVolume);
+                ma_engine_set_volume(&m_engine, targetVolume);
+#endif
             }
             if (m_musicSoundInit[m_pendingMusicSlot]) {
                 ma_sound_set_volume(&m_musicSounds[m_pendingMusicSlot], 0.0f);

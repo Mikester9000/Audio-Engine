@@ -8,6 +8,7 @@ import json
 import sys
 import types
 import wave
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -91,6 +92,16 @@ class TestPromptParser:
         assert isinstance(plan, SFXPlan)
         # Should default to "generic"
         assert plan.sfx_type == "generic"
+
+    def test_parse_sfx_surface_specific_footstep(self):
+        plan = self.parser.parse_sfx("footstep grass variant")
+        assert plan.sfx_type == "footstep_grass"
+
+    def test_parse_sfx_specialised_spell_types(self):
+        holy = self.parser.parse_sfx("holy light spell chime")
+        summon = self.parser.parse_sfx("summon charge energy build")
+        assert holy.sfx_type == "spell_holy"
+        assert summon.sfx_type == "summon_charge"
 
     def test_parse_voice_basic(self):
         plan = self.parser.parse_voice("Hello world", voice_preset="narrator")
@@ -471,6 +482,39 @@ class TestMusicGen:
         metadata = json.loads((layer_dir / "region_theme_layers.json").read_text(encoding="utf-8"))
         assert metadata["region"] == "plains"
         assert metadata["adaptiveIntensityEnabled"] is True
+        assert metadata["mainMixPath"] == "../region_theme.wav"
+        assert all(not Path(layer["path"]).is_absolute() for layer in metadata["layers"])
+
+    def test_generate_from_plan_region_and_adaptive_intensity_are_forwarded(self, monkeypatch):
+        gen = MusicGen(sample_rate=SR, seed=0, apply_mastering=False)
+        calls: list[dict[str, object]] = []
+
+        def _fake_generate_music_audio(style: str, duration: float, bpm: float | None = None, **kwargs):
+            calls.append(
+                {
+                    "style": style,
+                    "duration": duration,
+                    "bpm": bpm,
+                    "kwargs": kwargs,
+                }
+            )
+            return np.ones((32, 2), dtype=np.float32) * 0.5
+
+        monkeypatch.setattr(gen._backend, "generate_music_audio", _fake_generate_music_audio)
+        plan = MusicPlan(prompt="exploration cue", duration=1.0, output_path="music.wav", style="exploration", bpm=92.0)
+        adaptive_audio = gen.generate_from_plan(plan, region="forest", adaptive_intensity=True)
+        baseline_audio = gen.generate_from_plan(plan, region="forest", adaptive_intensity=False)
+
+        assert calls[0]["style"] == "exploration_forest"
+        assert calls[1]["style"] == "exploration_forest"
+        kwargs0 = calls[0]["kwargs"]
+        kwargs1 = calls[1]["kwargs"]
+        assert isinstance(kwargs0, dict)
+        assert isinstance(kwargs1, dict)
+        assert kwargs0["adaptive_intensity"] is True
+        assert kwargs1["adaptive_intensity"] is False
+        assert "forest canopy" in kwargs0["prompt"]
+        assert float(np.max(adaptive_audio)) > float(np.max(baseline_audio))
 
 
 # ---------------------------------------------------------------------------

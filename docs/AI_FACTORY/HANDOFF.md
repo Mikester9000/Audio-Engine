@@ -16,6 +16,10 @@ Completed ordered Task-List continuation batch (**Task 04 + Task 05**):
   - adaptive-intensity backend hint (`adaptive_intensity=...`)
   - optional adaptive layer-bundle export (`layer_output_dir=...`) that writes deterministic layer files + JSON metadata.
 - Added focused test coverage in `tests/test_ai_pipeline.py` and expanded style-coverage list in `tests/test_music_library.py`.
+- Expanded integration/runtime surfaces in the same change-set:
+  - `audio_engine/integration/game_state_map.py`: added/updated music and SFX manifest entries for expanded narrative, transition, spell, and footstep variants.
+  - `audio_engine/ai/sfx_synth.py`: added specialized synthesis recipes/routing for the new spell and footstep variant families.
+  - `audio_engine/integration/cpp/AudioSystem.hpp`: updated runtime playback behavior for crossfading music flow and generated-asset playback mapping consistency.
 
 Previously completed **SESSION-038** (dual-path vocal/instrumental workflow stabilization):
 
