@@ -452,11 +452,9 @@ class TestMusicGen:
             adaptive_intensity=True,
             layer_output_dir=layer_dir,
         )
-        assert (layer_dir / "region_theme_layer_base.wav").exists()
-        assert (layer_dir / "region_theme_layer_calm.wav").exists()
-        assert (layer_dir / "region_theme_layer_intense.wav").exists()
         for layer_name in ("region_theme_layer_base.wav", "region_theme_layer_calm.wav", "region_theme_layer_intense.wav"):
             layer_path = layer_dir / layer_name
+            assert layer_path.exists()
             assert layer_path.stat().st_size > 0
             with wave.open(str(layer_path), "rb") as wf:
                 assert wf.getnchannels() == 2

@@ -259,7 +259,7 @@ class MusicGen:
         calm_path = layer_dir / f"{stem}_layer_calm.wav"
         intense_path = layer_dir / f"{stem}_layer_intense.wav"
 
-        calm_audio = (audio * _CALM_LAYER_GAIN).astype(np.float32)
+        calm_audio = np.clip(audio * _CALM_LAYER_GAIN, -1.0, 1.0).astype(np.float32)
         intense_audio = np.clip(audio * _INTENSE_LAYER_GAIN, -1.0, 1.0).astype(np.float32)
 
         self._exporter.export(audio, base_path, fmt="wav")
