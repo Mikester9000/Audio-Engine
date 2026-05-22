@@ -919,6 +919,7 @@ _SFX_FUNCTIONS: dict[str, Callable[[float, float | None, int, np.random.Generato
     "footstep_metal": _sfx_footstep_metal,
     "footstep_water": _sfx_footstep_water,
     "footstep_water_shallow": _sfx_footstep_water,
+    "footstep_water_var01": _sfx_footstep_water,
     "footstep_hard": _sfx_footstep_stone,
     "footstep_soft": _sfx_footstep_grass,
     "hit": _sfx_hit,

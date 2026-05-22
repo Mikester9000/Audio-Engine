@@ -432,11 +432,11 @@ FANFARE_MANIFEST: tuple[SFXAsset, ...] = (
 
 TRANSITION_MANIFEST: tuple[SFXAsset, ...] = (
     SFXAsset("transition_scene_whoosh", "sfx_transition_scene_whoosh.wav", "scene transition whoosh", 0.7),
-    SFXAsset("transition_battle_start", "sfx_transition_battle_start_alt.wav", "battle start transition sting", 0.8),
-    SFXAsset("transition_battle_end", "sfx_transition_battle_end_alt.wav", "battle end transition sting", 0.7),
+    SFXAsset("transition_battle_start_alt", "sfx_transition_battle_start_alt.wav", "battle start transition sting", 0.8),
+    SFXAsset("transition_battle_end_alt", "sfx_transition_battle_end_alt.wav", "battle end transition sting", 0.7),
     SFXAsset("transition_fade_helper", "sfx_transition_fade_helper.wav", "fade helper transition", 0.5),
-    SFXAsset("transition_teleport_warp", "sfx_transition_teleport_warp_alt.wav", "teleport warp transition", 0.9),
-    SFXAsset("transition_respawn_revive", "sfx_transition_respawn_revive_alt.wav", "respawn revive transition", 0.9),
+    SFXAsset("transition_teleport_warp_alt", "sfx_transition_teleport_warp_alt.wav", "teleport warp transition", 0.9),
+    SFXAsset("transition_respawn_revive_alt", "sfx_transition_respawn_revive_alt.wav", "respawn revive transition", 0.9),
 )
 
 

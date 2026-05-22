@@ -351,10 +351,10 @@ public:
 
         if (!m_musicSoundInit[m_activeMusicSlot]) {
             ma_sound_set_volume(&m_musicSounds[m_pendingMusicSlot], m_muted ? 0.0f : m_musicVolume);
-            m_musicSoundInit[m_activeMusicSlot] = true;
             std::swap(m_activeMusicSlot, m_pendingMusicSlot);
             m_isCrossfading = false;
             m_crossfadeProgress = 0.0f;
+            m_pendingTrack.clear();
         } else {
             _BeginMusicCrossfade(filename);
             return;
