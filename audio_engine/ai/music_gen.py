@@ -36,6 +36,8 @@ _REGION_PROMPT_HINTS: dict[str, str] = {
     "ruins": "ancient ruins atmosphere with mystery and reverent tension",
     "arid": "arid frontier tone with sparse rhythmic pulse",
 }
+_CALM_LAYER_GAIN = 0.82
+_INTENSE_LAYER_GAIN = 1.18
 
 
 class MusicGen:
@@ -71,7 +73,6 @@ class MusicGen:
         region_prompt_hints: dict[str, str] | None = None,
     ) -> None:
         self.sample_rate = sample_rate
-        self._seed = seed
         self.apply_mastering = apply_mastering
         self.mastering_profile = mastering_profile
         self._region_prompt_hints = dict(_REGION_PROMPT_HINTS)
@@ -84,6 +85,7 @@ class MusicGen:
             self._backend = BackendRegistry.get(backend, sample_rate=sample_rate, seed=seed)
         else:
             self._backend = backend
+        self._seed = getattr(self._backend, "_seed", seed)
 
     def generate(
         self,
@@ -257,8 +259,8 @@ class MusicGen:
         calm_path = layer_dir / f"{stem}_layer_calm.wav"
         intense_path = layer_dir / f"{stem}_layer_intense.wav"
 
-        calm_audio = (audio * 0.82).astype(np.float32)
-        intense_audio = np.clip(audio * 1.18, -1.0, 1.0).astype(np.float32)
+        calm_audio = (audio * _CALM_LAYER_GAIN).astype(np.float32)
+        intense_audio = np.clip(audio * _INTENSE_LAYER_GAIN, -1.0, 1.0).astype(np.float32)
 
         self._exporter.export(audio, base_path, fmt="wav")
         self._exporter.export(calm_audio, calm_path, fmt="wav")

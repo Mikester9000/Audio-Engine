@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import sys
 import types
+import wave
 
 import numpy as np
 import pytest
@@ -454,6 +455,13 @@ class TestMusicGen:
         assert (layer_dir / "region_theme_layer_base.wav").exists()
         assert (layer_dir / "region_theme_layer_calm.wav").exists()
         assert (layer_dir / "region_theme_layer_intense.wav").exists()
+        for layer_name in ("region_theme_layer_base.wav", "region_theme_layer_calm.wav", "region_theme_layer_intense.wav"):
+            layer_path = layer_dir / layer_name
+            assert layer_path.stat().st_size > 0
+            with wave.open(str(layer_path), "rb") as wf:
+                assert wf.getnchannels() == 2
+                assert wf.getframerate() == SR
+                assert wf.getnframes() > 0
         metadata = json.loads((layer_dir / "region_theme_layers.json").read_text(encoding="utf-8"))
         assert metadata["region"] == "plains"
         assert metadata["adaptiveIntensityEnabled"] is True
