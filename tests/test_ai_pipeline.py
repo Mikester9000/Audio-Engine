@@ -460,6 +460,14 @@ class TestMusicGen:
                 assert wf.getnchannels() == 2
                 assert wf.getframerate() == SR
                 assert wf.getnframes() > 0
+        with wave.open(str(layer_dir / "region_theme_layer_base.wav"), "rb") as wf:
+            base_peak = np.max(np.abs(np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)))
+        with wave.open(str(layer_dir / "region_theme_layer_calm.wav"), "rb") as wf:
+            calm_peak = np.max(np.abs(np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)))
+        with wave.open(str(layer_dir / "region_theme_layer_intense.wav"), "rb") as wf:
+            intense_peak = np.max(np.abs(np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16)))
+        assert calm_peak <= base_peak
+        assert intense_peak >= calm_peak
         metadata = json.loads((layer_dir / "region_theme_layers.json").read_text(encoding="utf-8"))
         assert metadata["region"] == "plains"
         assert metadata["adaptiveIntensityEnabled"] is True

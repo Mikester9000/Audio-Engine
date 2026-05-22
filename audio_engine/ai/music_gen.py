@@ -85,7 +85,7 @@ class MusicGen:
             self._backend = BackendRegistry.get(backend, sample_rate=sample_rate, seed=seed)
         else:
             self._backend = backend
-        self._seed = getattr(self._backend, "_seed", seed)
+        self._seed = seed
 
     def generate(
         self,
@@ -118,8 +118,6 @@ class MusicGen:
             plan.loopable = True
         return self._generate_from_plan(
             plan,
-            region=region,
-            adaptive_intensity=adaptive_intensity,
         )
 
     def generate_from_plan(
@@ -142,8 +140,6 @@ class MusicGen:
         """
         return self._generate_from_plan(
             plan,
-            region=region,
-            adaptive_intensity=adaptive_intensity,
         )
 
     def generate_to_file(
@@ -207,16 +203,12 @@ class MusicGen:
     def _generate_from_plan(
         self,
         plan: MusicPlan,
-        region: str | None = None,
-        adaptive_intensity: bool = False,
     ) -> np.ndarray:
         """Internal: execute the plan and optionally master the result."""
         audio = self._backend.generate_music_audio(
             style=plan.style,
             duration=plan.duration,
             bpm=plan.bpm,
-            region=region,
-            adaptive_intensity=adaptive_intensity,
         )
 
         if self.apply_mastering:
