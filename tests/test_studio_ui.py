@@ -61,6 +61,7 @@ def test_parse_float_field_has_clear_error():
 
 def test_discover_wav_files_lists_nested_files(tmp_path: Path):
     (tmp_path / "a.wav").write_bytes(b"RIFF")
+    (tmp_path / "z.wav").write_bytes(b"RIFF")
     nested = tmp_path / "nested"
     nested.mkdir()
     (nested / "b.wav").write_bytes(b"RIFF")
@@ -68,7 +69,7 @@ def test_discover_wav_files_lists_nested_files(tmp_path: Path):
 
     found = _discover_wav_files(tmp_path)
 
-    assert found == [tmp_path / "a.wav", nested / "b.wav"]
+    assert found == [tmp_path / "a.wav", nested / "b.wav", tmp_path / "z.wav"]
 
 
 def test_build_preview_catalog_groups_outputs_and_examples(tmp_path: Path):
@@ -94,3 +95,20 @@ def test_build_preview_catalog_groups_outputs_and_examples(tmp_path: Path):
     assert catalog["SFX"] == [sfx]
     assert catalog["Vocal"] == [voice]
     assert catalog["Examples"] == [example]
+
+
+def test_build_preview_catalog_excludes_missing_outputs(tmp_path: Path):
+    examples_root = tmp_path / "examples"
+    examples_root.mkdir()
+
+    catalog = _build_preview_catalog(
+        music_output=tmp_path / "missing_music.wav",
+        sfx_output=tmp_path / "missing_sfx.wav",
+        voice_output=tmp_path / "missing_voice.wav",
+        examples_root=examples_root,
+    )
+
+    assert catalog["Music"] == []
+    assert catalog["SFX"] == []
+    assert catalog["Vocal"] == []
+    assert catalog["Examples"] == []

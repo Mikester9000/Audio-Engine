@@ -17,6 +17,9 @@ from audio_engine.ai.voice_gen import VoiceGen
 from audio_engine.ai.voice_synth import VOICE_PRESETS
 from audio_engine.render.offline_bounce import VALID_PROFILES
 
+_DEFAULT_SAMPLE_ROOT = "samples"
+_FALLBACK_STUDIO_BACKENDS = ["procedural", "sample"]
+
 
 class _StatusLabel(Protocol):
     def configure(self, **kwargs: object) -> object: ...
@@ -76,7 +79,7 @@ def _available_backends_for_modality(modality: str, *, sample_rate: int) -> list
     try:
         evaluations = BackendRegistry.evaluate_backends(sample_rate=sample_rate, seed=0)
     except Exception:
-        return ["procedural", "sample"]
+        return list(_FALLBACK_STUDIO_BACKENDS)
     names = [
         str(entry["name"])
         for entry in evaluations
@@ -100,7 +103,7 @@ def _resolve_backend(
         from audio_engine.ai.sample_backend import SampleBackend
 
         return SampleBackend(
-            samples_dir=samples_dir or "samples",
+            samples_dir=samples_dir or _DEFAULT_SAMPLE_ROOT,
             sample_rate=sample_rate,
             seed=seed,
             base_backend=sample_base_backend,
@@ -188,7 +191,7 @@ def launch_studio() -> None:
     control_bar.pack(fill="x", padx=8, pady=6)
     preset_path = tk.StringVar(value="studio_preset.json")
     examples_root = tk.StringVar(value="assets/examples")
-    sample_root = tk.StringVar(value="samples")
+    sample_root = tk.StringVar(value=_DEFAULT_SAMPLE_ROOT)
     sample_base_backend = tk.StringVar(value="synth_orchestral")
     ttk.Label(control_bar, text="Preset file").grid(row=0, column=0, sticky="w", padx=4)
     ttk.Entry(control_bar, textvariable=preset_path).grid(row=0, column=1, sticky="ew", padx=4)
