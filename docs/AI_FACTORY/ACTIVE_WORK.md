@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-only offline neural path, sample drop-in folder scaffolding, upgraded synth/mastering/DSP quality surfaces, and an implemented procedural quality-overhaul pass (structured composition + recipe-driven SFX + improved voice + studio UI).
+The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-only offline neural path, sample drop-in folder scaffolding, upgraded synth/mastering/DSP quality surfaces, and an implemented procedural quality-overhaul pass (structured composition + recipe-driven SFX + improved voice + expanded studio UI with preview playback controls).
 
 Latest additive work extended procedural music coverage with new narrative/region presets and added region-aware + adaptive layer-bundle output options in `MusicGen`.
 
@@ -78,7 +78,7 @@ Latest additive work extended procedural music coverage with new narrative/regio
 1. **Execute SESSION-041**
    - End-to-end vertical-slice release gate automation (generation → QA/compliance → export).
 2. Continue iterative studio quality refinement
-   - Use the new preset + batch + retry tooling plus dual-path delivery modes to accelerate deterministic production loops.
+   - Use the new preset + batch + retry tooling, backend/sample controls, and in-studio preview playback browser to accelerate deterministic production loops.
 
 ## Do not deprioritize
 

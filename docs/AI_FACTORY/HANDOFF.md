@@ -4,55 +4,27 @@
 
 ## Last completed change
 
-Completed ordered Task-List continuation batch (**Task 04 + Task 05**):
+Expanded `audio-engine studio` for creation + audition workflow:
 
-- Added new style presets in `audio_engine/ai/generator.py`:
-  - `stealth`, `memorial`, `mystery`, `underscore`, `ending`
-  - `exploration_plains`, `exploration_forest`, `exploration_coast`, `exploration_arid`
-  - `transition_sting`
-- Extended prompt style keyword routing in `audio_engine/ai/prompt.py` for the new presets.
-- Extended `MusicGen` (`audio_engine/ai/music_gen.py`) with additive options:
-  - region-aware prompt shaping (`region=...`)
-  - adaptive-intensity backend hint (`adaptive_intensity=...`)
-  - optional adaptive layer-bundle export (`layer_output_dir=...`) that writes deterministic layer files + JSON metadata.
-- Added focused test coverage in `tests/test_ai_pipeline.py` and expanded style-coverage list in `tests/test_music_library.py`.
-- Expanded integration/runtime surfaces in the same change-set:
-  - `audio_engine/integration/game_state_map.py`: added/updated music and SFX manifest entries for expanded narrative, transition, spell, and footstep variants.
-  - `audio_engine/ai/sfx_synth.py`: added specialized synthesis recipes/routing for the new spell and footstep variant families.
-  - `audio_engine/integration/cpp/AudioSystem.hpp`: updated runtime playback behavior for crossfading music flow and generated-asset playback mapping consistency.
-
-Previously completed **SESSION-038** (dual-path vocal/instrumental workflow stabilization):
-
-- Added additive request schema support in `audio_engine/integration/factory_inputs.py`:
-  - optional `musicDeliveryMode` field
-  - currently supported value: `dual_vocal_instrumental` (music requests only)
-- Implemented deterministic paired output generation in both request-batch execution paths:
-  - `RequestBatchPipeline.execute(...)`
-  - `AssetPipeline.execute_request_batch(...)`
-- Dual-path mode now produces paired files with stable suffixes:
-  - `__instrumental`
-  - `__vocal_ready`
-- Added explicit provenance linkage metadata for both paired outputs:
-  - `dualPathGroupId`
-  - `dualPathRole`
-  - `pairedOutputPath`
-- Added focused parser/pipeline tests in `tests/test_integration.py` for:
-  - `musicDeliveryMode` parsing/validation
-  - dual-path paired output generation
-  - provenance linkage correctness
+- Added backend selectors per modality (music/SFX/voice) to support built-in synth (`procedural`) and sample-backed generation (`sample`) directly in the GUI.
+- Added sample-library controls (`Sample WAV root`, `Sample base`) so users can generate from local sample folders without leaving the studio.
+- Added in-studio preview browser with category menu (`Music`, `SFX`, `Vocal`, `Examples`) and `Play`/`Stop` controls for listening before import/handoff.
+- Added example-WAV root selection + refresh controls for browsing local `.wav` references.
+- Extended studio preset payload support to persist and restore new backend/sample control state.
+- Added focused helper tests in `tests/test_studio_ui.py` for WAV discovery and preview catalog grouping.
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_ai_pipeline.py tests/test_music_library.py tests/test_generator.py
+python -m pytest tests/test_studio_ui.py tests/test_procedural_overhaul.py
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result:
-- Targeted style/music-gen test slice passes (369 tests)
-- Full test suite passes (1066 tests)
+- Targeted studio/UI regression slice passes (16 tests)
+- Full test suite passes (1091 tests)
 - Asset manifest validation passes
 
 ## Immediate next best task

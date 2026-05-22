@@ -11,7 +11,7 @@
 - mastering through `OfflineBounce`
 - CLI access through `generate` and `generate-music`
 - backend selection/discovery surfaces through `generate-music --backend` and `list-backends`
-- studio-side music mastering-profile selection plus preset save/load and one-click batch generation in `audio_engine/ui/studio.py`
+- studio-side music mastering-profile selection plus preset save/load, backend/sample controls, one-click batch generation, and play/stop preview browser in `audio_engine/ui/studio.py`
 - request-driven dual-path delivery mode for paired instrumental and vocal-ready outputs (`musicDeliveryMode: dual_vocal_instrumental`)
 - existing integration mapping for multiple game states in `audio_engine/integration/game_state_map.py`
 
