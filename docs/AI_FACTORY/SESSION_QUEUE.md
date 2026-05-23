@@ -328,12 +328,24 @@
 
 ## Current next session
 
-### SESSION-041 — End-to-end vertical slice release gate automation
+### SESSION-049 — Studio full-edit workflow + synthesis/theory alignment expansion
 
 - **Status:** `completed`
-- **Task type:** `orchestration`
-- **Objective:** Add one deterministic command that executes vertical-slice generation, QA, compliance checks, and export handoff with machine-readable gate artifacts.
-- **Notes:** Added `VerticalSliceGatePipeline` and `VerticalSliceGateReport` to `audio_engine/integration/asset_pipeline.py`; wired `audio-engine run-release-gate` CLI subcommand with `--skip-qa`, `--skip-compliance`, `--skip-export`, `--check-spectral`, `--check-loop`, `--force`, `--gate-report`, and `--qa-report` flags. 14 new tests added in `tests/test_release_gate.py`; 1108 tests pass total.
+- **Task type:** `ui + synthesis + theory`
+- **Objective:** Expand studio full-edit controls and new-file authoring while broadening style/synth/SFX coverage and enforcing style/synth alignment validation.
+- **Notes:**
+  - Expanded `audio-engine studio` with advanced music controls (prompt/format/region/adaptive intensity), procedural custom arrangement overrides, and explicit new-file template/output-target actions.
+  - Added style intent metadata + alignment validation in `audio_engine/ai/generator.py`, plus deterministic cadence/progression shaping tied to style theory profiles.
+  - Added five new style presets (`hybrid_trailer`, `neo_noir`, `festival_folk`, `sci_fi_pulse`, `waltz_orchestral`) and four new instruments (`violin_solo`, `trumpet`, `acoustic_guitar`, `synth_lead_bright`).
+  - Expanded SFX categories with `gunshot`, `engine_rev`, and `ui_success` families.
+  - Added/updated tests in `tests/test_studio_ui.py` and `tests/test_generator.py`.
+
+### SESSION-050 — Release-gate alignment checks for style/synth intent
+
+- **Status:** `ready`
+- **Task type:** `qa + orchestration`
+- **Objective:** Integrate style/synth alignment checks into release-gate reporting surfaces and document failure/remediation flow for deterministic factory runs.
+- **Notes:** Wire `MusicGenerator.validate_style_library_alignment()` into a machine-readable QA/release gate output path and add CLI-level smoke coverage.
 
 ### Recently completed session context
 

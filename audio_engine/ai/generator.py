@@ -93,6 +93,8 @@ TrackStyle = Literal[
     "rnb_ballad",
     "ambient_nature", "ambient_space",
     "cinematic_orchestral",
+    # Expanded genre and arrangement coverage
+    "hybrid_trailer", "neo_noir", "festival_folk", "sci_fi_pulse", "waltz_orchestral",
 ]
 
 
@@ -115,6 +117,22 @@ class _StyleDef:
     chord_pattern: str
     bars: int = 8                    # number of bars to generate
     ostinato_instrument: str = "crystal_synth"  # instrument for high-register ostinato texture
+
+
+@dataclass(frozen=True)
+class _TheoryProfile:
+    cadence: list[int]
+    pre_cadence: list[int]
+    closure: list[int]
+
+
+@dataclass(frozen=True)
+class _StyleIntent:
+    family: str
+    required_any: tuple[str, ...]
+    preferred_bass: tuple[str, ...] = ()
+    require_percussion: bool = False
+    disallow_percussion: bool = False
 
 
 _STYLE_DEFS: dict[str, _StyleDef] = {
@@ -1472,6 +1490,141 @@ _STYLE_DEFS: dict[str, _StyleDef] = {
         chord_pattern="half_notes",
         bars=8,
     ),
+    "hybrid_trailer": _StyleDef(
+        bpm=128,
+        scale_name="harmonic_minor",
+        root="D",
+        octave=3,
+        progression_name="i_bVII_bVI_V",
+        instruments=["french_horn", "trumpet"],
+        accompaniment=["cello", "choir"],
+        bass_instrument="ff7_bass",
+        percussion_instrument="timpani",
+        melody_pattern="battle",
+        chord_pattern="four_on_the_floor",
+        ostinato_instrument="marimba",
+        bars=8,
+    ),
+    "neo_noir": _StyleDef(
+        bpm=84,
+        scale_name="dorian",
+        root="C",
+        octave=3,
+        progression_name="ii_V_I_VI",
+        instruments=["clarinet", "piano"],
+        accompaniment=["strings", "synth_pad"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="syncopated",
+        chord_pattern="half_notes",
+        ostinato_instrument="marimba",
+        bars=8,
+    ),
+    "festival_folk": _StyleDef(
+        bpm=118,
+        scale_name="major",
+        root="G",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["acoustic_guitar", "flute"],
+        accompaniment=["strings", "piano"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="eighth_notes",
+        chord_pattern="syncopated",
+        ostinato_instrument="marimba",
+        bars=8,
+    ),
+    "sci_fi_pulse": _StyleDef(
+        bpm=124,
+        scale_name="natural_minor",
+        root="E",
+        octave=3,
+        progression_name="i_bVI_bVII_i",
+        instruments=["synth_lead_bright", "crystal_synth"],
+        accompaniment=["synth_pad", "ff7_strings"],
+        bass_instrument="synth_pad",
+        percussion_instrument="percussion",
+        melody_pattern="syncopated",
+        chord_pattern="four_on_the_floor",
+        ostinato_instrument="celesta",
+        bars=8,
+    ),
+    "waltz_orchestral": _StyleDef(
+        bpm=92,
+        scale_name="major",
+        root="F",
+        octave=4,
+        progression_name="I_vi_IV_V",
+        instruments=["violin_solo", "oboe"],
+        accompaniment=["cello", "harp"],
+        bass_instrument="bass",
+        percussion_instrument=None,
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        ostinato_instrument="harp",
+        bars=8,
+    ),
+}
+
+_PROGRESSION_DEGREES: dict[str, list[list[int]]] = {
+    "I_IV_V_I": [[1, 3, 5], [4, 6, 1], [5, 7, 2], [1, 3, 5]],
+    "I_V_vi_IV": [[1, 3, 5], [5, 7, 2], [6, 1, 3], [4, 6, 1]],
+    "ii_V_I": [[2, 4, 6], [5, 7, 2], [1, 3, 5]],
+    "ii_V_I_VI": [[2, 4, 6], [5, 7, 2], [1, 3, 5], [6, 1, 3]],
+    "i_bVII_bVI_bVII": [[1, 3, 5], [7, 2, 4], [6, 1, 3], [7, 2, 4]],
+    "i_iv_v_i": [[1, 3, 5], [4, 6, 1], [5, 7, 2], [1, 3, 5]],
+    "i_VI_III_VII": [[1, 3, 5], [6, 1, 3], [3, 5, 7], [7, 2, 4]],
+    "i_bII_i_bVII": [[1, 3, 5], [2, 4, 6], [1, 3, 5], [7, 2, 4]],
+    "i_v_bVI_bVII": [[1, 3, 5], [5, 7, 2], [6, 1, 3], [7, 2, 4]],
+    "i_bVII_bVI_V": [[1, 3, 5], [7, 2, 4], [6, 1, 3], [5, 7, 2]],
+    "I_vi_IV_V": [[1, 3, 5], [6, 1, 3], [4, 6, 1], [5, 7, 2]],
+    "i_iv_bVII_bIII": [[1, 3, 5], [4, 6, 1], [7, 2, 4], [3, 5, 7]],
+    "i_bVI_bVII_i": [[1, 3, 5], [6, 1, 3], [7, 2, 4], [1, 3, 5]],
+}
+
+_DEFAULT_THEORY_PROFILE = _TheoryProfile(cadence=[5, 7, 2], pre_cadence=[4, 6, 1], closure=[1, 3, 5])
+_THEORY_PROFILES: dict[str, _TheoryProfile] = {
+    "major": _TheoryProfile(cadence=[5, 7, 2], pre_cadence=[4, 6, 1], closure=[1, 3, 5]),
+    "pentatonic_major": _TheoryProfile(cadence=[5, 7, 2], pre_cadence=[4, 6, 1], closure=[1, 3, 5]),
+    "natural_minor": _TheoryProfile(cadence=[7, 2, 4], pre_cadence=[6, 1, 3], closure=[1, 3, 5]),
+    "harmonic_minor": _TheoryProfile(cadence=[5, 7, 2], pre_cadence=[4, 6, 1], closure=[1, 3, 5]),
+    "phrygian": _TheoryProfile(cadence=[2, 4, 6], pre_cadence=[7, 2, 4], closure=[1, 3, 5]),
+    "dorian": _TheoryProfile(cadence=[5, 7, 2], pre_cadence=[4, 6, 1], closure=[1, 3, 5]),
+    "blues": _TheoryProfile(cadence=[5, 7, 2], pre_cadence=[4, 6, 1], closure=[1, 3, 5]),
+}
+
+_STYLE_INTENT_OVERRIDES: dict[str, _StyleIntent] = {
+    "hybrid_trailer": _StyleIntent(
+        family="hybrid_trailer",
+        required_any=("french_horn", "trumpet", "cello", "timpani"),
+        preferred_bass=("ff7_bass", "bass"),
+        require_percussion=True,
+    ),
+    "neo_noir": _StyleIntent(
+        family="neo_noir",
+        required_any=("clarinet", "piano", "strings"),
+        preferred_bass=("bass",),
+        disallow_percussion=True,
+    ),
+    "festival_folk": _StyleIntent(
+        family="festival_folk",
+        required_any=("acoustic_guitar", "flute", "piano"),
+        preferred_bass=("bass",),
+        require_percussion=True,
+    ),
+    "sci_fi_pulse": _StyleIntent(
+        family="sci_fi_pulse",
+        required_any=("synth_lead_bright", "synth_pad", "crystal_synth"),
+        preferred_bass=("synth_pad", "bass"),
+        require_percussion=True,
+    ),
+    "waltz_orchestral": _StyleIntent(
+        family="waltz_orchestral",
+        required_any=("violin_solo", "oboe", "cello", "harp"),
+        preferred_bass=("bass", "cello"),
+        disallow_percussion=True,
+    ),
 }
 
 
@@ -1593,6 +1746,7 @@ class MusicGenerator:
             raise ValueError(f"Unknown style '{style}'. Available: {available}")
 
         sdef = _STYLE_DEFS[style]
+        self._validate_style_alignment(style, sdef)
         effective_bars = bars if bars is not None else sdef.bars
         rng = self._rng_for_call(style, effective_bars)
         scale_name = self._resolve_scale_name(style, sdef.scale_name)
@@ -1619,7 +1773,7 @@ class MusicGenerator:
                 if is_phrase_end:
                     motif[-1] = cadence_target
 
-                chord_degrees = self._chord_for_bar(style, bar_index)
+                chord_degrees = self._chord_for_bar(style, sdef, bar_index)
                 chord_freqs = [scale.degree(d) for d in chord_degrees]
                 root_freq = chord_freqs[0]
                 density_steps = max(2, int(round(2 + 6 * block.melody_density)))
@@ -1769,9 +1923,39 @@ class MusicGenerator:
                 "scale_name": style.scale_name,
                 "root": style.root,
                 "bars": style.bars,
+                "progression_name": style.progression_name,
+                "instruments": [*style.instruments],
+                "accompaniment": [*style.accompaniment],
+                "bass_instrument": style.bass_instrument,
+                "percussion_instrument": style.percussion_instrument,
             }
             for name, style in _STYLE_DEFS.items()
         }
+
+    @staticmethod
+    def style_intent_metadata() -> dict[str, dict[str, object]]:
+        """Return style-intent metadata used for alignment validation."""
+        data: dict[str, dict[str, object]] = {}
+        for name, sdef in _STYLE_DEFS.items():
+            intent = MusicGenerator._infer_style_intent(name, sdef)
+            data[name] = {
+                "family": intent.family,
+                "required_any": [*intent.required_any],
+                "preferred_bass": [*intent.preferred_bass],
+                "require_percussion": intent.require_percussion,
+                "disallow_percussion": intent.disallow_percussion,
+            }
+        return data
+
+    @staticmethod
+    def validate_style_library_alignment() -> dict[str, list[str]]:
+        """Return style-name/synth-alignment issues keyed by style."""
+        issues: dict[str, list[str]] = {}
+        for name, sdef in _STYLE_DEFS.items():
+            style_issues = MusicGenerator._style_validation_errors(name, sdef)
+            if style_issues:
+                issues[name] = style_issues
+        return issues
 
     def _rng_for_call(self, style: str, bars: int) -> random.Random:
         style_hash = sum((idx + 1) * ord(ch) for idx, ch in enumerate(style))
@@ -1826,20 +2010,94 @@ class MusicGenerator:
             return bank.rhythmic_diminish(motif)
         return motif[:]
 
-    def _chord_for_bar(self, style: str, bar_index: int) -> list[int]:
-        style_family = style.lower()
-        if style_family == "battle":
-            progression = [[1, 3, 5], [5, 7, 2], [6, 1, 3], [5, 7, 2]]
-        elif style_family == "exploration":
-            progression = [[1, 3, 5], [4, 6, 1], [5, 7, 2], [1, 3, 5]]
-        elif style_family == "ambient":
-            progression = [[1, 4, 5], [2, 5, 6], [1, 4, 6], [2, 5, 7]]
-        elif style_family == "boss":
-            progression = [[1, 2, 5], [2, 5, 7], [1, 2, 5], [7, 2, 5]]
-        elif style_family == "victory":
-            progression = [[1, 3, 5], [4, 6, 1], [5, 7, 2], [1, 3, 5]]
-        elif style_family == "menu":
-            progression = [[1, 2, 5], [6, 1, 3], [4, 5, 1], [1, 2, 5]]
-        else:
-            progression = [[1, 3, 5], [4, 6, 1], [5, 7, 2], [1, 3, 5]]
-        return progression[bar_index % len(progression)]
+    def _chord_for_bar(self, style: str, sdef: _StyleDef, bar_index: int) -> list[int]:
+        progression = _PROGRESSION_DEGREES.get(sdef.progression_name)
+        if not progression:
+            style_family = style.lower()
+            if style_family == "ambient":
+                progression = [[1, 4, 5], [2, 5, 6], [1, 4, 6], [2, 5, 7]]
+            elif style_family in {"boss", "battle"}:
+                progression = [[1, 3, 5], [5, 7, 2], [6, 1, 3], [5, 7, 2]]
+            else:
+                progression = [[1, 3, 5], [4, 6, 1], [5, 7, 2], [1, 3, 5]]
+        chord = progression[bar_index % len(progression)]
+        profile = _THEORY_PROFILES.get(sdef.scale_name, _DEFAULT_THEORY_PROFILE)
+        if bar_index % 8 == 7:
+            return profile.closure
+        if bar_index % 4 == 3:
+            return profile.cadence
+        if bar_index % 8 == 6:
+            return profile.pre_cadence
+        return chord
+
+    def _validate_style_alignment(self, style: str, sdef: _StyleDef) -> None:
+        issues = self._style_validation_errors(style, sdef)
+        if issues:
+            joined = "; ".join(issues)
+            raise ValueError(f"style/synth alignment failed for '{style}': {joined}")
+
+    @staticmethod
+    def _style_validation_errors(style: str, sdef: _StyleDef) -> list[str]:
+        intent = MusicGenerator._infer_style_intent(style, sdef)
+        voices = [*sdef.instruments, *sdef.accompaniment, sdef.bass_instrument]
+        if sdef.ostinato_instrument:
+            voices.append(sdef.ostinato_instrument)
+        issues: list[str] = []
+        if intent.required_any and not any(voice in intent.required_any for voice in voices):
+            issues.append(
+                f"expected at least one of {sorted(intent.required_any)} in instruments/accompaniment"
+            )
+        if intent.preferred_bass and sdef.bass_instrument not in intent.preferred_bass:
+            issues.append(
+                f"bass instrument '{sdef.bass_instrument}' should be one of {sorted(intent.preferred_bass)}"
+            )
+        if intent.require_percussion and not sdef.percussion_instrument:
+            issues.append("percussion is required for this style family")
+        if intent.disallow_percussion and sdef.percussion_instrument:
+            issues.append("percussion should be disabled for this style family")
+        return issues
+
+    @staticmethod
+    def _infer_style_intent(style: str, sdef: _StyleDef) -> _StyleIntent:
+        if style in _STYLE_INTENT_OVERRIDES:
+            return _STYLE_INTENT_OVERRIDES[style]
+        name = style.lower()
+        if "ambient" in name:
+            return _StyleIntent(
+                family="ambient",
+                required_any=("synth_pad", "crystal_synth", "choir", "strings"),
+                preferred_bass=("synth_pad", "bass", "ff7_bass"),
+                disallow_percussion=True,
+            )
+        if "battle" in name or "boss" in name or "epic" in name:
+            return _StyleIntent(
+                family="combat",
+                required_any=(
+                    "brass",
+                    "ff8_electric_guitar",
+                    "ff7_strings",
+                    "french_horn",
+                    "timpani",
+                    "ff7_lead",
+                    "piano",
+                    "flute",
+                    "synth_pad",
+                    "acoustic_guitar",
+                ),
+                preferred_bass=("ff7_bass", "bass", "synth_pad"),
+                require_percussion=bool(sdef.percussion_instrument),
+            )
+        if "ballad" in name or "menu" in name or "memorial" in name:
+            return _StyleIntent(
+                family="ballad",
+                required_any=("piano", "strings", "cello", "flute", "violin_solo"),
+                preferred_bass=("bass", "ff7_bass", "synth_pad"),
+                disallow_percussion=True,
+            )
+        return _StyleIntent(
+            family="general",
+            required_any=tuple(sorted(set(sdef.instruments[:1] + sdef.accompaniment[:1]))),
+            preferred_bass=(sdef.bass_instrument,),
+            require_percussion=bool(sdef.percussion_instrument),
+            disallow_percussion=not bool(sdef.percussion_instrument),
+        )

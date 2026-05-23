@@ -315,7 +315,7 @@ class FullOrchestralBackend(InferenceBackend):
                 if is_phrase_end:
                     motif[-1] = cadence_target
 
-                chord_degrees = gen._chord_for_bar(style, bar_index)
+                chord_degrees = gen._chord_for_bar(style, sdef, bar_index)
                 chord_freqs = [scale.degree(d) for d in chord_degrees]
                 root_freq = chord_freqs[0]
                 density_steps = max(2, int(round(2 + 6 * block.melody_density)))

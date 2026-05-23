@@ -4,36 +4,42 @@
 
 ## Last completed change
 
-Implemented **SESSION-041**: End-to-end vertical-slice release gate automation.
+Implemented **SESSION-049**: Studio full-edit workflow + synthesis/theory alignment expansion.
 
-- Added `VerticalSliceGatePipeline` and `VerticalSliceGateReport` to `audio_engine/integration/asset_pipeline.py`.
-  - Chains four gates in order: generation → QA → license compliance → export.
-  - Each gate is individually skippable; gate status is one of `pass`, `fail`, or `skip`.
-  - Writes a combined `release_gate_report.json` with per-gate evidence and an overall `gatesPassed` boolean.
-  - Internally reuses `RequestBatchPipeline`, `DraftExportPipeline`, and `audio_engine.compliance.license_checker`.
-- Exported `VerticalSliceGatePipeline` and `VerticalSliceGateReport` from `audio_engine/integration/__init__.py`.
-- Added `_cmd_run_release_gate` handler and `run-release-gate` subcommand to `audio_engine/cli.py`.
-  - Flags: `--batch-file`, `--output-dir`, `--gate-report`, `--qa-report`, `--policy`, `--skip-qa`, `--skip-compliance`, `--skip-export`, `--check-spectral`, `--check-loop`, `--force`, `--quiet`.
-  - Exits 0 when all non-skipped gates pass; exits 1 when any gate fails.
-- Added 14 focused tests in `tests/test_release_gate.py`.
+- Expanded `audio_engine/ui/studio.py`:
+  - Added advanced music controls (prompt override, format, region, adaptive intensity).
+  - Added procedural custom arrangement editing (lead/counter/pad/chord/bass/ostinato/percussion instruments).
+  - Added explicit new-file workflow controls (`new file JSON`, output base/dir, auto-target generation).
+  - Added helper writers for new-file templates.
+- Expanded `audio_engine/ai/generator.py`:
+  - Added five style families: `hybrid_trailer`, `neo_noir`, `festival_folk`, `sci_fi_pulse`, `waltz_orchestral`.
+  - Added style intent metadata and executable style/synth alignment validation.
+  - Added progression/theory profile tables and stronger deterministic cadence/closure behavior.
+- Expanded `audio_engine/synthesizer/instrument.py` with four timbres:
+  - `violin_solo`, `trumpet`, `acoustic_guitar`, `synth_lead_bright`.
+- Expanded `audio_engine/ai/sfx_synth.py` coverage:
+  - added `gunshot`, `engine_rev`, and `ui_success` families (plus aliases).
+- Added/updated tests:
+  - `tests/test_studio_ui.py` new-file helper coverage.
+  - `tests/test_generator.py` new-style generation + style-intent alignment validation coverage.
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_release_gate.py -v
+python -m pytest tests/test_studio_ui.py tests/test_generator.py tests/test_instrument.py tests/test_ai_pipeline.py -k "sfx or style or studio or generator"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result:
-- Targeted release gate tests pass (14 tests)
+- Targeted studio/generator/instrument/sfx slices pass (55 selected tests)
 - Full test suite passes (1108 tests)
 - Asset manifest validation passes
 
 ## Immediate next best task
 
-Continue iterative studio quality refinement and iterate on the next planned session once SESSION-041 continuity docs are synchronized.
+Execute SESSION-050 to surface style/synth alignment validation in release-gate artifacts and continue iterative studio quality refinement.
 
 ## Files future agents should read first
 
@@ -62,3 +68,4 @@ Continue iterative studio quality refinement and iterate on the next planned ses
 - [x] Completion-state handoff (`docs/AI_FACTORY/COMPLETION_HANDOFF.md`, SESSION-045)
 - [x] Session control docs synchronized (SESSION_QUEUE, SESSION_STATE, CURRENT_SESSION, FACTORY_STATUS, ACTIVE_WORK)
 - [x] **Vertical-slice release gate automation** (`run-release-gate` CLI + `VerticalSliceGatePipeline`, SESSION-041)
+- [x] **Studio full-edit + style/synth alignment expansion** (`audio_engine studio` advanced controls, new styles/instruments/SFX, SESSION-049)

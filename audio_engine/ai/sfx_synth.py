@@ -909,6 +909,48 @@ def _sfx_spell_dark(duration: float, pitch_hz: float | None, sr: int, rng: np.ra
     return (0.55 * dry + 0.45 * wet).astype(np.float32)
 
 
+def _sfx_gunshot(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Gunshot/transient firearm hit with muzzle crack and tail."""
+    d = max(duration, 0.18)
+    n = int(d * sr)
+    crack_n = max(1, int(0.012 * sr))
+    crack = _band_noise(crack_n, 1500.0, 12000.0, sr, rng) * _exp_env(crack_n, 28.0)
+    body = _sine(pitch_hz or 130.0, d, sr) * _exp_env(n, 18.0)
+    snap = np.zeros(n, dtype=np.float32)
+    snap[:crack_n] = crack
+    tail = _reverb((0.65 * body + snap).astype(np.float32), sr, room_seconds=0.35, decay=3.4, seed=int(rng.integers(0, 2**31 - 1)))
+    return (0.78 * (0.65 * body + snap) + 0.22 * tail).astype(np.float32)
+
+
+def _sfx_engine_rev(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Mechanical engine rev with rising tonal body and grit."""
+    d = max(duration, 0.45)
+    n = int(d * sr)
+    start = max(40.0, (pitch_hz or 95.0) * 0.75)
+    end = (pitch_hz or 95.0) * 2.1
+    core = _freq_sweep(start, end, d, sr)
+    grit = _moving_band_noise(n, 180.0, 2600.0, bandwidth=900.0, sr=sr, rng=rng) * 0.24
+    env = _adsr(n, sr, attack_ms=12.0, decay_ms=120.0, sustain=0.75, release_ms=180.0)
+    dry = (0.76 * core[:n] + grit) * env
+    wet = _reverb(dry.astype(np.float32), sr, room_seconds=0.26, decay=2.8, seed=int(rng.integers(0, 2**31 - 1)))
+    return (0.82 * dry + 0.18 * wet).astype(np.float32)
+
+
+def _sfx_ui_success(duration: float, pitch_hz: float | None, sr: int, rng: np.random.Generator) -> np.ndarray:
+    """Short positive UI success flourish."""
+    base = pitch_hz or 660.0
+    notes = [1.0, 1.2599, 1.5874]
+    note_d = max(0.04, max(duration, 0.18) / len(notes))
+    parts: list[np.ndarray] = []
+    for idx, ratio in enumerate(notes):
+        nn = int(note_d * sr)
+        t = np.arange(nn, dtype=np.float64) / sr
+        tone = np.sin(2.0 * np.pi * base * ratio * t)
+        overtone = 0.2 * np.sin(2.0 * np.pi * base * ratio * 2.0 * t + idx * 0.2)
+        parts.append(((tone + overtone) * _exp_env(nn, 11.0)).astype(np.float32))
+    return np.concatenate(parts).astype(np.float32)
+
+
 _SFX_FUNCTIONS: dict[str, Callable[[float, float | None, int, np.random.Generator], np.ndarray]] = {
     "explosion": _sfx_explosion,
     "footstep": _sfx_footstep,
@@ -1033,6 +1075,17 @@ _SFX_FUNCTIONS: dict[str, Callable[[float, float | None, int, np.random.Generato
     "treasure_open": _sfx_chest_open,
     "dialogue_blip": _sfx_dialogue_blip,
     "text_advance": _sfx_dialogue_blip,
+    "gunshot": _sfx_gunshot,
+    "rifle": _sfx_gunshot,
+    "pistol": _sfx_gunshot,
+    "shot": _sfx_gunshot,
+    "engine_rev": _sfx_engine_rev,
+    "engine": _sfx_engine_rev,
+    "motor": _sfx_engine_rev,
+    "vehicle_accel": _sfx_engine_rev,
+    "ui_success": _sfx_ui_success,
+    "success": _sfx_ui_success,
+    "accept": _sfx_ui_success,
     "transition": _sfx_transition_whoosh,
     "transition_whoosh": _sfx_transition_whoosh,
     "scene_transition": _sfx_transition_whoosh,

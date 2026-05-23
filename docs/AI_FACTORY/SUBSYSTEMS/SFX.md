@@ -5,6 +5,7 @@
 - prompt-driven SFX generation via `SFXGen`
 - procedural synthesis helpers in `audio_engine/ai/sfx_synth.py`
 - category-specific synthesis recipes (explosion/footstep/hit/whoosh/laser/coin/jump/magic elemental spell families/heal/summon/progression/UI/sword)
+- expanded SFX families for procedural semantic coverage: `gunshot` (+ `rifle`/`pistol` aliases), `engine_rev` (+ vehicle aliases), and `ui_success`
 - CLI access through `generate-sfx`
 - current game integration map covers combat, magic, world, quest, and UI events
 

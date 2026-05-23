@@ -61,3 +61,16 @@ def test_reproducibility():
     a1 = g1.generate_audio("battle", bars=2)
     a2 = g2.generate_audio("battle", bars=2)
     np.testing.assert_array_equal(a1, a2)
+
+
+@pytest.mark.parametrize("style", ["hybrid_trailer", "neo_noir", "festival_folk", "sci_fi_pulse", "waltz_orchestral"])
+def test_new_styles_generate_audio(style):
+    gen = MusicGenerator(sample_rate=SR, seed=7)
+    audio = gen.generate_audio(style=style, bars=2)
+    assert audio.ndim == 2
+    assert audio.shape[1] == 2
+
+
+def test_style_alignment_validation_has_no_issues():
+    issues = MusicGenerator.validate_style_library_alignment()
+    assert issues == {}

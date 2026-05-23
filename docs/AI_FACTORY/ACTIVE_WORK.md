@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-only offline neural path, sample drop-in folder scaffolding, upgraded synth/mastering/DSP quality surfaces, and an implemented procedural quality-overhaul pass (structured composition + recipe-driven SFX + improved voice + expanded studio UI with preview playback controls).
+The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-only offline neural path, sample drop-in folder scaffolding, upgraded synth/mastering/DSP quality surfaces, and an implemented procedural quality-overhaul pass (structured composition + recipe-driven SFX + improved voice + expanded studio UI with preview playback controls). Latest additive work (SESSION-049) expands full-edit studio controls and new-file workflow templates, adds new style/instrument/SFX families, and enforces style/synth alignment validation.
 
 Latest additive work extended procedural music coverage with new narrative/region presets and added region-aware + adaptive layer-bundle output options in `MusicGen`.
 
@@ -73,12 +73,12 @@ Latest additive work extended procedural music coverage with new narrative/regio
 - [x] Execute SESSION-038 — stabilize dual-path vocal/instrumental production outputs with provenance linkage
 - [x] Complete ordered task-list batch continuation: Task 04 (music style preset expansion) + Task 05 (region-aware/adaptive `MusicGen` output options)
 - [x] Execute SESSION-041 — end-to-end vertical-slice release gate automation (`VerticalSliceGatePipeline`, `run-release-gate` CLI)
+- [x] Execute SESSION-049 — studio full-edit workflow + synthesis/theory alignment expansion
 
 ## Recommended next PRs
 
-1. Continue iterative studio quality refinement
-   - Use the new preset + batch + retry tooling, backend/sample controls, and in-studio preview playback browser to accelerate deterministic production loops.
-2. Synchronize remaining continuity docs for SESSION-041 completion (session state, session history, current session).
+1. Execute SESSION-050 release-gate integration for style/synth intent validation output.
+2. Continue iterative studio quality refinement using the new full-edit arrangement and new-file template controls.
 
 ## Do not deprioritize
 
