@@ -88,6 +88,8 @@ __all__ = [
     "RemasterBatchRecord",
     "RemasterBatchResult",
     "ReviewLogWriter",
+    "VerticalSliceGatePipeline",
+    "VerticalSliceGateReport",
 ]
 
 _SUPPORTED_REQUEST_FORMATS = frozenset({"wav", "ogg"})
@@ -2498,3 +2500,424 @@ class ApprovalWorkflow:
                     notes=review_notes or ["Approved via approval workflow."],
                 )
         return records
+
+
+# ---------------------------------------------------------------------------
+# VerticalSliceGateReport / VerticalSliceGatePipeline
+# ---------------------------------------------------------------------------
+
+@dataclass
+class VerticalSliceGateReport:
+    """Machine-readable aggregate result for a full vertical-slice release gate run.
+
+    Each gate holds a ``status`` of ``"pass"``, ``"fail"``, or ``"skip"`` and
+    any gate-specific evidence fields so downstream tooling can audit without
+    re-reading individual sub-reports.
+    """
+
+    output_dir: str
+    batch_file: str
+    generated_at: str
+    gates_passed: bool
+    generation: dict = field(default_factory=dict)
+    qa: dict = field(default_factory=dict)
+    compliance: dict = field(default_factory=dict)
+    export: dict = field(default_factory=dict)
+
+    def summary(self) -> str:
+        overall = "PASS" if self.gates_passed else "FAIL"
+        lines = [
+            f"Release gate: {overall}  ({self.output_dir})",
+            f"  Generation : {self.generation.get('status', 'skip')}  "
+            f"({self.generation.get('generated', 0)} file(s), "
+            f"{self.generation.get('errors', 0)} error(s))",
+            f"  QA         : {self.qa.get('status', 'skip')}  "
+            f"({self.qa.get('passed', 0)}/{self.qa.get('total', 0)} passed)",
+            f"  Compliance : {self.compliance.get('status', 'skip')}",
+            f"  Export     : {self.export.get('status', 'skip')}  "
+            f"({self.export.get('files', 0)} file(s))",
+        ]
+        return "\n".join(lines)
+
+    def to_json(self) -> str:
+        return json.dumps(
+            {
+                "releaseGateVersion": "1.0.0",
+                "outputDir": self.output_dir,
+                "batchFile": self.batch_file,
+                "generatedAt": self.generated_at,
+                "gatesPassed": self.gates_passed,
+                "gates": {
+                    "generation": self.generation,
+                    "qa": self.qa,
+                    "compliance": self.compliance,
+                    "export": self.export,
+                },
+            },
+            indent=2,
+        )
+
+
+class VerticalSliceGatePipeline:
+    """End-to-end vertical-slice release gate automation.
+
+    Chains the four existing factory gates in order:
+
+    1. **Generation** — executes a :class:`RequestBatchPipeline` from a batch
+       file and writes draft assets to ``<output_dir>/drafts/``.
+    2. **QA** — runs loudness, true-peak, clipping, and optional spectral
+       checks on every WAV in ``<output_dir>/drafts/`` via
+       :class:`~audio_engine.qa.LoudnessMeter` and
+       :class:`~audio_engine.qa.ClippingDetector`.
+    3. **Compliance** — calls
+       :func:`~audio_engine.compliance.license_checker.check_licenses` to
+       verify all declared package licenses against the policy file.
+    4. **Export** — copies approved drafts to the GameRewritten export surface
+       via :class:`DraftExportPipeline`.
+
+    Each gate is individually skippable.  The combined
+    :class:`VerticalSliceGateReport` is written as
+    ``release_gate_report.json`` under *output_dir* (or the path given by
+    *gate_report_path*).
+
+    Parameters
+    ----------
+    progress_callback:
+        Optional callable invoked with a progress message after each step.
+    """
+
+    def __init__(
+        self,
+        progress_callback: Callable[[str], None] | None = None,
+    ) -> None:
+        self.progress_callback = progress_callback or (lambda msg: None)
+
+    def run(
+        self,
+        batch_file: str | Path,
+        output_dir: str | Path,
+        *,
+        gate_report_path: str | Path | None = None,
+        skip_qa: bool = False,
+        skip_compliance: bool = False,
+        skip_export: bool = False,
+        check_spectral: bool = False,
+        check_loop: bool = False,
+        force: bool = False,
+        qa_report_path: str | Path | None = None,
+        compliance_policy_path: str | Path | None = None,
+    ) -> VerticalSliceGateReport:
+        """Execute the full vertical-slice release gate and return a gate report.
+
+        Parameters
+        ----------
+        batch_file:
+            Path to a generation-request batch JSON file
+            (:class:`~audio_engine.integration.factory_inputs.GenerationRequestBatch`).
+        output_dir:
+            Root output directory.  Drafts are written to
+            ``<output_dir>/drafts/``, exports to
+            ``<output_dir>/exports/gamerewritten/``.
+        gate_report_path:
+            Where to write the combined JSON gate report.  Defaults to
+            ``<output_dir>/release_gate_report.json``.
+        skip_qa:
+            Skip the QA gate (gate status recorded as ``"skip"``).
+        skip_compliance:
+            Skip the license compliance gate.
+        skip_export:
+            Skip the export handoff gate.
+        check_spectral:
+            Enforce spectral balance as a hard QA gate (passed through to
+            the QA batch run).
+        check_loop:
+            Include loop-boundary checks in the QA batch run.
+        force:
+            Regenerate assets even when output files already exist.
+        qa_report_path:
+            Where to write the QA batch JSON report.  Defaults to
+            ``<output_dir>/qa_report.json``.
+        compliance_policy_path:
+            Path to the TOML license policy file.  Defaults to
+            ``tools/license_policy.toml`` in the repository root.
+
+        Returns
+        -------
+        VerticalSliceGateReport
+            Combined gate report written to *gate_report_path*.
+        """
+        import datetime
+
+        batch_file = Path(batch_file)
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        if gate_report_path is None:
+            gate_report_path = output_dir / "release_gate_report.json"
+        gate_report_path = Path(gate_report_path)
+
+        if qa_report_path is None:
+            qa_report_path = output_dir / "qa_report.json"
+        qa_report_path = Path(qa_report_path)
+
+        generated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+        generation_gate: dict = {}
+        qa_gate: dict = {}
+        compliance_gate: dict = {}
+        export_gate: dict = {}
+
+        # ---- Gate 1: Generation ----
+        self.progress_callback("\n[gate 1/4] Generation …")
+        try:
+            from audio_engine.integration import load_generation_request_batch
+
+            batch = load_generation_request_batch(batch_file)
+            pipeline = RequestBatchPipeline(
+                progress_callback=self.progress_callback,
+                skip_existing=not force,
+            )
+            manifest = pipeline.execute(batch, output_dir)
+            n_generated = len(manifest.music) + len(manifest.sfx) + len(manifest.voice)
+            n_errors = len(manifest.errors)
+            generation_gate = {
+                "status": "pass" if n_errors == 0 else "fail",
+                "generated": n_generated,
+                "errors": n_errors,
+                "errorMessages": manifest.errors,
+            }
+            self.progress_callback(
+                f"  generation: {n_generated} file(s), {n_errors} error(s)"
+            )
+        except Exception as exc:  # noqa: BLE001
+            generation_gate = {
+                "status": "fail",
+                "generated": 0,
+                "errors": 1,
+                "errorMessages": [str(exc)],
+            }
+            self.progress_callback(f"  [generation error] {exc}")
+
+        # ---- Gate 2: QA ----
+        if skip_qa:
+            qa_gate = {"status": "skip"}
+            self.progress_callback("[gate 2/4] QA skipped.")
+        else:
+            self.progress_callback("\n[gate 2/4] QA …")
+            drafts_dir = output_dir / "drafts"
+            try:
+                qa_gate = self._run_qa_gate(
+                    drafts_dir=drafts_dir,
+                    qa_report_path=qa_report_path,
+                    check_spectral=check_spectral,
+                    check_loop=check_loop,
+                )
+            except Exception as exc:  # noqa: BLE001
+                qa_gate = {"status": "fail", "total": 0, "passed": 0, "failed": 0, "error": str(exc)}
+                self.progress_callback(f"  [qa error] {exc}")
+
+        # ---- Gate 3: Compliance ----
+        if skip_compliance:
+            compliance_gate = {"status": "skip"}
+            self.progress_callback("[gate 3/4] Compliance skipped.")
+        else:
+            self.progress_callback("\n[gate 3/4] License compliance …")
+            try:
+                from audio_engine.compliance.license_checker import check_licenses
+
+                compliance_report_path = output_dir / "compliance_report.json"
+                report = check_licenses(policy_path=compliance_policy_path)
+                compliant = report.compliant
+                compliance_gate = {
+                    "status": "pass" if compliant else "fail",
+                    "compliant": compliant,
+                    "summary": report.summary,
+                    "reportPath": str(compliance_report_path),
+                }
+                compliance_report_path.write_text(
+                    json.dumps(report.to_dict(), indent=2), encoding="utf-8"
+                )
+                self.progress_callback(
+                    f"  compliance: {'pass' if compliant else 'fail'}  "
+                    f"(allow={report.summary.get('allow', 0)}, "
+                    f"block={report.summary.get('block', 0)}, "
+                    f"unknown={report.summary.get('unknown', 0)})"
+                )
+            except Exception as exc:  # noqa: BLE001
+                compliance_gate = {"status": "fail", "error": str(exc)}
+                self.progress_callback(f"  [compliance error] {exc}")
+
+        # ---- Gate 4: Export ----
+        if skip_export:
+            export_gate = {"status": "skip"}
+            self.progress_callback("[gate 4/4] Export skipped.")
+        else:
+            self.progress_callback("\n[gate 4/4] Export …")
+            try:
+                export_pipeline = DraftExportPipeline(progress_callback=self.progress_callback)
+                export_manifest = export_pipeline.export(factory_root=output_dir)
+                n_exported = export_manifest["summary"]["total"]
+                export_root = (
+                    output_dir
+                    / DraftExportPipeline.EXPORT_SUBDIR
+                )
+                export_gate = {
+                    "status": "pass",
+                    "files": n_exported,
+                    "exportPath": str(export_root),
+                }
+                self.progress_callback(f"  export: {n_exported} file(s) → {export_root}")
+            except Exception as exc:  # noqa: BLE001
+                export_gate = {"status": "fail", "files": 0, "error": str(exc)}
+                self.progress_callback(f"  [export error] {exc}")
+
+        # ---- Aggregate result ----
+        gates_passed = all(
+            g.get("status") in {"pass", "skip"}
+            for g in [generation_gate, qa_gate, compliance_gate, export_gate]
+        )
+
+        gate_report = VerticalSliceGateReport(
+            output_dir=str(output_dir),
+            batch_file=str(batch_file),
+            generated_at=generated_at,
+            gates_passed=gates_passed,
+            generation=generation_gate,
+            qa=qa_gate,
+            compliance=compliance_gate,
+            export=export_gate,
+        )
+
+        gate_report_path.parent.mkdir(parents=True, exist_ok=True)
+        gate_report_path.write_text(gate_report.to_json(), encoding="utf-8")
+        self.progress_callback(f"\nRelease gate report written → {gate_report_path}")
+
+        return gate_report
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _run_qa_gate(
+        self,
+        *,
+        drafts_dir: Path,
+        qa_report_path: Path,
+        check_spectral: bool,
+        check_loop: bool,
+    ) -> dict:
+        """Run QA checks on all WAV files under *drafts_dir* and return a gate dict."""
+        import datetime
+
+        import numpy as np
+
+        from audio_engine.qa import ClippingDetector, LoudnessMeter, SpectralAnalyzer
+
+        wav_files = sorted(drafts_dir.rglob("*.wav")) if drafts_dir.exists() else []
+        if not wav_files:
+            return {
+                "status": "skip",
+                "total": 0,
+                "passed": 0,
+                "failed": 0,
+                "reportPath": str(qa_report_path),
+                "note": "no WAV files found in drafts/",
+            }
+
+        results = []
+        n_passed = 0
+        n_failed = 0
+
+        for wav_path in wav_files:
+            try:
+                audio, sr = self._load_wav(wav_path)
+            except Exception as exc:
+                results.append({"file": str(wav_path), "status": "error", "error": str(exc)})
+                n_failed += 1
+                continue
+
+            meter = LoudnessMeter(sample_rate=sr)
+            loudness = meter.measure(audio)
+
+            detector = ClippingDetector()
+            clip = detector.detect(audio)
+
+            sa = SpectralAnalyzer(sample_rate=sr)
+            spectral = sa.analyze(audio)
+
+            checks: dict = {
+                "loudness_lufs": round(float(loudness.integrated_lufs), 2),
+                "true_peak_dbfs": round(float(loudness.true_peak_dbfs), 2),
+                "loudness_range_lu": round(float(loudness.loudness_range_lu), 2),
+                "has_clipping": bool(clip.has_clipping),
+                "loudness_ok": bool(-30.0 <= loudness.integrated_lufs <= -9.0),
+                "peak_ok": bool(loudness.true_peak_dbfs <= -0.1),
+                "clipping_ok": bool(not clip.has_clipping),
+                "spectral_low_ratio": round(float(spectral.low_ratio), 4),
+                "spectral_mid_ratio": round(float(spectral.mid_ratio), 4),
+                "spectral_high_ratio": round(float(spectral.high_ratio), 4),
+                "spectral_centroid_hz": round(float(spectral.spectral_centroid_hz), 2),
+            }
+            if check_spectral:
+                checks["spectral_balance_ok"] = bool(spectral.spectral_balance_ok)
+            if check_loop:
+                from audio_engine.qa import LoopAnalyzer
+
+                la = LoopAnalyzer(sample_rate=sr)
+                loop = la.analyze(audio)
+                checks["loop_ok"] = bool(loop.is_seamless)
+                checks["loop_amplitude_jump_db"] = round(float(loop.amplitude_jump_db), 2)
+
+            passed = all(v for k, v in checks.items() if k.endswith("_ok"))
+            status = "pass" if passed else "fail"
+            if passed:
+                n_passed += 1
+            else:
+                n_failed += 1
+            results.append({"file": str(wav_path), "status": status, "checks": checks})
+
+        qa_report_data = {
+            "qaBatchVersion": "1.0.0",
+            "inputDir": str(drafts_dir),
+            "generatedAt": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "summary": {"total": len(results), "passed": n_passed, "failed": n_failed},
+            "results": results,
+        }
+        qa_report_path.parent.mkdir(parents=True, exist_ok=True)
+        qa_report_path.write_text(json.dumps(qa_report_data, indent=2), encoding="utf-8")
+        self.progress_callback(f"  QA report written → {qa_report_path}")
+        self.progress_callback(f"  QA: {n_passed}/{len(results)} passed, {n_failed} failed")
+
+        return {
+            "status": "pass" if n_failed == 0 else "fail",
+            "total": len(results),
+            "passed": n_passed,
+            "failed": n_failed,
+            "reportPath": str(qa_report_path),
+        }
+
+    @staticmethod
+    def _load_wav(path: Path):
+        """Load a WAV file and return (audio_array, sample_rate)."""
+        import struct
+        import wave as _wave
+
+        with _wave.open(str(path), "rb") as wf:
+            sr = wf.getframerate()
+            n_channels = wf.getnchannels()
+            n_frames = wf.getnframes()
+            raw = wf.readframes(n_frames)
+            sampwidth = wf.getsampwidth()
+
+        import numpy as np
+
+        if sampwidth == 2:
+            data = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+        elif sampwidth == 4:
+            data = np.frombuffer(raw, dtype=np.int32).astype(np.float32) / 2147483648.0
+        else:
+            data = np.frombuffer(raw, dtype=np.uint8).astype(np.float32) / 128.0 - 1.0
+
+        if n_channels > 1:
+            data = data.reshape(-1, n_channels)
+        return data, sr

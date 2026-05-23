@@ -72,13 +72,13 @@ Latest additive work extended procedural music coverage with new narrative/regio
 - [x] Execute SESSION-029b — expand studio creation tooling with presets/profile loading/batch shortcut/retry UX
 - [x] Execute SESSION-038 — stabilize dual-path vocal/instrumental production outputs with provenance linkage
 - [x] Complete ordered task-list batch continuation: Task 04 (music style preset expansion) + Task 05 (region-aware/adaptive `MusicGen` output options)
+- [x] Execute SESSION-041 — end-to-end vertical-slice release gate automation (`VerticalSliceGatePipeline`, `run-release-gate` CLI)
 
 ## Recommended next PRs
 
-1. **Execute SESSION-041**
-   - End-to-end vertical-slice release gate automation (generation → QA/compliance → export).
-2. Continue iterative studio quality refinement
+1. Continue iterative studio quality refinement
    - Use the new preset + batch + retry tooling, backend/sample controls, and in-studio preview playback browser to accelerate deterministic production loops.
+2. Synchronize remaining continuity docs for SESSION-041 completion (session state, session history, current session).
 
 ## Do not deprioritize
 

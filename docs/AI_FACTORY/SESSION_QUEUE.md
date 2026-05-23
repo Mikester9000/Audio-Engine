@@ -330,10 +330,10 @@
 
 ### SESSION-041 — End-to-end vertical slice release gate automation
 
-- **Status:** `planned`
+- **Status:** `completed`
 - **Task type:** `orchestration`
 - **Objective:** Add one deterministic command that executes vertical-slice generation, QA, compliance checks, and export handoff with machine-readable gate artifacts.
-- **Notes:** Preserve existing command compatibility; wire together existing gates additively instead of replacing current command surfaces.
+- **Notes:** Added `VerticalSliceGatePipeline` and `VerticalSliceGateReport` to `audio_engine/integration/asset_pipeline.py`; wired `audio-engine run-release-gate` CLI subcommand with `--skip-qa`, `--skip-compliance`, `--skip-export`, `--check-spectral`, `--check-loop`, `--force`, `--gate-report`, and `--qa-report` flags. 14 new tests added in `tests/test_release_gate.py`; 1108 tests pass total.
 
 ### Recently completed session context
 

@@ -4,32 +4,36 @@
 
 ## Last completed change
 
-Expanded `audio-engine studio` for creation + audition workflow:
+Implemented **SESSION-041**: End-to-end vertical-slice release gate automation.
 
-- Added backend selectors per modality (music/SFX/voice) to support built-in synth (`procedural`) and sample-backed generation (`sample`) directly in the GUI.
-- Added sample-library controls (`Sample WAV root`, `Sample base`) so users can generate from local sample folders without leaving the studio.
-- Added in-studio preview browser with category menu (`Music`, `SFX`, `Vocal`, `Examples`) and `Play`/`Stop` controls for listening before import/handoff.
-- Added example-WAV root selection + refresh controls for browsing local `.wav` references.
-- Extended studio preset payload support to persist and restore new backend/sample control state.
-- Added focused helper tests in `tests/test_studio_ui.py` for WAV discovery and preview catalog grouping.
+- Added `VerticalSliceGatePipeline` and `VerticalSliceGateReport` to `audio_engine/integration/asset_pipeline.py`.
+  - Chains four gates in order: generation → QA → license compliance → export.
+  - Each gate is individually skippable; gate status is one of `pass`, `fail`, or `skip`.
+  - Writes a combined `release_gate_report.json` with per-gate evidence and an overall `gatesPassed` boolean.
+  - Internally reuses `RequestBatchPipeline`, `DraftExportPipeline`, and `audio_engine.compliance.license_checker`.
+- Exported `VerticalSliceGatePipeline` and `VerticalSliceGateReport` from `audio_engine/integration/__init__.py`.
+- Added `_cmd_run_release_gate` handler and `run-release-gate` subcommand to `audio_engine/cli.py`.
+  - Flags: `--batch-file`, `--output-dir`, `--gate-report`, `--qa-report`, `--policy`, `--skip-qa`, `--skip-compliance`, `--skip-export`, `--check-spectral`, `--check-loop`, `--force`, `--quiet`.
+  - Exits 0 when all non-skipped gates pass; exits 1 when any gate fails.
+- Added 14 focused tests in `tests/test_release_gate.py`.
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_studio_ui.py tests/test_procedural_overhaul.py
+python -m pytest tests/test_release_gate.py -v
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result:
-- Targeted studio/UI regression slice passes (16 tests)
-- Full test suite passes (1091 tests)
+- Targeted release gate tests pass (14 tests)
+- Full test suite passes (1108 tests)
 - Asset manifest validation passes
 
 ## Immediate next best task
 
-Execute **SESSION-041** (end-to-end vertical-slice release gate automation).
+Continue iterative studio quality refinement and iterate on the next planned session once SESSION-041 continuity docs are synchronized.
 
 ## Files future agents should read first
 
@@ -57,3 +61,4 @@ Execute **SESSION-041** (end-to-end vertical-slice release gate automation).
 - [x] Commercial readiness audit evidence (`docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md`, SESSION-044)
 - [x] Completion-state handoff (`docs/AI_FACTORY/COMPLETION_HANDOFF.md`, SESSION-045)
 - [x] Session control docs synchronized (SESSION_QUEUE, SESSION_STATE, CURRENT_SESSION, FACTORY_STATUS, ACTIVE_WORK)
+- [x] **Vertical-slice release gate automation** (`run-release-gate` CLI + `VerticalSliceGatePipeline`, SESSION-041)

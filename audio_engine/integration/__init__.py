@@ -58,6 +58,8 @@ from audio_engine.integration.asset_pipeline import (
     RemasterBatchRecord,
     RemasterBatchResult,
     ReviewLogWriter,
+    VerticalSliceGatePipeline,
+    VerticalSliceGateReport,
 )
 from audio_engine.integration.factory_inputs import (
     AudioPlan,
@@ -95,6 +97,8 @@ __all__ = [
     "RemasterBatchRecord",
     "RemasterBatchResult",
     "ReviewLogWriter",
+    "VerticalSliceGatePipeline",
+    "VerticalSliceGateReport",
     "AudioPlan",
     "AudioPlanAssetGroup",
     "AudioPlanPriorities",
