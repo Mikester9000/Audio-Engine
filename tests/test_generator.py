@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from audio_engine.ai import generator as generator_module
 from audio_engine.ai.generator import MusicGenerator
 from audio_engine.composer.sequencer import Sequencer
 
@@ -74,3 +75,28 @@ def test_new_styles_generate_audio(style):
 def test_style_alignment_validation_has_no_issues():
     issues = MusicGenerator.validate_style_library_alignment()
     assert issues == {}
+
+
+def test_style_alignment_validation_detects_misaligned_style():
+    style_name = "tmp_alignment_ballad_failure"
+    generator_module._STYLE_DEFS[style_name] = generator_module._StyleDef(
+        bpm=78,
+        scale_name="major",
+        root="C",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["piano"],
+        accompaniment=["strings"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=4,
+        ostinato_instrument="harp",
+    )
+    try:
+        issues = MusicGenerator.validate_style_library_alignment()
+        assert style_name in issues
+        assert any("percussion should be disabled" in message for message in issues[style_name])
+    finally:
+        generator_module._STYLE_DEFS.pop(style_name, None)

@@ -719,8 +719,8 @@ def launch_studio() -> None:
                 custom_bass.set(_normalize_instrument_choice(str(music.get("bassInstrument", custom_bass.get())), custom_bass.get()))
                 custom_ostinato.set(_normalize_instrument_choice(str(music.get("ostinatoInstrument", custom_ostinato.get())), custom_ostinato.get()))
                 percussion_value = str(music.get("percussionInstrument", custom_percussion.get()))
-                if percussion_value and percussion_value not in InstrumentLibrary.available():
-                    percussion_value = ""
+                if percussion_value:
+                    percussion_value = _normalize_instrument_choice(percussion_value, custom_percussion.get())
                 custom_percussion.set(percussion_value)
                 music_adaptive_intensity.set(bool(music.get("adaptiveIntensity", music_adaptive_intensity.get())))
                 bars_raw = music.get("bars", bars_var.get())

@@ -2043,9 +2043,10 @@ class MusicGenerator:
         if sdef.ostinato_instrument:
             voices.append(sdef.ostinato_instrument)
         issues: list[str] = []
-        if intent.required_any and not any(voice in intent.required_any for voice in voices):
+        required = set(intent.required_any)
+        if required and not any(voice in required for voice in voices):
             issues.append(
-                f"expected at least one of {sorted(intent.required_any)} in instruments/accompaniment"
+                f"expected at least one of {sorted(required)} in instruments/accompaniment"
             )
         if intent.preferred_bass and sdef.bass_instrument not in intent.preferred_bass:
             issues.append(
