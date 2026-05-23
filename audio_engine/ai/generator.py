@@ -1714,12 +1714,7 @@ class MusicGenerator:
         self.sample_rate = sample_rate
         # Keep seed=None distinct from seed=0 by capturing a random base seed per generator instance.
         self._seed = resolve_base_seed(seed)
-        if not getattr(MusicGenerator, "_style_alignment_verified", False):
-            issues = MusicGenerator.validate_style_library_alignment()
-            if issues:
-                summary = "; ".join(f"{name}: {messages[0]}" for name, messages in sorted(issues.items()))
-                raise ValueError(f"style/synth alignment failed during initialization: {summary}")
-            MusicGenerator._style_alignment_verified = True
+        MusicGenerator.verify_style_library_alignment()
 
     # ------------------------------------------------------------------
     # Public API
@@ -1963,6 +1958,15 @@ class MusicGenerator:
             if style_issues:
                 issues[name] = style_issues
         return issues
+
+    @staticmethod
+    def verify_style_library_alignment() -> None:
+        """Raise when any style-intent alignment issue exists."""
+        issues = MusicGenerator.validate_style_library_alignment()
+        if not issues:
+            return
+        summary = "; ".join(f"{name}: {messages[0]}" for name, messages in sorted(issues.items()))
+        raise ValueError(f"style/synth alignment failed during initialization: {summary}")
 
     def _rng_for_call(self, style: str, bars: int) -> random.Random:
         style_hash = sum((idx + 1) * ord(ch) for idx, ch in enumerate(style))

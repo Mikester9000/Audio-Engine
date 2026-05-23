@@ -23,6 +23,7 @@ __all__ = ["Instrument", "InstrumentLibrary"]
 
 _STRINGS_BOW_NOISE_SEED = 11
 _BASS_PICK_NOISE_SEED = 21
+_GUITAR_PICK_NOISE_SEED = 61
 _PERCUSSION_NOISE_SEED = 5
 _FLUTE_BREATH_SEED = 7
 _CHOIR_FORMANTS = (700.0, 1220.0, 2600.0)
@@ -1077,7 +1078,7 @@ def _acoustic_guitar(sr: int = 44100) -> Instrument:
         octave = osc.sine(freq * 2.0, dur) * 0.17
         n = len(body)
         t = np.arange(n, dtype=np.float64) / sr
-        pick = np.random.default_rng(_BASS_PICK_NOISE_SEED).standard_normal(n).astype(np.float32)
+        pick = np.random.default_rng(_GUITAR_PICK_NOISE_SEED).standard_normal(n).astype(np.float32)
         pick = Filter(sr).band_pass(pick, 1200.0, 9000.0) * np.exp(-42.0 * t).astype(np.float32) * 0.34
         sig = (body + fifth + octave).astype(np.float32)
         return (sig + pick).astype(np.float32)
