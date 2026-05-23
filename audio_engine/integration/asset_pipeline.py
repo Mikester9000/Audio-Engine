@@ -2831,7 +2831,7 @@ class VerticalSliceGatePipeline:
         for wav_path in wav_files:
             try:
                 audio, sr = self._load_wav(wav_path)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001  # per-file errors must not abort the full QA batch
                 results.append({"file": str(wav_path), "status": "error", "error": str(exc)})
                 n_failed += 1
                 continue
@@ -2897,7 +2897,7 @@ class VerticalSliceGatePipeline:
         }
 
     @staticmethod
-    def _load_wav(path: Path):
+    def _load_wav(path: Path) -> "tuple[np.ndarray, int]":
         """Load a WAV file and return (audio_array, sample_rate)."""
         import struct
         import wave as _wave
