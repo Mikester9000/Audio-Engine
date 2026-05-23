@@ -7,6 +7,7 @@ import json
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Protocol
 
@@ -21,6 +22,7 @@ from audio_engine.synthesizer.instrument import InstrumentLibrary
 
 _DEFAULT_SAMPLE_ROOT = "samples"
 _FALLBACK_STUDIO_BACKENDS = ["procedural", "sample"]
+_STYLE_OVERRIDE_LOCK = threading.Lock()
 
 
 class _StatusLabel(Protocol):
@@ -394,21 +396,43 @@ def launch_studio() -> None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         from audio_engine.ai.music_gen import MusicGen
         backend_name = music_backend.get()
-        temporary_style_name: str | None = None
-        try:
-            if custom_arrangement.get() and backend_name == "procedural":
-                from audio_engine.ai import generator as generator_module
+        
+        def _emit_music(prompt_value: str) -> Path:
+            return MusicGen(
+                sample_rate=44100,
+                backend=_resolve_backend(
+                    backend_name=backend_name,
+                    sample_rate=44100,
+                    seed=seed,
+                    samples_dir=sample_root.get().strip(),
+                    sample_base_backend=sample_base_backend.get(),
+                ),
+                seed=seed,
+                mastering_profile=music_profile.get(),
+            ).generate_to_file(
+                prompt=prompt_value,
+                output_path=out_path,
+                duration=duration,
+                loopable=True,
+                fmt="ogg" if music_format.get() == "ogg" else "wav",
+                region=music_region.get().strip() or None,
+                adaptive_intensity=bool(music_adaptive_intensity.get()),
+            )
 
-                source = generator_module._STYLE_DEFS.get(style)
-                if source is None:
-                    raise ValueError(f"unknown source style for override: {style}")
-                lead_fallback = source.instruments[0] if source.instruments else "strings"
-                counter_fallback = source.instruments[1] if len(source.instruments) > 1 else lead_fallback
-                pad_fallback = source.accompaniment[0] if source.accompaniment else "synth_pad"
-                chord_fallback = source.accompaniment[1] if len(source.accompaniment) > 1 else (source.accompaniment[0] if source.accompaniment else "strings")
-                percussion_choice = custom_percussion.get().strip()
-                percussion_fallback = source.percussion_instrument or "percussion"
-                temporary_style_name = f"studio_custom_{style}"
+        if custom_arrangement.get() and backend_name == "procedural":
+            from audio_engine.ai import generator as generator_module
+
+            source = generator_module._STYLE_DEFS.get(style)
+            if source is None:
+                raise ValueError(f"unknown source style for override: {style}")
+            lead_fallback = source.instruments[0] if source.instruments else "strings"
+            counter_fallback = source.instruments[1] if len(source.instruments) > 1 else lead_fallback
+            pad_fallback = source.accompaniment[0] if source.accompaniment else "synth_pad"
+            chord_fallback = source.accompaniment[1] if len(source.accompaniment) > 1 else (source.accompaniment[0] if source.accompaniment else "strings")
+            percussion_choice = custom_percussion.get().strip()
+            percussion_fallback = source.percussion_instrument or "percussion"
+            temporary_style_name = f"studio_custom_{style}"
+            with _STYLE_OVERRIDE_LOCK:
                 generator_module._STYLE_DEFS[temporary_style_name] = generator_module._StyleDef(
                     bpm=float(bpm),
                     scale_name=str(source.scale_name),
@@ -434,33 +458,12 @@ def launch_studio() -> None:
                     bars=int(bars),
                     ostinato_instrument=_normalize_instrument_choice(custom_ostinato.get(), source.ostinato_instrument),
                 )
-                prompt = temporary_style_name
+                try:
+                    return _emit_music(temporary_style_name)
+                finally:
+                    generator_module._STYLE_DEFS.pop(temporary_style_name, None)
 
-            return MusicGen(
-                sample_rate=44100,
-                backend=_resolve_backend(
-                    backend_name=backend_name,
-                    sample_rate=44100,
-                    seed=seed,
-                    samples_dir=sample_root.get().strip(),
-                    sample_base_backend=sample_base_backend.get(),
-                ),
-                seed=seed,
-                mastering_profile=music_profile.get(),
-            ).generate_to_file(
-                prompt=prompt,
-                output_path=out_path,
-                duration=duration,
-                loopable=True,
-                fmt="ogg" if music_format.get() == "ogg" else "wav",
-                region=music_region.get().strip() or None,
-                adaptive_intensity=bool(music_adaptive_intensity.get()),
-            )
-        finally:
-            if temporary_style_name:
-                from audio_engine.ai import generator as generator_module
-
-                generator_module._STYLE_DEFS.pop(temporary_style_name, None)
+        return _emit_music(prompt)
 
     def _generate_music() -> None:
         nonlocal last_failed_action

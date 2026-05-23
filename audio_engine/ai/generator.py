@@ -1714,6 +1714,12 @@ class MusicGenerator:
         self.sample_rate = sample_rate
         # Keep seed=None distinct from seed=0 by capturing a random base seed per generator instance.
         self._seed = resolve_base_seed(seed)
+        if not getattr(MusicGenerator, "_style_alignment_verified", False):
+            issues = MusicGenerator.validate_style_library_alignment()
+            if issues:
+                summary = "; ".join(f"{name}: {messages[0]}" for name, messages in sorted(issues.items()))
+                raise ValueError(f"style/synth alignment failed during initialization: {summary}")
+            MusicGenerator._style_alignment_verified = True
 
     # ------------------------------------------------------------------
     # Public API
@@ -1746,7 +1752,8 @@ class MusicGenerator:
             raise ValueError(f"Unknown style '{style}'. Available: {available}")
 
         sdef = _STYLE_DEFS[style]
-        self._validate_style_alignment(style, sdef)
+        if style.startswith("studio_custom_"):
+            self._validate_style_alignment(style, sdef)
         effective_bars = bars if bars is not None else sdef.bars
         rng = self._rng_for_call(style, effective_bars)
         scale_name = self._resolve_scale_name(style, sdef.scale_name)
@@ -2094,7 +2101,7 @@ class MusicGenerator:
                 preferred_bass=("bass", "ff7_bass", "synth_pad"),
                 disallow_percussion=True,
             )
-        required_any = tuple(sorted(set(sdef.instruments[:1] + sdef.accompaniment[:1]))) or ("strings",)
+        required_any = tuple(sorted(set([*sdef.instruments, *sdef.accompaniment]))) or ("strings",)
         return _StyleIntent(
             family="general",
             required_any=required_any,
