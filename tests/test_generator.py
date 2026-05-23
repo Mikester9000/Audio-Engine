@@ -97,6 +97,6 @@ def test_style_alignment_validation_detects_misaligned_style():
     try:
         issues = MusicGenerator.validate_style_library_alignment()
         assert style_name in issues
-        assert any("percussion should be disabled" in message for message in issues[style_name])
+        assert "percussion should be disabled for this style family" in issues[style_name]
     finally:
         generator_module._STYLE_DEFS.pop(style_name, None)

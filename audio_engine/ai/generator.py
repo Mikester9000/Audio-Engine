@@ -2083,7 +2083,6 @@ class MusicGenerator:
                     "piano",
                     "flute",
                     "synth_pad",
-                    "acoustic_guitar",
                 ),
                 preferred_bass=("ff7_bass", "bass", "synth_pad"),
                 require_percussion=bool(sdef.percussion_instrument),
@@ -2095,9 +2094,10 @@ class MusicGenerator:
                 preferred_bass=("bass", "ff7_bass", "synth_pad"),
                 disallow_percussion=True,
             )
+        required_any = tuple(sorted(set(sdef.instruments[:1] + sdef.accompaniment[:1]))) or ("strings",)
         return _StyleIntent(
             family="general",
-            required_any=tuple(sorted(set(sdef.instruments[:1] + sdef.accompaniment[:1]))),
+            required_any=required_any,
             preferred_bass=(sdef.bass_instrument,),
             require_percussion=bool(sdef.percussion_instrument),
             disallow_percussion=not bool(sdef.percussion_instrument),

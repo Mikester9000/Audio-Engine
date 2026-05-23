@@ -402,6 +402,12 @@ def launch_studio() -> None:
                 source = generator_module._STYLE_DEFS.get(style)
                 if source is None:
                     raise ValueError(f"unknown source style for override: {style}")
+                lead_fallback = source.instruments[0] if source.instruments else "strings"
+                counter_fallback = source.instruments[1] if len(source.instruments) > 1 else lead_fallback
+                pad_fallback = source.accompaniment[0] if source.accompaniment else "synth_pad"
+                chord_fallback = source.accompaniment[1] if len(source.accompaniment) > 1 else (source.accompaniment[0] if source.accompaniment else "strings")
+                percussion_choice = custom_percussion.get().strip()
+                percussion_fallback = source.percussion_instrument or "percussion"
                 temporary_style_name = f"studio_custom_{style}"
                 generator_module._STYLE_DEFS[temporary_style_name] = generator_module._StyleDef(
                     bpm=float(bpm),
@@ -410,17 +416,17 @@ def launch_studio() -> None:
                     octave=int(source.octave),
                     progression_name=str(source.progression_name),
                     instruments=[
-                        _normalize_instrument_choice(custom_lead.get(), source.instruments[0]),
-                        _normalize_instrument_choice(custom_counter.get(), source.instruments[1] if len(source.instruments) > 1 else source.instruments[0]),
+                        _normalize_instrument_choice(custom_lead.get(), lead_fallback),
+                        _normalize_instrument_choice(custom_counter.get(), counter_fallback),
                     ],
                     accompaniment=[
-                        _normalize_instrument_choice(custom_pad.get(), source.accompaniment[0] if source.accompaniment else "synth_pad"),
-                        _normalize_instrument_choice(custom_chord.get(), source.accompaniment[1] if len(source.accompaniment) > 1 else source.accompaniment[0] if source.accompaniment else "strings"),
+                        _normalize_instrument_choice(custom_pad.get(), pad_fallback),
+                        _normalize_instrument_choice(custom_chord.get(), chord_fallback),
                     ],
                     bass_instrument=_normalize_instrument_choice(custom_bass.get(), source.bass_instrument),
                     percussion_instrument=(
-                        _normalize_instrument_choice(custom_percussion.get(), source.percussion_instrument or "percussion")
-                        if custom_percussion.get().strip()
+                        _normalize_instrument_choice(custom_percussion.get(), percussion_fallback)
+                        if percussion_choice
                         else None
                     ),
                     melody_pattern=str(source.melody_pattern),
