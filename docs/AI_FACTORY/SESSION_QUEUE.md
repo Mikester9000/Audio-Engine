@@ -328,6 +328,16 @@
 
 ## Current next session
 
+### SESSION-051 — PS2 instrument identity refinement (piano + guitar families)
+
+- **Status:** `completed`
+- **Task type:** `synthesis + regression`
+- **Objective:** Refine procedural piano and guitar-family synthesis so instrument names align more closely to audible character while preserving PS2-era FF8/FF10 aesthetic constraints.
+- **Notes:**
+  - Refined `piano`, `electric_guitar`, `ff8_electric_guitar`, and `acoustic_guitar` synthesis and post-processing for stronger instrument-name character alignment.
+  - Preserved PS2-era JRPG tone constraints (band-limited/cabinet-like shaping with controlled room ambience).
+  - Added regression tests covering transient decay and guitar/piano spectral identity in `tests/test_instrument.py`.
+
 ### SESSION-049 — Studio full-edit workflow + synthesis/theory alignment expansion
 
 - **Status:** `completed`

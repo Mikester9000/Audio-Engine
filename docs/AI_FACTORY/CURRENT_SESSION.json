@@ -1,25 +1,25 @@
 {
-  "version": "1.16.0",
+  "version": "1.17.0",
   "lastUpdated": "2026-05-23",
   "currentSession": {
-    "id": "SESSION-049",
-    "title": "Studio full-edit workflow + synthesis/theory alignment expansion",
+    "id": "SESSION-051",
+    "title": "PS2 instrument identity refinement (piano + guitar families)",
     "status": "completed",
-    "taskType": "ui + synthesis + theory",
-    "objective": "Expand studio editing controls and new-file authoring, add broader style/synth/SFX coverage, strengthen deterministic theory shaping, and enforce style/synth naming alignment validation.",
-    "outcome": "Added advanced studio music controls with custom arrangement and new-file JSON templates, introduced new style families and instrument timbres, expanded SFX coverage, added style-intent alignment validation, and added targeted tests.",
+    "taskType": "synthesis + regression",
+    "objective": "Improve procedural instrument realism so piano and guitar-family timbres sound closer to their names while preserving PS2-era FF8/FF10 character.",
+    "outcome": "Refined piano and guitar-family instrument synthesis/post-processing for stronger timbral identity and added regression tests for instrument-character drift.",
     "previousSessions": [
+      {
+        "id": "SESSION-049",
+        "title": "Studio full-edit workflow + synthesis/theory alignment expansion",
+        "status": "completed",
+        "notes": "Expanded studio editing/new-file workflow, style coverage, and style/synth alignment validation."
+      },
       {
         "id": "SESSION-041",
         "title": "End-to-end vertical slice release gate automation",
         "status": "completed",
         "notes": "Added run-release-gate orchestration and release_gate_report.json generation."
-      },
-      {
-        "id": "SESSION-048",
-        "title": "Full Orchestral Synth",
-        "status": "completed",
-        "notes": "Added full_orchestral backend and distinct orchestral instrument family."
       }
     ],
     "readFirst": [
@@ -29,12 +29,10 @@
       "docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md"
     ],
     "likelyModify": [
-      "audio_engine/ui/studio.py",
-      "audio_engine/ai/generator.py",
       "audio_engine/synthesizer/instrument.py",
-      "audio_engine/ai/sfx_synth.py",
-      "tests/test_studio_ui.py",
-      "tests/test_generator.py"
+      "tests/test_instrument.py",
+      "tests/test_ps1_era.py",
+      "docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md"
     ]
   }
 }

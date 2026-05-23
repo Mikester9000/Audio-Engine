@@ -1,11 +1,11 @@
 {
-  "version": "1.16.0",
+  "version": "1.17.0",
   "lastUpdated": "2026-05-23",
   "currentSession": {
-    "id": "SESSION-049",
-    "title": "Studio full-edit workflow + synthesis/theory alignment expansion",
+    "id": "SESSION-051",
+    "title": "PS2 instrument identity refinement (piano + guitar families)",
     "status": "completed",
-    "taskType": "ui + synthesis + theory"
+    "taskType": "synthesis + regression"
   },
   "completedSessions": [
     {
@@ -260,6 +260,11 @@
     },
     {
       "id": "SESSION-049",
+      "status": "completed",
+      "completedDate": "2026-05-23"
+    },
+    {
+      "id": "SESSION-051",
       "status": "completed",
       "completedDate": "2026-05-23"
     }
