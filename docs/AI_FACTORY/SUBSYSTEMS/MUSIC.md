@@ -18,13 +18,14 @@
 - style-intent metadata and executable style/synth alignment validation via `MusicGenerator.validate_style_library_alignment()`
 - expanded style families: `hybrid_trailer`, `neo_noir`, `festival_folk`, `sci_fi_pulse`, `waltz_orchestral`
 - expanded timbres: `violin_solo`, `trumpet`, `acoustic_guitar`, `synth_lead_bright`
+- SESSION-051 timbre identity refinement: `piano`, `electric_guitar`, `ff8_electric_guitar`, and `acoustic_guitar` now have stronger instrument-name alignment under PS2-era FF8/FF10-style tonal constraints
 
 ## What is missing
 
 - broader style-keyword resolver coverage for every advanced preset family
 - verified non-procedural backend quality benchmarks using real downloaded model weights
 - release-gate reporting hookup for style-intent validation output (planned SESSION-050)
-- full release-gate orchestration that consumes dual-path outputs end-to-end (SESSION-041 planned)
+- full release-gate orchestration that consumes dual-path outputs end-to-end (SESSION-041 completed; further alignment reporting integration tracked in SESSION-050)
 
 ## Backend evaluation notes (SESSION-011 + optional neural scaffolding)
 

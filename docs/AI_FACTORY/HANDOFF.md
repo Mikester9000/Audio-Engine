@@ -4,42 +4,35 @@
 
 ## Last completed change
 
-Implemented **SESSION-049**: Studio full-edit workflow + synthesis/theory alignment expansion.
+Implemented **SESSION-051**: PS2 instrument identity refinement (piano + guitar families).
 
-- Expanded `audio_engine/ui/studio.py`:
-  - Added advanced music controls (prompt override, format, region, adaptive intensity).
-  - Added procedural custom arrangement editing (lead/counter/pad/chord/bass/ostinato/percussion instruments).
-  - Added explicit new-file workflow controls (`new file JSON`, output base/dir, auto-target generation).
-  - Added helper writers for new-file templates.
-- Expanded `audio_engine/ai/generator.py`:
-  - Added five style families: `hybrid_trailer`, `neo_noir`, `festival_folk`, `sci_fi_pulse`, `waltz_orchestral`.
-  - Added style intent metadata and executable style/synth alignment validation.
-  - Added progression/theory profile tables and stronger deterministic cadence/closure behavior.
-- Expanded `audio_engine/synthesizer/instrument.py` with four timbres:
-  - `violin_solo`, `trumpet`, `acoustic_guitar`, `synth_lead_bright`.
-- Expanded `audio_engine/ai/sfx_synth.py` coverage:
-  - added `gunshot`, `engine_rev`, and `ui_success` families (plus aliases).
-- Added/updated tests:
-  - `tests/test_studio_ui.py` new-file helper coverage.
-  - `tests/test_generator.py` new-style generation + style-intent alignment validation coverage.
+- Refined `audio_engine/synthesizer/instrument.py` core timbres:
+  - upgraded `piano` synthesis with detuned-string layering, hammer/key transients, and controlled body resonance
+  - upgraded `electric_guitar` and `ff8_electric_guitar` with pick transients + cabinet-like post-EQ shaping
+  - upgraded `acoustic_guitar` with stronger pluck/body resonance behavior and natural high-frequency decay
+- Preserved PS2-era JRPG design target (FF8/FF10-like tonal aesthetic) by keeping constrained bandwidth, modest ambience, and deterministic synth behavior.
+- Added regression checks in `tests/test_instrument.py`:
+  - transient decay profile for piano
+  - pick-brightness decay for acoustic guitar
+  - midrange-presence guardrail for ff8 electric guitar
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_studio_ui.py tests/test_generator.py tests/test_instrument.py tests/test_ai_pipeline.py -k "sfx or style or studio or generator"
+python -m pytest tests/test_instrument.py tests/test_ps1_era.py -k "instrument or guitar or piano"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result:
-- Targeted studio/generator/instrument/sfx slices pass (55 selected tests)
-- Full test suite passes (1108 tests)
+- Targeted instrument + PS-era slices pass (111 selected tests)
+- Full test suite passes (1129 tests)
 - Asset manifest validation passes
 
 ## Immediate next best task
 
-Execute SESSION-050 to surface style/synth alignment validation in release-gate artifacts and continue iterative studio quality refinement.
+Execute SESSION-050 to surface style/synth alignment validation in release-gate artifacts, then continue instrument-identity refinement for additional named timbres.
 
 ## Files future agents should read first
 
@@ -69,3 +62,4 @@ Execute SESSION-050 to surface style/synth alignment validation in release-gate 
 - [x] Session control docs synchronized (SESSION_QUEUE, SESSION_STATE, CURRENT_SESSION, FACTORY_STATUS, ACTIVE_WORK)
 - [x] **Vertical-slice release gate automation** (`run-release-gate` CLI + `VerticalSliceGatePipeline`, SESSION-041)
 - [x] **Studio full-edit + style/synth alignment expansion** (`audio_engine studio` advanced controls, new styles/instruments/SFX, SESSION-049)
+- [x] **PS2 instrument identity refinement** (`piano` + guitar-family timbre updates, SESSION-051)
