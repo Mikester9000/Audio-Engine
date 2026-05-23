@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import json
 import shutil
 import subprocess
@@ -37,6 +38,11 @@ class _ProcessPlaybackHandle:
     def stop(self) -> None:
         if self._process.poll() is None:
             self._process.terminate()
+            try:
+                self._process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                self._process.kill()
+                self._process.wait()
 
 
 class _WindowsPlaybackHandle:
@@ -75,6 +81,7 @@ def _build_preview_catalog(
     return catalog
 
 
+@functools.lru_cache(maxsize=8)
 def _available_backends_for_modality(modality: str, *, sample_rate: int) -> list[str]:
     try:
         evaluations = BackendRegistry.evaluate_backends(sample_rate=sample_rate, seed=0)

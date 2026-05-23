@@ -2726,7 +2726,8 @@ class VerticalSliceGatePipeline:
                 from audio_engine.compliance.license_checker import check_licenses
 
                 compliance_report_path = output_dir / "compliance_report.json"
-                report = check_licenses(policy_path=compliance_policy_path)
+                _policy_path = Path(compliance_policy_path) if compliance_policy_path is not None else None
+                report = check_licenses(policy_path=_policy_path)
                 compliant = report.compliant
                 compliance_gate = {
                     "status": "pass" if compliant else "fail",
@@ -2911,12 +2912,25 @@ class VerticalSliceGatePipeline:
 
         import numpy as np
 
-        if sampwidth == 2:
+        if sampwidth == 1:
+            data = np.frombuffer(raw, dtype=np.uint8).astype(np.float32) / 128.0 - 1.0
+        elif sampwidth == 2:
             data = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+        elif sampwidth == 3:
+            # 24-bit PCM: 3 bytes per sample, little-endian, signed.
+            # Place the 3 raw bytes into positions 1-3 of a 4-byte buffer
+            # (position 0 = 0x00).  When interpreted as a little-endian int32
+            # this is equivalent to a left-shift of 8 bits, which both scales
+            # the value and propagates the sign bit into the MSB so that the
+            # int32 view correctly sign-extends the 24-bit sample.
+            raw_bytes = np.frombuffer(raw, dtype=np.uint8).reshape(-1, 3)
+            padded = np.zeros((raw_bytes.shape[0], 4), dtype=np.uint8)
+            padded[:, 1:] = raw_bytes  # byte 0 = LSB (zero); bytes 1-3 = original LE bytes
+            data = padded.view(np.int32).reshape(-1).astype(np.float32) / 2147483648.0
         elif sampwidth == 4:
             data = np.frombuffer(raw, dtype=np.int32).astype(np.float32) / 2147483648.0
         else:
-            data = np.frombuffer(raw, dtype=np.uint8).astype(np.float32) / 128.0 - 1.0
+            raise ValueError(f"Unsupported WAV sample width: {sampwidth} bytes")
 
         if n_channels > 1:
             data = data.reshape(-1, n_channels)
