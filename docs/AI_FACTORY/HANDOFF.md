@@ -4,60 +4,36 @@
 
 ## Last completed change
 
-Completed ordered Task-List continuation batch (**Task 04 + Task 05**):
+Implemented **SESSION-041**: End-to-end vertical-slice release gate automation.
 
-- Added new style presets in `audio_engine/ai/generator.py`:
-  - `stealth`, `memorial`, `mystery`, `underscore`, `ending`
-  - `exploration_plains`, `exploration_forest`, `exploration_coast`, `exploration_arid`
-  - `transition_sting`
-- Extended prompt style keyword routing in `audio_engine/ai/prompt.py` for the new presets.
-- Extended `MusicGen` (`audio_engine/ai/music_gen.py`) with additive options:
-  - region-aware prompt shaping (`region=...`)
-  - adaptive-intensity backend hint (`adaptive_intensity=...`)
-  - optional adaptive layer-bundle export (`layer_output_dir=...`) that writes deterministic layer files + JSON metadata.
-- Added focused test coverage in `tests/test_ai_pipeline.py` and expanded style-coverage list in `tests/test_music_library.py`.
-- Expanded integration/runtime surfaces in the same change-set:
-  - `audio_engine/integration/game_state_map.py`: added/updated music and SFX manifest entries for expanded narrative, transition, spell, and footstep variants.
-  - `audio_engine/ai/sfx_synth.py`: added specialized synthesis recipes/routing for the new spell and footstep variant families.
-  - `audio_engine/integration/cpp/AudioSystem.hpp`: updated runtime playback behavior for crossfading music flow and generated-asset playback mapping consistency.
-
-Previously completed **SESSION-038** (dual-path vocal/instrumental workflow stabilization):
-
-- Added additive request schema support in `audio_engine/integration/factory_inputs.py`:
-  - optional `musicDeliveryMode` field
-  - currently supported value: `dual_vocal_instrumental` (music requests only)
-- Implemented deterministic paired output generation in both request-batch execution paths:
-  - `RequestBatchPipeline.execute(...)`
-  - `AssetPipeline.execute_request_batch(...)`
-- Dual-path mode now produces paired files with stable suffixes:
-  - `__instrumental`
-  - `__vocal_ready`
-- Added explicit provenance linkage metadata for both paired outputs:
-  - `dualPathGroupId`
-  - `dualPathRole`
-  - `pairedOutputPath`
-- Added focused parser/pipeline tests in `tests/test_integration.py` for:
-  - `musicDeliveryMode` parsing/validation
-  - dual-path paired output generation
-  - provenance linkage correctness
+- Added `VerticalSliceGatePipeline` and `VerticalSliceGateReport` to `audio_engine/integration/asset_pipeline.py`.
+  - Chains four gates in order: generation → QA → license compliance → export.
+  - Each gate is individually skippable; gate status is one of `pass`, `fail`, or `skip`.
+  - Writes a combined `release_gate_report.json` with per-gate evidence and an overall `gatesPassed` boolean.
+  - Internally reuses `RequestBatchPipeline`, `DraftExportPipeline`, and `audio_engine.compliance.license_checker`.
+- Exported `VerticalSliceGatePipeline` and `VerticalSliceGateReport` from `audio_engine/integration/__init__.py`.
+- Added `_cmd_run_release_gate` handler and `run-release-gate` subcommand to `audio_engine/cli.py`.
+  - Flags: `--batch-file`, `--output-dir`, `--gate-report`, `--qa-report`, `--policy`, `--skip-qa`, `--skip-compliance`, `--skip-export`, `--check-spectral`, `--check-loop`, `--force`, `--quiet`.
+  - Exits 0 when all non-skipped gates pass; exits 1 when any gate fails.
+- Added 14 focused tests in `tests/test_release_gate.py`.
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_ai_pipeline.py tests/test_music_library.py tests/test_generator.py
+python -m pytest tests/test_release_gate.py -v
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result:
-- Targeted style/music-gen test slice passes (369 tests)
-- Full test suite passes (1066 tests)
+- Targeted release gate tests pass (14 tests)
+- Full test suite passes (1108 tests)
 - Asset manifest validation passes
 
 ## Immediate next best task
 
-Execute **SESSION-041** (end-to-end vertical-slice release gate automation).
+Continue iterative studio quality refinement and iterate on the next planned session once SESSION-041 continuity docs are synchronized.
 
 ## Files future agents should read first
 
@@ -85,3 +61,4 @@ Execute **SESSION-041** (end-to-end vertical-slice release gate automation).
 - [x] Commercial readiness audit evidence (`docs/AI_FACTORY/COMMERCIAL_READINESS_AUDIT.md`, SESSION-044)
 - [x] Completion-state handoff (`docs/AI_FACTORY/COMPLETION_HANDOFF.md`, SESSION-045)
 - [x] Session control docs synchronized (SESSION_QUEUE, SESSION_STATE, CURRENT_SESSION, FACTORY_STATUS, ACTIVE_WORK)
+- [x] **Vertical-slice release gate automation** (`run-release-gate` CLI + `VerticalSliceGatePipeline`, SESSION-041)

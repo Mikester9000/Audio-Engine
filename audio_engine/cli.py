@@ -1966,6 +1966,78 @@ def build_parser() -> argparse.ArgumentParser:
         help="Suppress per-file progress messages.",
     )
 
+    # --- run-release-gate ---
+    rrg = sub.add_parser(
+        "run-release-gate",
+        help=(
+            "Run the full vertical-slice release gate: "
+            "generation → QA → license compliance → export handoff. "
+            "Writes a combined release_gate_report.json to <output-dir>."
+        ),
+    )
+    rrg.add_argument(
+        "--batch-file", "-b", required=True,
+        help="Path to a generation-request batch JSON file.",
+    )
+    rrg.add_argument(
+        "--output-dir", "-o", default=".",
+        help="Root output directory for all gate artifacts (default: current directory).",
+    )
+    rrg.add_argument(
+        "--gate-report",
+        default=None,
+        help=(
+            "Path to write the combined release gate JSON report "
+            "(default: <output-dir>/release_gate_report.json)."
+        ),
+    )
+    rrg.add_argument(
+        "--qa-report",
+        default=None,
+        help=(
+            "Path to write the QA batch JSON report "
+            "(default: <output-dir>/qa_report.json)."
+        ),
+    )
+    rrg.add_argument(
+        "--policy", default=None,
+        help=(
+            "Path to the TOML license policy file used by the compliance gate "
+            "(default: tools/license_policy.toml in the repository root)."
+        ),
+    )
+    rrg.add_argument(
+        "--skip-qa", action="store_true",
+        help="Skip the QA gate (gate status recorded as 'skip').",
+    )
+    rrg.add_argument(
+        "--skip-compliance", action="store_true",
+        help="Skip the license compliance gate.",
+    )
+    rrg.add_argument(
+        "--skip-export", action="store_true",
+        help="Skip the export handoff gate.",
+    )
+    rrg.add_argument(
+        "--check-spectral", action="store_true",
+        help=(
+            "Enforce spectral balance as a hard QA gate: fail if any single frequency band "
+            "carries more than 90%% of total energy."
+        ),
+    )
+    rrg.add_argument(
+        "--check-loop", action="store_true",
+        help="Include loop-boundary click checks in the QA gate.",
+    )
+    rrg.add_argument(
+        "--force", action="store_true",
+        help="Regenerate assets even if output files already exist.",
+    )
+    rrg.add_argument(
+        "--quiet", action="store_true",
+        help="Suppress per-step progress messages.",
+    )
+
     return parser
 
 
@@ -2128,6 +2200,39 @@ def _cmd_verify_game_assets(args: argparse.Namespace) -> None:
         print("  ✓  All assets present.")
 
 
+def _cmd_run_release_gate(args: argparse.Namespace) -> None:
+    """Execute the full vertical-slice release gate (generation → QA → compliance → export)."""
+    from audio_engine.integration.asset_pipeline import VerticalSliceGatePipeline
+
+    quiet = getattr(args, "quiet", False)
+
+    def _progress(msg: str) -> None:
+        if not quiet:
+            print(msg)
+
+    pipeline = VerticalSliceGatePipeline(progress_callback=_progress)
+
+    report = pipeline.run(
+        batch_file=args.batch_file,
+        output_dir=args.output_dir,
+        gate_report_path=args.gate_report,
+        skip_qa=args.skip_qa,
+        skip_compliance=args.skip_compliance,
+        skip_export=args.skip_export,
+        check_spectral=args.check_spectral,
+        check_loop=args.check_loop,
+        force=args.force,
+        qa_report_path=args.qa_report,
+        compliance_policy_path=args.policy,
+    )
+
+    print()
+    print(report.summary())
+
+    if not report.gates_passed:
+        raise SystemExit(1)
+
+
 def _cmd_export_wav_delivery(args: argparse.Namespace) -> None:
     """Package approved assets into a deterministic commercial WAV delivery."""
     from audio_engine.integration.export_contract import WavDeliveryPipeline
@@ -2213,6 +2318,7 @@ def main(argv: list[str] | None = None) -> int:
         "generate-game-assets": _cmd_generate_game_assets,
         "verify-game-assets": _cmd_verify_game_assets,
         "export-wav-delivery": _cmd_export_wav_delivery,
+        "run-release-gate": _cmd_run_release_gate,
     }
 
     handler = dispatch.get(args.command)
