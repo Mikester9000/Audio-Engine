@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -188,8 +189,11 @@ def _normalize_instrument_choice(value: str, fallback: str) -> str:
 
 
 def _new_file_output_targets(base_name: str, output_dir: str | Path, *, fmt: str = "wav") -> dict[str, str]:
-    clean = base_name.strip() or "new_asset"
-    ext = fmt.lower().strip(".") or "wav"
+    normalized = re.sub(r"[^A-Za-z0-9_-]+", "_", base_name.strip()).strip("_")
+    clean = normalized or "new_asset"
+    ext = fmt.lower().strip(".")
+    if ext not in {"wav", "ogg"}:
+        ext = "wav"
     root = Path(output_dir)
     return {
         "music": str(root / f"{clean}_music.{ext}"),
@@ -397,7 +401,7 @@ def launch_studio() -> None:
         from audio_engine.ai.music_gen import MusicGen
         backend_name = music_backend.get()
         
-        def _emit_music(prompt_value: str) -> Path:
+        def _emit_music(prompt_value: str, *, style_override: str | None = None) -> Path:
             return MusicGen(
                 sample_rate=44100,
                 backend=_resolve_backend(
@@ -417,6 +421,7 @@ def launch_studio() -> None:
                 fmt="ogg" if music_format.get() == "ogg" else "wav",
                 region=music_region.get().strip() or None,
                 adaptive_intensity=bool(music_adaptive_intensity.get()),
+                style_override=style_override,
             )
 
         if custom_arrangement.get() and backend_name == "procedural":
@@ -459,7 +464,7 @@ def launch_studio() -> None:
                     ostinato_instrument=_normalize_instrument_choice(custom_ostinato.get(), source.ostinato_instrument),
                 )
                 try:
-                    return _emit_music(temporary_style_name)
+                    return _emit_music(prompt, style_override=temporary_style_name)
                 finally:
                     generator_module._STYLE_DEFS.pop(temporary_style_name, None)
 

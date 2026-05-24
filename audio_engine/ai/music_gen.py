@@ -102,6 +102,7 @@ class MusicGen:
         loopable: bool = False,
         region: str | None = None,
         adaptive_intensity: bool = False,
+        style_override: str | None = None,
     ) -> np.ndarray:
         """Generate a music track from a text prompt.
 
@@ -122,6 +123,8 @@ class MusicGen:
         """
         shaped_prompt = self._prompt_with_region(prompt, region)
         plan = self._parser.parse_music(shaped_prompt, duration=duration)
+        if style_override:
+            plan.style = style_override.strip() or plan.style
         if loopable:
             plan.loopable = True
         return self._generate_from_plan(
@@ -166,6 +169,7 @@ class MusicGen:
         region: str | None = None,
         adaptive_intensity: bool = False,
         layer_output_dir: str | Path | None = None,
+        style_override: str | None = None,
     ) -> Path:
         """Generate music and save to *output_path*.
 
@@ -193,6 +197,7 @@ class MusicGen:
             loopable=loopable,
             region=region,
             adaptive_intensity=adaptive_intensity,
+            style_override=style_override,
         )
         if loopable:
             audio = bake_crossfade_loop(audio, self.sample_rate, crossfade_ms=500)

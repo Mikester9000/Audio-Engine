@@ -516,6 +516,24 @@ class TestMusicGen:
         assert "forest canopy" in kwargs0["prompt"]
         assert float(np.max(adaptive_audio)) > float(np.max(baseline_audio))
 
+    def test_generate_to_file_style_override_forces_backend_style(self, monkeypatch, tmp_path):
+        gen = MusicGen(sample_rate=SR, seed=0, apply_mastering=False)
+        calls: list[dict[str, object]] = []
+
+        def _fake_generate_music_audio(style: str, duration: float, bpm: float | None = None, **kwargs):
+            calls.append({"style": style, "duration": duration, "bpm": bpm, "kwargs": kwargs})
+            return np.ones((32, 2), dtype=np.float32) * 0.5
+
+        monkeypatch.setattr(gen._backend, "generate_music_audio", _fake_generate_music_audio)
+        gen.generate_to_file(
+            "battle theme",
+            tmp_path / "music.wav",
+            duration=1.0,
+            style_override="studio_custom_battle",
+        )
+
+        assert calls[0]["style"] == "studio_custom_battle"
+
 
 # ---------------------------------------------------------------------------
 # SFXGen

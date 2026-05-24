@@ -124,6 +124,13 @@ def test_new_file_output_targets_use_base_name_and_dir(tmp_path: Path):
     assert targets["voice"].endswith("quest_intro_voice.wav")
 
 
+def test_new_file_output_targets_sanitize_name_and_format(tmp_path: Path):
+    targets = _new_file_output_targets("../quest intro?!", tmp_path / "renders", fmt="mp3")
+    assert targets["music"].endswith("quest_intro_music.wav")
+    assert targets["sfx"].endswith("quest_intro_sfx.wav")
+    assert targets["voice"].endswith("quest_intro_voice.wav")
+
+
 def test_write_new_file_template_roundtrip(tmp_path: Path):
     payload = _build_new_file_template(
         project_name="quest_intro",

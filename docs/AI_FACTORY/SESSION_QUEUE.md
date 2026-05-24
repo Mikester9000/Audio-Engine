@@ -301,32 +301,16 @@
 
 ## Current next session
 
-### SESSION-048 — Full Orchestral Synth (completed)
+### SESSION-050 — Release-gate alignment checks for style/synth intent
 
-- **Status:** `completed`
-- **Task type:** `synthesis + cli`
-- **Objective:** Add a full orchestral synth backend and new distinct instruments to address "same sounds for everything" audio feedback.
-- **Notes:**
-  - Added 8 new orchestral instruments: `oboe`, `clarinet`, `french_horn`, `cello`, `harp`, `celesta`, `timpani`, `marimba`.
-  - Added `full_orchestral` backend with per-section stereo panning and OST mastering.
-  - Updated 6 style defs to use distinct section instruments.
-  - 24 new instrument tests + 14 new backend tests.
-
-### SESSION-032 — Add license compliance CI gate
-
-- **Status:** `completed`
-- **Task type:** `cli`
-- **Objective:** Fail CI on unknown or disallowed dependency/model licenses and emit a machine-readable compliance report for auditability.
-- **Notes:**
-  - Added `tools/license_policy.toml` (SPDX policy with allow/conditional/block sections).
-  - Added `audio_engine/compliance/license_checker.py` scoped to declared deps only.
-  - Added `audio-engine check-licenses` CLI command (exits 0=compliant, 1=blocked/unknown).
-  - Added `.github/workflows/license-compliance.yml` CI gate.
-  - 21 new tests in `tests/test_license_compliance.py`.
+- **Status:** `ready`
+- **Task type:** `qa + orchestration`
+- **Objective:** Integrate style/synth alignment checks into release-gate reporting surfaces and document failure/remediation flow for deterministic factory runs.
+- **Notes:** Wire `MusicGenerator.validate_style_library_alignment()` into a machine-readable QA/release gate output path and add CLI-level smoke coverage.
 
 ## Remaining planned sessions (post-baseline)
 
-## Current next session
+### Recently completed session context
 
 ### SESSION-051 — PS2 instrument identity refinement (piano + guitar families)
 
@@ -350,14 +334,28 @@
   - Expanded SFX categories with `gunshot`, `engine_rev`, and `ui_success` families.
   - Added/updated tests in `tests/test_studio_ui.py` and `tests/test_generator.py`.
 
-### SESSION-050 — Release-gate alignment checks for style/synth intent
+### SESSION-048 — Full Orchestral Synth
 
-- **Status:** `ready`
-- **Task type:** `qa + orchestration`
-- **Objective:** Integrate style/synth alignment checks into release-gate reporting surfaces and document failure/remediation flow for deterministic factory runs.
-- **Notes:** Wire `MusicGenerator.validate_style_library_alignment()` into a machine-readable QA/release gate output path and add CLI-level smoke coverage.
+- **Status:** `completed`
+- **Task type:** `synthesis + cli`
+- **Objective:** Add a full orchestral synth backend and new distinct instruments to address "same sounds for everything" audio feedback.
+- **Notes:**
+  - Added 8 new orchestral instruments: `oboe`, `clarinet`, `french_horn`, `cello`, `harp`, `celesta`, `timpani`, `marimba`.
+  - Added `full_orchestral` backend with per-section stereo panning and OST mastering.
+  - Updated 6 style defs to use distinct section instruments.
+  - 24 new instrument tests + 14 new backend tests.
 
-### Recently completed session context
+### SESSION-032 — Add license compliance CI gate
+
+- **Status:** `completed`
+- **Task type:** `cli`
+- **Objective:** Fail CI on unknown or disallowed dependency/model licenses and emit a machine-readable compliance report for auditability.
+- **Notes:**
+  - Added `tools/license_policy.toml` (SPDX policy with allow/conditional/block sections).
+  - Added `audio_engine/compliance/license_checker.py` scoped to declared deps only.
+  - Added `audio-engine check-licenses` CLI command (exits 0=compliant, 1=blocked/unknown).
+  - Added `.github/workflows/license-compliance.yml` CI gate.
+  - 21 new tests in `tests/test_license_compliance.py`.
 
 ### SESSION-038 — Stabilize dual-path vocal and instrumental workflow
 
