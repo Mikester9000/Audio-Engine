@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_beach_v1",
+  "assetId": "bgm_test_beach",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205006,
+  "prompt": "relaxed beach ambience music with light percussion and warm chords, loopable",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_beach_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_beach.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:56:54.854683+00:00"
+}

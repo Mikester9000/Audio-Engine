@@ -1,0 +1,297 @@
+{
+  "output_dir": "audio_export",
+  "music": [
+    {
+      "request_id": "req_music_bgm_field_day_v1",
+      "asset_id": "bgm_field_day",
+      "type": "music",
+      "seed": 204801,
+      "file": "audio_export/drafts/music/req_music_bgm_field_day_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_field_day_ost_v1",
+      "asset_id": "bgm_field_day_ost",
+      "type": "music",
+      "seed": 204802,
+      "file": "audio_export/drafts/music/req_music_bgm_field_day_ost_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_town_evening_v1",
+      "asset_id": "bgm_town_evening",
+      "type": "music",
+      "seed": 204823,
+      "file": "audio_export/drafts/music/req_music_bgm_town_evening_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_town_evening_ost_v1",
+      "asset_id": "bgm_town_evening_ost",
+      "type": "music",
+      "seed": 204824,
+      "file": "audio_export/drafts/music/req_music_bgm_town_evening_ost_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_dungeon_ruins_v1",
+      "asset_id": "bgm_dungeon_ruins",
+      "type": "music",
+      "seed": 204845,
+      "file": "audio_export/drafts/music/req_music_bgm_dungeon_ruins_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_dungeon_ruins_ost_v1",
+      "asset_id": "bgm_dungeon_ruins_ost",
+      "type": "music",
+      "seed": 204846,
+      "file": "audio_export/drafts/music/req_music_bgm_dungeon_ruins_ost_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_battle_standard_v1",
+      "asset_id": "bgm_battle_standard",
+      "type": "music",
+      "seed": 204812,
+      "file": "audio_export/drafts/music/req_music_bgm_battle_standard_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_battle_standard_ost_v1",
+      "asset_id": "bgm_battle_standard_ost",
+      "type": "music",
+      "seed": 204813,
+      "file": "audio_export/drafts/music/req_music_bgm_battle_standard_ost_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_boss_phase1_v1",
+      "asset_id": "bgm_boss_phase1",
+      "type": "music",
+      "seed": 204856,
+      "file": "audio_export/drafts/music/req_music_bgm_boss_phase1_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_boss_phase1_ost_v1",
+      "asset_id": "bgm_boss_phase1_ost",
+      "type": "music",
+      "seed": 204857,
+      "file": "audio_export/drafts/music/req_music_bgm_boss_phase1_ost_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_tension_stealth_v1",
+      "asset_id": "bgm_tension_stealth",
+      "type": "music",
+      "seed": 204868,
+      "file": "audio_export/drafts/music/req_music_bgm_tension_stealth_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_sadness_memorial_v1",
+      "asset_id": "bgm_sadness_memorial",
+      "type": "music",
+      "seed": 204879,
+      "file": "audio_export/drafts/music/req_music_bgm_sadness_memorial_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_stinger_victory_short_v1",
+      "asset_id": "stinger_victory_short",
+      "type": "music",
+      "seed": 204834,
+      "file": "audio_export/drafts/music/req_music_stinger_victory_short_v1.wav",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_fanfare_item_obtain_v1",
+      "asset_id": "fanfare_item_obtain",
+      "type": "music",
+      "seed": 204835,
+      "file": "audio_export/drafts/music/req_music_fanfare_item_obtain_v1.wav",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_fanfare_quest_complete_v1",
+      "asset_id": "fanfare_quest_complete",
+      "type": "music",
+      "seed": 204836,
+      "file": "audio_export/drafts/music/req_music_fanfare_quest_complete_v1.wav",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_driving_v1",
+      "asset_id": "bgm_test_driving",
+      "type": "music",
+      "seed": 205001,
+      "file": "audio_export/drafts/music/req_music_bgm_test_driving_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_hopeful_v1",
+      "asset_id": "bgm_test_hopeful",
+      "type": "music",
+      "seed": 205002,
+      "file": "audio_export/drafts/music/req_music_bgm_test_hopeful_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_romance_v1",
+      "asset_id": "bgm_test_romance",
+      "type": "music",
+      "seed": 205003,
+      "file": "audio_export/drafts/music/req_music_bgm_test_romance_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_love_v1",
+      "asset_id": "bgm_test_love",
+      "type": "music",
+      "seed": 205004,
+      "file": "audio_export/drafts/music/req_music_bgm_test_love_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_sailing_v1",
+      "asset_id": "bgm_test_sailing",
+      "type": "music",
+      "seed": 205005,
+      "file": "audio_export/drafts/music/req_music_bgm_test_sailing_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_beach_v1",
+      "asset_id": "bgm_test_beach",
+      "type": "music",
+      "seed": 205006,
+      "file": "audio_export/drafts/music/req_music_bgm_test_beach_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_snowy_mountains_v1",
+      "asset_id": "bgm_test_snowy_mountains",
+      "type": "music",
+      "seed": 205007,
+      "file": "audio_export/drafts/music/req_music_bgm_test_snowy_mountains_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_hot_desert_v1",
+      "asset_id": "bgm_test_hot_desert",
+      "type": "music",
+      "seed": 205008,
+      "file": "audio_export/drafts/music/req_music_bgm_test_hot_desert_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_high_tech_city_v1",
+      "asset_id": "bgm_test_high_tech_city",
+      "type": "music",
+      "seed": 205009,
+      "file": "audio_export/drafts/music/req_music_bgm_test_high_tech_city_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_elevator_music_v1",
+      "asset_id": "bgm_test_elevator_music",
+      "type": "music",
+      "seed": 205010,
+      "file": "audio_export/drafts/music/req_music_bgm_test_elevator_music_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_guitar_solo_v1",
+      "asset_id": "bgm_test_guitar_solo",
+      "type": "music",
+      "seed": 205011,
+      "file": "audio_export/drafts/music/req_music_bgm_test_guitar_solo_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_piano_solo_v1",
+      "asset_id": "bgm_test_piano_solo",
+      "type": "music",
+      "seed": 205012,
+      "file": "audio_export/drafts/music/req_music_bgm_test_piano_solo_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_cyberpunk_v1",
+      "asset_id": "bgm_test_cyberpunk",
+      "type": "music",
+      "seed": 205013,
+      "file": "audio_export/drafts/music/req_music_bgm_test_cyberpunk_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_country_v1",
+      "asset_id": "bgm_test_country",
+      "type": "music",
+      "seed": 205014,
+      "file": "audio_export/drafts/music/req_music_bgm_test_country_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_rock_v1",
+      "asset_id": "bgm_test_rock",
+      "type": "music",
+      "seed": 205015,
+      "file": "audio_export/drafts/music/req_music_bgm_test_rock_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_emo_v1",
+      "asset_id": "bgm_test_emo",
+      "type": "music",
+      "seed": 205016,
+      "file": "audio_export/drafts/music/req_music_bgm_test_emo_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_lo_fi_v1",
+      "asset_id": "bgm_test_lo_fi",
+      "type": "music",
+      "seed": 205017,
+      "file": "audio_export/drafts/music/req_music_bgm_test_lo_fi_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_synth_pop_v1",
+      "asset_id": "bgm_test_synth_pop",
+      "type": "music",
+      "seed": 205018,
+      "file": "audio_export/drafts/music/req_music_bgm_test_synth_pop_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_synth_rock_v1",
+      "asset_id": "bgm_test_synth_rock",
+      "type": "music",
+      "seed": 205019,
+      "file": "audio_export/drafts/music/req_music_bgm_test_synth_rock_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_synth_wave_v1",
+      "asset_id": "bgm_test_synth_wave",
+      "type": "music",
+      "seed": 205020,
+      "file": "audio_export/drafts/music/req_music_bgm_test_synth_wave_v1.ogg",
+      "status": "ok"
+    },
+    {
+      "request_id": "req_music_bgm_test_grand_opera_v1",
+      "asset_id": "bgm_test_grand_opera",
+      "type": "music",
+      "seed": 205021,
+      "file": "audio_export/drafts/music/req_music_bgm_test_grand_opera_v1.ogg",
+      "status": "ok"
+    }
+  ],
+  "sfx": [],
+  "voice": [],
+  "errors": [],
+  "total_duration_seconds": 311.724293301
+}

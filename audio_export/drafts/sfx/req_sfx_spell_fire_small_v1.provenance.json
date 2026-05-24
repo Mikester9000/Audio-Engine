@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_sfx_spell_fire_small_v1",
+  "assetId": "sfx_spell_fire_small",
+  "type": "sfx",
+  "backend": "procedural",
+  "seed": 305034,
+  "prompt": "small fire spell cast with arcane start and flame burst",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/sfx/req_sfx_spell_fire_small_v1.wav",
+  "targetImportPath": "Content/Audio/sfx_spell_fire_small.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:52:49.492066+00:00"
+}

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import functools
 import json
+import re
 import shutil
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Protocol
 
@@ -17,9 +19,11 @@ from audio_engine.ai.sfx_synth import available_sfx_types
 from audio_engine.ai.voice_gen import VoiceGen
 from audio_engine.ai.voice_synth import VOICE_PRESETS
 from audio_engine.render.offline_bounce import VALID_PROFILES
+from audio_engine.synthesizer.instrument import InstrumentLibrary
 
 _DEFAULT_SAMPLE_ROOT = "samples"
 _FALLBACK_STUDIO_BACKENDS = ["procedural", "sample"]
+_STYLE_OVERRIDE_LOCK = threading.Lock()
 
 
 class _StatusLabel(Protocol):
@@ -177,6 +181,47 @@ def _write_studio_preset(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
+def _normalize_instrument_choice(value: str, fallback: str) -> str:
+    available = set(InstrumentLibrary.available())
+    if value in available:
+        return value
+    return fallback
+
+
+def _new_file_output_targets(base_name: str, output_dir: str | Path, *, fmt: str = "wav") -> dict[str, str]:
+    normalized = re.sub(r"[^A-Za-z0-9_-]+", "_", base_name.strip()).strip("_")
+    clean = normalized or "new_asset"
+    ext = fmt.lower().strip(".")
+    if ext not in {"wav", "ogg"}:
+        ext = "wav"
+    root = Path(output_dir)
+    return {
+        "music": str(root / f"{clean}_music.{ext}"),
+        "sfx": str(root / f"{clean}_sfx.wav"),
+        "voice": str(root / f"{clean}_voice.wav"),
+    }
+
+
+def _build_new_file_template(
+    *,
+    project_name: str,
+    preset_path: str,
+    output_targets: dict[str, str],
+    preset_payload: dict[str, object],
+) -> dict[str, object]:
+    return {
+        "projectName": project_name.strip() or "new_audio_asset",
+        "presetPath": preset_path,
+        "outputTargets": output_targets,
+        "preset": preset_payload,
+    }
+
+
+def _write_new_file_template(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
 def _set_status(label: _StatusLabel, text: str) -> None:
     label.configure(text=text)
     label.update_idletasks()
@@ -197,6 +242,10 @@ def launch_studio() -> None:
     control_bar = ttk.Frame(root)
     control_bar.pack(fill="x", padx=8, pady=6)
     preset_path = tk.StringVar(value="studio_preset.json")
+    new_file_path = tk.StringVar(value="studio_new_file.json")
+    new_project_name = tk.StringVar(value="new_audio_asset")
+    output_dir = tk.StringVar(value="output")
+    output_base_name = tk.StringVar(value="new_asset")
     examples_root = tk.StringVar(value="assets/examples")
     sample_root = tk.StringVar(value=_DEFAULT_SAMPLE_ROOT)
     sample_base_backend = tk.StringVar(value="synth_orchestral")
@@ -204,6 +253,14 @@ def launch_studio() -> None:
     ttk.Entry(control_bar, textvariable=preset_path).grid(row=0, column=1, sticky="ew", padx=4)
     ttk.Label(control_bar, text="Examples WAV root").grid(row=1, column=0, sticky="w", padx=4)
     ttk.Entry(control_bar, textvariable=examples_root).grid(row=1, column=1, sticky="ew", padx=4)
+    ttk.Label(control_bar, text="New file JSON").grid(row=0, column=6, sticky="w", padx=4)
+    ttk.Entry(control_bar, textvariable=new_file_path, width=28).grid(row=0, column=7, sticky="ew", padx=4)
+    ttk.Label(control_bar, text="Project").grid(row=1, column=6, sticky="w", padx=4)
+    ttk.Entry(control_bar, textvariable=new_project_name, width=28).grid(row=1, column=7, sticky="ew", padx=4)
+    ttk.Label(control_bar, text="Output dir").grid(row=2, column=6, sticky="w", padx=4)
+    ttk.Entry(control_bar, textvariable=output_dir, width=28).grid(row=2, column=7, sticky="ew", padx=4)
+    ttk.Label(control_bar, text="Base name").grid(row=3, column=6, sticky="w", padx=4)
+    ttk.Entry(control_bar, textvariable=output_base_name, width=28).grid(row=3, column=7, sticky="ew", padx=4)
     ttk.Label(control_bar, text="Sample WAV root").grid(row=2, column=0, sticky="w", padx=4)
     ttk.Entry(control_bar, textvariable=sample_root).grid(row=2, column=1, sticky="ew", padx=4)
     ttk.Label(control_bar, text="Sample base").grid(row=2, column=2, sticky="w", padx=4)
@@ -217,6 +274,7 @@ def launch_studio() -> None:
     global_status = ttk.Label(control_bar, text="")
     global_status.grid(row=4, column=0, columnspan=12, sticky="w", padx=4, pady=(4, 0))
     control_bar.columnconfigure(1, weight=1)
+    control_bar.columnconfigure(7, weight=1)
 
     notebook = ttk.Notebook(root)
     notebook.pack(fill="both", expand=True, padx=8, pady=(0, 8))
@@ -270,8 +328,60 @@ def launch_studio() -> None:
     music_out = tk.StringVar(value="music.wav")
     ttk.Entry(music_tab, textvariable=music_out).grid(row=6, column=1, sticky="ew", padx=8, pady=6)
 
+    ttk.Label(music_tab, text="Prompt override").grid(row=7, column=0, sticky="w", padx=8, pady=6)
+    music_prompt = tk.StringVar(value="")
+    ttk.Entry(music_tab, textvariable=music_prompt).grid(row=7, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(music_tab, text="Output format").grid(row=8, column=0, sticky="w", padx=8, pady=6)
+    music_format = tk.StringVar(value="wav")
+    ttk.Combobox(music_tab, textvariable=music_format, values=["wav", "ogg"], state="readonly").grid(row=8, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(music_tab, text="Region hint").grid(row=9, column=0, sticky="w", padx=8, pady=6)
+    music_region = tk.StringVar(value="")
+    ttk.Combobox(
+        music_tab,
+        textvariable=music_region,
+        values=["", "plains", "forest", "coast", "ruins", "arid"],
+        state="readonly",
+    ).grid(row=9, column=1, sticky="ew", padx=8, pady=6)
+
+    music_adaptive_intensity = tk.BooleanVar(value=False)
+    ttk.Checkbutton(music_tab, text="Adaptive intensity", variable=music_adaptive_intensity).grid(row=10, column=0, columnspan=2, sticky="w", padx=8, pady=4)
+
+    custom_arrangement = tk.BooleanVar(value=False)
+    ttk.Checkbutton(music_tab, text="Custom arrangement (procedural backend)", variable=custom_arrangement).grid(row=11, column=0, columnspan=2, sticky="w", padx=8, pady=4)
+
+    instrument_choices = InstrumentLibrary.available()
+    ttk.Label(music_tab, text="Lead instrument").grid(row=12, column=0, sticky="w", padx=8, pady=6)
+    custom_lead = tk.StringVar(value="strings")
+    ttk.Combobox(music_tab, textvariable=custom_lead, values=instrument_choices, state="readonly").grid(row=12, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(music_tab, text="Counter instrument").grid(row=13, column=0, sticky="w", padx=8, pady=6)
+    custom_counter = tk.StringVar(value="flute")
+    ttk.Combobox(music_tab, textvariable=custom_counter, values=instrument_choices, state="readonly").grid(row=13, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(music_tab, text="Pad / accompaniment").grid(row=14, column=0, sticky="w", padx=8, pady=6)
+    custom_pad = tk.StringVar(value="synth_pad")
+    ttk.Combobox(music_tab, textvariable=custom_pad, values=instrument_choices, state="readonly").grid(row=14, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(music_tab, text="Chord support").grid(row=15, column=0, sticky="w", padx=8, pady=6)
+    custom_chord = tk.StringVar(value="strings")
+    ttk.Combobox(music_tab, textvariable=custom_chord, values=instrument_choices, state="readonly").grid(row=15, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(music_tab, text="Bass instrument").grid(row=16, column=0, sticky="w", padx=8, pady=6)
+    custom_bass = tk.StringVar(value="bass")
+    ttk.Combobox(music_tab, textvariable=custom_bass, values=instrument_choices, state="readonly").grid(row=16, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(music_tab, text="Ostinato instrument").grid(row=17, column=0, sticky="w", padx=8, pady=6)
+    custom_ostinato = tk.StringVar(value="crystal_synth")
+    ttk.Combobox(music_tab, textvariable=custom_ostinato, values=instrument_choices, state="readonly").grid(row=17, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(music_tab, text="Percussion instrument").grid(row=18, column=0, sticky="w", padx=8, pady=6)
+    custom_percussion = tk.StringVar(value="percussion")
+    ttk.Combobox(music_tab, textvariable=custom_percussion, values=["", *instrument_choices], state="readonly").grid(row=18, column=1, sticky="ew", padx=8, pady=6)
+
     music_status = ttk.Label(music_tab, text="")
-    music_status.grid(row=8, column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    music_status.grid(row=20, column=0, columnspan=2, sticky="w", padx=8, pady=8)
 
     def _refresh_bpm(*_args: object) -> None:
         style = music_style.get()
@@ -285,28 +395,80 @@ def launch_studio() -> None:
         bars = max(4, _safe_int(str(bars_var.get()), 16))
         bpm = max(40, _safe_int(bpm_var.get(), 120))
         duration = bars * (60.0 / bpm) * 4.0
-        prompt = style
+        prompt = music_prompt.get().strip() or style
         out_path = Path(music_out.get())
         out_path.parent.mkdir(parents=True, exist_ok=True)
         from audio_engine.ai.music_gen import MusicGen
-        return MusicGen(
-            sample_rate=44100,
-            backend=_resolve_backend(
-                backend_name=music_backend.get(),
+        backend_name = music_backend.get()
+
+        def _emit_music(prompt_value: str, *, style_override: str | None = None) -> Path:
+            return MusicGen(
                 sample_rate=44100,
+                backend=_resolve_backend(
+                    backend_name=backend_name,
+                    sample_rate=44100,
+                    seed=seed,
+                    samples_dir=sample_root.get().strip(),
+                    sample_base_backend=sample_base_backend.get(),
+                ),
                 seed=seed,
-                samples_dir=sample_root.get().strip(),
-                sample_base_backend=sample_base_backend.get(),
-            ),
-            seed=seed,
-            mastering_profile=music_profile.get(),
-        ).generate_to_file(
-            prompt=prompt,
-            output_path=out_path,
-            duration=duration,
-            loopable=True,
-            fmt="wav",
-        )
+                mastering_profile=music_profile.get(),
+            ).generate_to_file(
+                prompt=prompt_value,
+                output_path=out_path,
+                duration=duration,
+                loopable=True,
+                fmt="ogg" if music_format.get() == "ogg" else "wav",
+                region=music_region.get().strip() or None,
+                adaptive_intensity=bool(music_adaptive_intensity.get()),
+                style_override=style_override,
+            )
+
+        if custom_arrangement.get() and backend_name == "procedural":
+            from audio_engine.ai import generator as generator_module
+
+            source = generator_module._STYLE_DEFS.get(style)
+            if source is None:
+                raise ValueError(f"unknown source style for override: {style}")
+            lead_fallback = source.instruments[0] if source.instruments else "strings"
+            counter_fallback = source.instruments[1] if len(source.instruments) > 1 else lead_fallback
+            pad_fallback = source.accompaniment[0] if source.accompaniment else "synth_pad"
+            chord_fallback = source.accompaniment[1] if len(source.accompaniment) > 1 else (source.accompaniment[0] if source.accompaniment else "strings")
+            percussion_choice = custom_percussion.get().strip()
+            percussion_fallback = source.percussion_instrument or "percussion"
+            temporary_style_name = f"studio_custom_{style}"
+            with _STYLE_OVERRIDE_LOCK:
+                generator_module._STYLE_DEFS[temporary_style_name] = generator_module._StyleDef(
+                    bpm=float(bpm),
+                    scale_name=str(source.scale_name),
+                    root=str(source.root),
+                    octave=int(source.octave),
+                    progression_name=str(source.progression_name),
+                    instruments=[
+                        _normalize_instrument_choice(custom_lead.get(), lead_fallback),
+                        _normalize_instrument_choice(custom_counter.get(), counter_fallback),
+                    ],
+                    accompaniment=[
+                        _normalize_instrument_choice(custom_pad.get(), pad_fallback),
+                        _normalize_instrument_choice(custom_chord.get(), chord_fallback),
+                    ],
+                    bass_instrument=_normalize_instrument_choice(custom_bass.get(), source.bass_instrument),
+                    percussion_instrument=(
+                        _normalize_instrument_choice(custom_percussion.get(), percussion_fallback)
+                        if percussion_choice
+                        else None
+                    ),
+                    melody_pattern=str(source.melody_pattern),
+                    chord_pattern=str(source.chord_pattern),
+                    bars=int(bars),
+                    ostinato_instrument=_normalize_instrument_choice(custom_ostinato.get(), source.ostinato_instrument),
+                )
+                try:
+                    return _emit_music(prompt, style_override=temporary_style_name)
+                finally:
+                    generator_module._STYLE_DEFS.pop(temporary_style_name, None)
+
+        return _emit_music(prompt)
 
     def _generate_music() -> None:
         nonlocal last_failed_action
@@ -323,7 +485,7 @@ def launch_studio() -> None:
             _set_status(music_status, f"Error: {exc}")
             _set_status(global_status, f"Music failed — {exc}")
 
-    ttk.Button(music_tab, text="Generate", command=_generate_music).grid(row=7, column=0, columnspan=2, pady=8)
+    ttk.Button(music_tab, text="Generate", command=_generate_music).grid(row=19, column=0, columnspan=2, pady=8)
 
     # SFX tab
     ttk.Label(sfx_tab, text="Category").grid(row=0, column=0, sticky="w", padx=8, pady=6)
@@ -478,12 +640,28 @@ def launch_studio() -> None:
                 "examplesRoot": examples_root.get(),
                 "sampleRoot": sample_root.get(),
                 "sampleBaseBackend": sample_base_backend.get(),
+                "newFilePath": new_file_path.get(),
+                "newProjectName": new_project_name.get(),
+                "outputDir": output_dir.get(),
+                "outputBaseName": output_base_name.get(),
             },
             "music": {
                 "style": music_style.get(),
+                "prompt": music_prompt.get(),
                 "backend": music_backend.get(),
                 "profile": music_profile.get(),
                 "bars": int(max(4, _safe_int(str(bars_var.get()), 16))),
+                "region": music_region.get(),
+                "adaptiveIntensity": bool(music_adaptive_intensity.get()),
+                "format": music_format.get(),
+                "customArrangement": bool(custom_arrangement.get()),
+                "leadInstrument": custom_lead.get(),
+                "counterInstrument": custom_counter.get(),
+                "padInstrument": custom_pad.get(),
+                "chordInstrument": custom_chord.get(),
+                "bassInstrument": custom_bass.get(),
+                "ostinatoInstrument": custom_ostinato.get(),
+                "percussionInstrument": custom_percussion.get(),
                 "seed": music_seed.get(),
                 "outputPath": music_out.get(),
             },
@@ -524,18 +702,41 @@ def launch_studio() -> None:
                 sample_base = str(studio.get("sampleBaseBackend", sample_base_backend.get()))
                 if sample_base in {"synth_orchestral", "ps1", "full_orchestral", "procedural"}:
                     sample_base_backend.set(sample_base)
+                new_file_path.set(str(studio.get("newFilePath", new_file_path.get())))
+                new_project_name.set(str(studio.get("newProjectName", new_project_name.get())))
+                output_dir.set(str(studio.get("outputDir", output_dir.get())))
+                output_base_name.set(str(studio.get("outputBaseName", output_base_name.get())))
             music = data.get("music", {})
             if isinstance(music, dict):
                 style_value = str(music.get("style", music_style.get()))
                 if style_value in MusicGenerator.available_styles():
                     music_style.set(style_value)
                     _refresh_bpm()
+                music_prompt.set(str(music.get("prompt", music_prompt.get())))
                 backend_value = str(music.get("backend", music_backend.get()))
                 if backend_value in _available_backends_for_modality("music", sample_rate=44100):
                     music_backend.set(backend_value)
                 profile_value = str(music.get("profile", music_profile.get()))
                 if profile_value in VALID_PROFILES:
                     music_profile.set(profile_value)
+                region_value = str(music.get("region", music_region.get()))
+                if region_value in {"", "plains", "forest", "coast", "ruins", "arid"}:
+                    music_region.set(region_value)
+                format_value = str(music.get("format", music_format.get())).lower()
+                if format_value in {"wav", "ogg"}:
+                    music_format.set(format_value)
+                custom_arrangement.set(bool(music.get("customArrangement", custom_arrangement.get())))
+                custom_lead.set(_normalize_instrument_choice(str(music.get("leadInstrument", custom_lead.get())), custom_lead.get()))
+                custom_counter.set(_normalize_instrument_choice(str(music.get("counterInstrument", custom_counter.get())), custom_counter.get()))
+                custom_pad.set(_normalize_instrument_choice(str(music.get("padInstrument", custom_pad.get())), custom_pad.get()))
+                custom_chord.set(_normalize_instrument_choice(str(music.get("chordInstrument", custom_chord.get())), custom_chord.get()))
+                custom_bass.set(_normalize_instrument_choice(str(music.get("bassInstrument", custom_bass.get())), custom_bass.get()))
+                custom_ostinato.set(_normalize_instrument_choice(str(music.get("ostinatoInstrument", custom_ostinato.get())), custom_ostinato.get()))
+                percussion_value = str(music.get("percussionInstrument", custom_percussion.get()))
+                if percussion_value:
+                    percussion_value = _normalize_instrument_choice(percussion_value, custom_percussion.get())
+                custom_percussion.set(percussion_value)
+                music_adaptive_intensity.set(bool(music.get("adaptiveIntensity", music_adaptive_intensity.get())))
                 bars_raw = music.get("bars", bars_var.get())
                 bars_value = _safe_int(str(bars_raw), int(bars_var.get()))
                 bars_var.set(max(4, bars_value))
@@ -581,6 +782,37 @@ def launch_studio() -> None:
             _refresh_preview_files()
         except Exception as exc:  # pragma: no cover - UI path
             _set_status(global_status, f"Preset load failed — {exc}")
+
+    def _apply_new_file_targets() -> None:
+        targets = _new_file_output_targets(
+            output_base_name.get(),
+            output_dir.get(),
+            fmt=music_format.get(),
+        )
+        music_out.set(targets["music"])
+        sfx_out.set(targets["sfx"])
+        voice_out.set(targets["voice"])
+        _set_status(global_status, f"New file targets applied for '{output_base_name.get().strip() or 'new_asset'}'.")
+        _refresh_preview_files()
+
+    def _write_new_file() -> None:
+        try:
+            targets = _new_file_output_targets(
+                output_base_name.get(),
+                output_dir.get(),
+                fmt=music_format.get(),
+            )
+            payload = _build_new_file_template(
+                project_name=new_project_name.get(),
+                preset_path=preset_path.get(),
+                output_targets=targets,
+                preset_payload=_build_current_preset(),
+            )
+            path = Path(new_file_path.get())
+            _write_new_file_template(path, payload)
+            _set_status(global_status, f"New file template saved: {path}")
+        except Exception as exc:  # pragma: no cover - UI path
+            _set_status(global_status, f"New file template failed — {exc}")
 
     def _generate_all() -> None:
         nonlocal last_failed_action
@@ -689,6 +921,8 @@ def launch_studio() -> None:
     ttk.Button(control_bar, text="Retry Last Error", command=_retry_last_error).grid(row=0, column=5, padx=4)
     ttk.Button(control_bar, text="Browse Examples", command=_browse_example_root).grid(row=1, column=2, padx=4)
     ttk.Button(control_bar, text="Refresh Preview Files", command=_refresh_preview_files).grid(row=1, column=3, padx=4)
+    ttk.Button(control_bar, text="New File Targets", command=_apply_new_file_targets).grid(row=1, column=4, padx=4)
+    ttk.Button(control_bar, text="Write New File JSON", command=_write_new_file).grid(row=1, column=5, padx=4)
 
     ttk.Button(preview_frame, text="Play", command=_play_selected).grid(row=0, column=4, padx=6, pady=6)
     ttk.Button(preview_frame, text="Stop", command=_stop_selected).grid(row=0, column=5, padx=6, pady=6)

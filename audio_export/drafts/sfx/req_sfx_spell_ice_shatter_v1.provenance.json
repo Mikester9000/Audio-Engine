@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_sfx_spell_ice_shatter_v1",
+  "assetId": "sfx_spell_ice_shatter",
+  "type": "sfx",
+  "backend": "procedural",
+  "seed": 305035,
+  "prompt": "ice spell hit with brittle crystalline shatter and short tail",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/sfx/req_sfx_spell_ice_shatter_v1.wav",
+  "targetImportPath": "Content/Audio/sfx_spell_ice_shatter.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:52:49.497655+00:00"
+}

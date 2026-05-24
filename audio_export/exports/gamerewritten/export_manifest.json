@@ -1,0 +1,194 @@
+{
+  "exportManifestVersion": "1.0.0",
+  "factoryRoot": "audio_export",
+  "exportedAt": "2026-05-24T15:58:43.563479+00:00",
+  "summary": {
+    "total": 46
+  },
+  "entries": [
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_battle_standard_ost_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_battle_standard_ost.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_battle_standard_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_battle_standard.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_boss_phase1_ost_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_boss_phase1_ost.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_boss_phase1_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_boss_phase1.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_dungeon_ruins_ost_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_dungeon_ruins_ost.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_dungeon_ruins_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_dungeon_ruins.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_field_day_ost_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_field_day_ost.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_field_day_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_field_day.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_sadness_memorial_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_sadness_memorial.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_tension_stealth_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_tension_stealth.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_beach_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_beach.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_country_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_country.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_cyberpunk_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_cyberpunk.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_driving_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_driving.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_elevator_music_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_elevator_music.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_emo_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_emo.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_grand_opera_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_grand_opera.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_guitar_solo_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_guitar_solo.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_high_tech_city_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_high_tech_city.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_hopeful_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_hopeful.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_hot_desert_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_hot_desert.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_lo_fi_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_lo_fi.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_love_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_love.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_piano_solo_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_piano_solo.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_rock_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_rock.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_romance_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_romance.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_sailing_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_sailing.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_snowy_mountains_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_snowy_mountains.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_synth_pop_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_synth_pop.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_synth_rock_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_synth_rock.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_test_synth_wave_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_test_synth_wave.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_town_evening_ost_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_town_evening_ost.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_bgm_town_evening_v1.ogg",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/bgm_town_evening.ogg"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_fanfare_item_obtain_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/fanfare_item_obtain.wav"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_fanfare_quest_complete_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/fanfare_quest_complete.wav"
+    },
+    {
+      "source": "audio_export/drafts/music/req_music_stinger_victory_short_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/stinger_victory_short.wav"
+    },
+    {
+      "source": "audio_export/drafts/sfx/req_sfx_amb_forest_day_loop_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/amb_forest_day_loop.wav"
+    },
+    {
+      "source": "audio_export/drafts/sfx/req_sfx_amb_town_market_loop_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/amb_town_market_loop.wav"
+    },
+    {
+      "source": "audio_export/drafts/sfx/req_sfx_amb_wind_ruins_loop_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/amb_wind_ruins_loop.wav"
+    },
+    {
+      "source": "audio_export/drafts/sfx/req_sfx_attack_light_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/sfx_attack_light.wav"
+    },
+    {
+      "source": "audio_export/drafts/sfx/req_sfx_combat_parry_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/sfx_combat_parry.wav"
+    },
+    {
+      "source": "audio_export/drafts/sfx/req_sfx_spell_fire_small_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/sfx_spell_fire_small.wav"
+    },
+    {
+      "source": "audio_export/drafts/sfx/req_sfx_spell_ice_shatter_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/sfx_spell_ice_shatter.wav"
+    },
+    {
+      "source": "audio_export/drafts/sfx/req_sfx_ui_cancel_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/sfx_ui_cancel.wav"
+    },
+    {
+      "source": "audio_export/drafts/sfx/req_sfx_ui_confirm_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/sfx_ui_confirm.wav"
+    },
+    {
+      "source": "audio_export/drafts/sfx/req_sfx_ui_error_v1.wav",
+      "destination": "audio_export/exports/gamerewritten/Content/Audio/sfx_ui_error.wav"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_love_v1",
+  "assetId": "bgm_test_love",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205004,
+  "prompt": "tender love theme with lyrical melody and soft accompaniment, non-looping",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_love_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_love.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:56:46.158788+00:00"
+}

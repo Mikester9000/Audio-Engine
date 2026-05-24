@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_hopeful_v1",
+  "assetId": "bgm_test_hopeful",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205002,
+  "prompt": "hopeful cinematic cue with uplifting harmony and forward motion, loopable",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_hopeful_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_hopeful.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:56:35.891444+00:00"
+}

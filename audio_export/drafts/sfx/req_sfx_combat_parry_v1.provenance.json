@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_sfx_combat_parry_v1",
+  "assetId": "sfx_combat_parry",
+  "type": "sfx",
+  "backend": "procedural",
+  "seed": 305024,
+  "prompt": "metallic parry ring with quick damping and clear impact",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/sfx/req_sfx_combat_parry_v1.wav",
+  "targetImportPath": "Content/Audio/sfx_combat_parry.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:52:49.478057+00:00"
+}

@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_grand_opera_v1",
+  "assetId": "bgm_test_grand_opera",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205021,
+  "prompt": "grand opera inspired finale with dramatic arc and theatrical cadence, non-looping",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_grand_opera_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_grand_opera.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:58:06.355910+00:00"
+}

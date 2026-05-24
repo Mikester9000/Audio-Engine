@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_battle_standard_v1",
+  "assetId": "bgm_battle_standard",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204812,
+  "prompt": "urgent battle loop, synthetic-orchestral pulse, strong low strings and brass accents, loopable",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_battle_standard_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_battle_standard.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:54:30.030137+00:00"
+}

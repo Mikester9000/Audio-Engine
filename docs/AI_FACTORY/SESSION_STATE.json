@@ -1,11 +1,11 @@
 {
-  "version": "1.15.0",
-  "lastUpdated": "2026-05-23",
+  "version": "1.17.0",
+  "lastUpdated": "2026-05-24",
   "currentSession": {
-    "id": "SESSION-041",
-    "title": "End-to-end vertical slice release gate automation",
+    "id": "SESSION-051",
+    "title": "PS2 instrument identity refinement (piano + guitar families)",
     "status": "completed",
-    "taskType": "orchestration"
+    "taskType": "synthesis + regression"
   },
   "completedSessions": [
     {
@@ -255,6 +255,16 @@
     },
     {
       "id": "SESSION-041",
+      "status": "completed",
+      "completedDate": "2026-05-23"
+    },
+    {
+      "id": "SESSION-049",
+      "status": "completed",
+      "completedDate": "2026-05-23"
+    },
+    {
+      "id": "SESSION-051",
       "status": "completed",
       "completedDate": "2026-05-23"
     }

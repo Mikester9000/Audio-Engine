@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_synth_pop_v1",
+  "assetId": "bgm_test_synth_pop",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205018,
+  "prompt": "synth-pop track with bright hooks and danceable mid-tempo pulse, loopable",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_synth_pop_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_synth_pop.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:57:51.083740+00:00"
+}

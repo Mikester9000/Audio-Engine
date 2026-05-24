@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_fanfare_item_obtain_v1",
+  "assetId": "fanfare_item_obtain",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204835,
+  "prompt": "short item obtain fanfare with sparkle and clean ending",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_fanfare_item_obtain_v1.wav",
+  "targetImportPath": "Content/Audio/fanfare_item_obtain.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:56:11.873612+00:00"
+}

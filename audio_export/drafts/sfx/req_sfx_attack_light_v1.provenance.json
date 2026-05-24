@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_sfx_attack_light_v1",
+  "assetId": "sfx_attack_light",
+  "type": "sfx",
+  "backend": "procedural",
+  "seed": 305023,
+  "prompt": "light sword hit, clear transient, no long tail",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/sfx/req_sfx_attack_light_v1.wav",
+  "targetImportPath": "Content/Audio/sfx_attack_light.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:52:49.466786+00:00"
+}

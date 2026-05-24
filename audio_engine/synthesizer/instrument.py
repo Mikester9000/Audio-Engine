@@ -23,9 +23,13 @@ __all__ = ["Instrument", "InstrumentLibrary"]
 
 _STRINGS_BOW_NOISE_SEED = 11
 _BASS_PICK_NOISE_SEED = 21
+_GUITAR_PICK_NOISE_SEED = 61
 _PERCUSSION_NOISE_SEED = 5
 _FLUTE_BREATH_SEED = 7
 _CHOIR_FORMANTS = (700.0, 1220.0, 2600.0)
+_VIOLIN_NOISE_SEED = 31
+_TRUMPET_NOISE_SEED = 41
+_SYNTH_LEAD_NOISE_SEED = 51
 
 
 def _cents_to_ratio(cents: float) -> float:
@@ -230,27 +234,42 @@ def _brass(sr: int = 44100) -> Instrument:
 def _piano(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
-        t = np.arange(n, dtype=np.float32) / sr
-        # String stiffness: upper harmonics go slightly sharp (inharmonicity)
-        harmonic_decay = np.exp(-5.0 * t)
-        body = osc.additive(
-            freq, dur,
-            [(1, 1.0), (2, 0.50), (3, 0.28), (4.03, 0.14), (5.07, 0.07), (7.12, 0.03)],
-        )
-        # Sympathetic string resonance (very quiet secondary frequencies)
-        sympathetic = osc.additive(
-            freq * 2.0, dur,
-            [(1, 0.12), (2, 0.06)],
-        ) * np.exp(-8.0 * t)
-        click_len = max(1, int(0.005 * sr))
-        click = np.zeros(n, dtype=np.float32)
-        click[:click_len] = np.exp(-np.linspace(0.0, 6.0, click_len)).astype(np.float32)
-        return (body * harmonic_decay + sympathetic + 0.18 * click).astype(np.float32)
+        t = np.arange(n, dtype=np.float64) / sr
+        # Three detuned string model per note (typical piano unison behavior).
+        detunes_cents = (-2.3, 0.0, 2.5)
+        detune_weights = (0.31, 0.42, 0.27)
+        partials = ((1.0, 1.0), (2.01, 0.45), (3.03, 0.24), (4.08, 0.14), (5.17, 0.08), (6.32, 0.045))
+        string_sum = np.zeros(n, dtype=np.float64)
+        for cents, weight in zip(detunes_cents, detune_weights):
+            f = freq * _cents_to_ratio(cents)
+            partial_sig = np.zeros(n, dtype=np.float64)
+            for ratio, amp in partials:
+                decay = np.exp(-(2.3 + ratio * 0.55) * t)
+                partial_sig += amp * np.sin(2.0 * np.pi * f * ratio * t) * decay
+            string_sum += weight * partial_sig
+
+        # Hammer noise + key click transient for recognizable piano attack.
+        hammer = np.random.default_rng(_STRINGS_BOW_NOISE_SEED).standard_normal(n).astype(np.float64)
+        hammer = Filter(sr).band_pass(hammer.astype(np.float32), 900.0, 7500.0).astype(np.float64)
+        hammer *= np.exp(-70.0 * t) * 0.14
+        click_len = max(1, int(0.004 * sr))
+        key_click = np.zeros(n, dtype=np.float64)
+        key_click[:click_len] = 0.8 * np.exp(-np.linspace(0.0, 9.0, click_len))
+
+        # Mild soundboard resonance to retain PS2-era sampled-body character.
+        resonance = (
+            0.08 * np.sin(2.0 * np.pi * (freq * 0.5) * t)
+            + 0.05 * np.sin(2.0 * np.pi * (freq * 1.5) * t)
+        ) * np.exp(-4.2 * t)
+
+        return (string_sum + hammer + key_click + resonance).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
-        sig = flt.warm_low_pass(sig, 6500.0)
-        return fx.reverb(sig, room_size=0.35, wet=0.15)
+        sig = flt.high_pass(sig, 38.0)
+        sig = flt.warm_low_pass(sig, 6200.0)
+        sig = fx.compress(sig, threshold=0.62, ratio=2.2, makeup_gain=1.03)
+        return fx.reverb(sig, room_size=0.28, wet=0.12)
 
     return Instrument(
         name="piano",
@@ -343,14 +362,23 @@ def _synth_pad(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("electric_guitar")
 def _electric_guitar(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        return osc.fm(freq, freq * 2.0, dur, modulation_index=3.5)
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        fm = osc.fm(freq, freq * 2.0, dur, modulation_index=3.2).astype(np.float64)
+        saw = osc.bl_sawtooth(freq, dur).astype(np.float64) * 0.25
+        pick = np.random.default_rng(_GUITAR_PICK_NOISE_SEED).standard_normal(n).astype(np.float32)
+        pick = Filter(sr).band_pass(pick, 1600.0, 7800.0).astype(np.float64)
+        pick *= np.exp(-55.0 * t) * 0.18
+        return (fm + saw + pick).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
-        sig = fx.distortion(sig, drive=3.0, tone=0.6)
-        sig = flt.band_pass(sig, 80.0, 5000.0)
-        return fx.reverb(sig, room_size=0.3, wet=0.15)
+        sig = fx.distortion(sig, drive=3.2, tone=0.58)
+        sig = flt.high_pass(sig, 90.0)
+        sig = flt.low_pass(sig, 5200.0)
+        sig = flt.band_pass(sig, 130.0, 4200.0)  # cabinet-like narrowing
+        sig = fx.compress(sig, threshold=0.58, ratio=3.2, makeup_gain=1.08)
+        return fx.reverb(sig, room_size=0.24, wet=0.09)
 
     return Instrument(
         name="electric_guitar",
@@ -605,17 +633,22 @@ def _ff8_electric_guitar(sr: int = 44100) -> Instrument:
     """
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        fm  = osc.fm(freq, freq * 2.0, dur, modulation_index=3.8)
-        sq  = osc.bl_square(freq, dur, duty_cycle=0.48) * 0.3
-        return fm + sq
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        fm = osc.fm(freq, freq * 2.0, dur, modulation_index=3.8).astype(np.float64)
+        sq = osc.bl_square(freq, dur, duty_cycle=0.48).astype(np.float64) * 0.3
+        pick = np.random.default_rng(_GUITAR_PICK_NOISE_SEED + 2).standard_normal(n).astype(np.float32)
+        pick = Filter(sr).band_pass(pick, 2200.0, 8500.0).astype(np.float64)
+        pick *= np.exp(-65.0 * t) * 0.22
+        return (fm + sq + pick).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        from audio_engine.synthesizer.filter import Filter
         flt = Filter(sr)
         sig = fx.distortion(sig, drive=6.0, tone=0.65)
         sig = flt.band_pass(sig, 100.0, 5500.0)
+        sig = flt.resonant_low_pass(sig, 4700.0, resonance=1.25)
         sig = fx.compress(sig, threshold=0.45, ratio=5.0, makeup_gain=1.15)
-        return fx.reverb(sig, room_size=0.22, wet=0.10)
+        return fx.reverb(sig, room_size=0.2, wet=0.08)
 
     return Instrument(
         name="ff8_electric_guitar",
@@ -1002,5 +1035,140 @@ def _marimba(sr: int = 44100) -> Instrument:
         envelope=Envelope(attack=0.001, decay=0.30, sustain=0.0, release=0.25, sample_rate=sr),
         post_process=post,
         volume=0.76,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("violin_solo")
+def _violin_solo(sr: int = 44100) -> Instrument:
+    """Expressive solo violin with narrow vibrato and bow-noise edge."""
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        phase = _vibrato_phase(freq, dur, sr, rate_hz=6.1, depth_semitones=0.09)
+        body = _bl_saw_from_phase(phase, freq, sr)
+        n = len(body)
+        noise = np.random.default_rng(_VIOLIN_NOISE_SEED).standard_normal(n).astype(np.float32)
+        noise = Filter(sr).band_pass(noise, 900.0, 5200.0) * 0.08
+        return (0.92 * body + noise).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 140.0)
+        sig = flt.warm_low_pass(sig, 6200.0)
+        sig = fx.compress(sig, threshold=0.62, ratio=2.6, makeup_gain=1.04)
+        return fx.reverb(sig, room_size=0.42, wet=0.17)
+
+    return Instrument(
+        name="violin_solo",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.018, decay=0.16, sustain=0.72, release=0.24, sample_rate=sr),
+        post_process=post,
+        volume=0.80,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("trumpet")
+def _trumpet(sr: int = 44100) -> Instrument:
+    """Bright trumpet lead with brassy buzz and controlled bite."""
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        base = osc.bl_sawtooth(freq, dur)
+        n = len(base)
+        buzz = osc.square(freq * 2.0, dur) * 0.24
+        breath = np.random.default_rng(_TRUMPET_NOISE_SEED).standard_normal(n).astype(np.float32)
+        breath = Filter(sr).band_pass(breath, 1200.0, 6500.0) * 0.05
+        return (0.76 * base + buzz + breath).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 180.0)
+        sig = flt.band_pass(sig, 250.0, 7000.0)
+        sig = fx.compress(sig, threshold=0.55, ratio=3.2, makeup_gain=1.1)
+        return fx.reverb(sig, room_size=0.38, wet=0.15)
+
+    return Instrument(
+        name="trumpet",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.01, decay=0.11, sustain=0.66, release=0.16, sample_rate=sr),
+        post_process=post,
+        volume=0.82,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("acoustic_guitar")
+def _acoustic_guitar(sr: int = 44100) -> Instrument:
+    """Nylon/steel hybrid pluck suited for folk and festival styles."""
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        fundamental = np.sin(2.0 * np.pi * freq * t) * np.exp(-4.8 * t)
+        second = 0.33 * np.sin(2.0 * np.pi * (freq * 2.0) * t) * np.exp(-8.0 * t)
+        third = 0.20 * np.sin(2.0 * np.pi * (freq * 3.01) * t) * np.exp(-10.5 * t)
+        fourth = 0.10 * np.sin(2.0 * np.pi * (freq * 4.18) * t) * np.exp(-13.5 * t)
+        body = (fundamental + second + third + fourth).astype(np.float32)
+
+        # Acoustic body resonances (air + wood cavity) for guitar identity.
+        resonance = (
+            0.09 * np.sin(2.0 * np.pi * 110.0 * t)
+            + 0.07 * np.sin(2.0 * np.pi * 220.0 * t)
+            + 0.05 * np.sin(2.0 * np.pi * 440.0 * t)
+        ) * np.exp(-6.4 * t)
+
+        pick = np.random.default_rng(_GUITAR_PICK_NOISE_SEED).standard_normal(n).astype(np.float32)
+        pick = Filter(sr).band_pass(pick, 1400.0, 9200.0) * np.exp(-52.0 * t).astype(np.float32) * 0.28
+        fret = np.random.default_rng(_GUITAR_PICK_NOISE_SEED + 1).standard_normal(n).astype(np.float32)
+        fret = Filter(sr).band_pass(fret, 2800.0, 10000.0) * np.exp(-88.0 * t).astype(np.float32) * 0.06
+        return (body + resonance.astype(np.float32) + pick + fret).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 75.0)
+        sig = flt.warm_low_pass(sig, 7600.0)
+        sig = flt.band_pass(sig, 90.0, 6200.0)
+        sig = fx.compress(sig, threshold=0.66, ratio=2.2, makeup_gain=1.03)
+        return fx.reverb(sig, room_size=0.22, wet=0.10)
+
+    return Instrument(
+        name="acoustic_guitar",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.001, decay=0.24, sustain=0.0, release=0.22, sample_rate=sr),
+        post_process=post,
+        volume=0.77,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("synth_lead_bright")
+def _synth_lead_bright(sr: int = 44100) -> Instrument:
+    """Modern bright synth lead for electronic and sci-fi styles."""
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        glide = freq * (1.0 + 0.08 * np.exp(-9.0 * t))
+        phase = 2.0 * np.pi * np.cumsum(glide / sr)
+        saw = _bl_saw_from_phase(phase, freq, sr)
+        pulse = np.sign(np.sin(phase * 0.5)).astype(np.float32) * 0.25
+        air = np.random.default_rng(_SYNTH_LEAD_NOISE_SEED).standard_normal(n).astype(np.float32)
+        air = Filter(sr).band_pass(air, 3000.0, 11000.0) * 0.04
+        return (0.85 * saw + pulse + air).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 240.0)
+        sig = flt.resonant_low_pass(sig, 4800.0, resonance=1.35)
+        sig = fx.chorus(sig, depth=0.0009, rate=0.75, wet=0.14)
+        sig = fx.compress(sig, threshold=0.56, ratio=3.0, makeup_gain=1.08)
+        return fx.reverb(sig, room_size=0.3, wet=0.1)
+
+    return Instrument(
+        name="synth_lead_bright",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.005, decay=0.08, sustain=0.64, release=0.12, sample_rate=sr),
+        post_process=post,
+        volume=0.79,
         sample_rate=sr,
     )

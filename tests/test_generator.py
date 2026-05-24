@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from audio_engine.ai import generator as generator_module
 from audio_engine.ai.generator import MusicGenerator
 from audio_engine.composer.sequencer import Sequencer
 
@@ -61,3 +62,41 @@ def test_reproducibility():
     a1 = g1.generate_audio("battle", bars=2)
     a2 = g2.generate_audio("battle", bars=2)
     np.testing.assert_array_equal(a1, a2)
+
+
+@pytest.mark.parametrize("style", ["hybrid_trailer", "neo_noir", "festival_folk", "sci_fi_pulse", "waltz_orchestral"])
+def test_new_styles_generate_audio(style):
+    gen = MusicGenerator(sample_rate=SR, seed=7)
+    audio = gen.generate_audio(style=style, bars=2)
+    assert audio.ndim == 2
+    assert audio.shape[1] == 2
+
+
+def test_style_alignment_validation_has_no_issues():
+    issues = MusicGenerator.validate_style_library_alignment()
+    assert issues == {}
+
+
+def test_style_alignment_validation_detects_misaligned_style():
+    style_name = "tmp_alignment_ballad_failure"
+    generator_module._STYLE_DEFS[style_name] = generator_module._StyleDef(
+        bpm=78,
+        scale_name="major",
+        root="C",
+        octave=4,
+        progression_name="I_IV_V_I",
+        instruments=["piano"],
+        accompaniment=["strings"],
+        bass_instrument="bass",
+        percussion_instrument="percussion",
+        melody_pattern="half_notes",
+        chord_pattern="half_notes",
+        bars=4,
+        ostinato_instrument="harp",
+    )
+    try:
+        issues = MusicGenerator.validate_style_library_alignment()
+        assert style_name in issues
+        assert "percussion should be disabled for this style family" in issues[style_name]
+    finally:
+        generator_module._STYLE_DEFS.pop(style_name, None)

@@ -12,15 +12,20 @@
 - CLI access through `generate` and `generate-music`
 - backend selection/discovery surfaces through `generate-music --backend` and `list-backends`
 - studio-side music mastering-profile selection plus preset save/load, backend/sample controls, one-click batch generation, and play/stop preview browser in `audio_engine/ui/studio.py`
+- studio-side full-edit controls for prompt/format/region/adaptive intensity plus procedural custom arrangement instrument overrides and new-file template output authoring
 - request-driven dual-path delivery mode for paired instrumental and vocal-ready outputs (`musicDeliveryMode: dual_vocal_instrumental`)
 - existing integration mapping for multiple game states in `audio_engine/integration/game_state_map.py`
+- style-intent metadata and executable style/synth alignment validation via `MusicGenerator.validate_style_library_alignment()`
+- expanded style families: `hybrid_trailer`, `neo_noir`, `festival_folk`, `sci_fi_pulse`, `waltz_orchestral`
+- expanded timbres: `violin_solo`, `trumpet`, `acoustic_guitar`, `synth_lead_bright`
+- SESSION-051 timbre identity refinement: `piano`, `electric_guitar`, `ff8_electric_guitar`, and `acoustic_guitar` now have stronger instrument-name alignment under PS2-era FF8/FF10-style tonal constraints
 
 ## What is missing
 
 - broader style-keyword resolver coverage for every advanced preset family
 - verified non-procedural backend quality benchmarks using real downloaded model weights
-- full studio-side profile/preset lifecycle management (beyond current save/load + profile selection)
-- full release-gate orchestration that consumes dual-path outputs end-to-end (SESSION-041 planned)
+- release-gate reporting hookup for style-intent validation output (planned SESSION-050)
+- full release-gate orchestration that consumes dual-path outputs end-to-end (SESSION-041 completed; further alignment reporting integration tracked in SESSION-050)
 
 ## Backend evaluation notes (SESSION-011 + optional neural scaffolding)
 

@@ -7,9 +7,12 @@ import pytest
 
 from audio_engine.ui.studio import (
     _build_preview_catalog,
+    _build_new_file_template,
     _discover_wav_files,
+    _new_file_output_targets,
     _parse_float_field,
     _read_studio_preset,
+    _write_new_file_template,
     _write_studio_preset,
 )
 
@@ -112,3 +115,35 @@ def test_build_preview_catalog_excludes_missing_outputs(tmp_path: Path):
     assert catalog["SFX"] == []
     assert catalog["Vocal"] == []
     assert catalog["Examples"] == []
+
+
+def test_new_file_output_targets_use_base_name_and_dir(tmp_path: Path):
+    targets = _new_file_output_targets("quest_intro", tmp_path / "renders", fmt="ogg")
+    assert targets["music"].endswith("quest_intro_music.ogg")
+    assert targets["sfx"].endswith("quest_intro_sfx.wav")
+    assert targets["voice"].endswith("quest_intro_voice.wav")
+
+
+def test_new_file_output_targets_sanitize_name_and_format(tmp_path: Path):
+    targets = _new_file_output_targets("../quest intro?!", tmp_path / "renders", fmt="mp3")
+    assert targets["music"].endswith("quest_intro_music.wav")
+    assert targets["sfx"].endswith("quest_intro_sfx.wav")
+    assert targets["voice"].endswith("quest_intro_voice.wav")
+
+
+def test_write_new_file_template_roundtrip(tmp_path: Path):
+    payload = _build_new_file_template(
+        project_name="quest_intro",
+        preset_path="studio_preset.json",
+        output_targets={
+            "music": "output/quest_intro_music.wav",
+            "sfx": "output/quest_intro_sfx.wav",
+            "voice": "output/quest_intro_voice.wav",
+        },
+        preset_payload={"music": {"style": "battle"}},
+    )
+    path = tmp_path / "new_file.json"
+    _write_new_file_template(path, payload)
+    loaded = json.loads(path.read_text(encoding="utf-8"))
+    assert loaded["projectName"] == "quest_intro"
+    assert loaded["outputTargets"]["music"].endswith("quest_intro_music.wav")

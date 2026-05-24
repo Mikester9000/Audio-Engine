@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_romance_v1",
+  "assetId": "bgm_test_romance",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205003,
+  "prompt": "romantic theme with warm strings and gentle phrasing, loopable",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_romance_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_romance.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:56:41.147169+00:00"
+}

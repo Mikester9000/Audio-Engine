@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_sfx_ui_error_v1",
+  "assetId": "sfx_ui_error",
+  "type": "sfx",
+  "backend": "procedural",
+  "seed": 305013,
+  "prompt": "short UI error chirp, clear negative feedback, no ringing tail",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/sfx/req_sfx_ui_error_v1.wav",
+  "targetImportPath": "Content/Audio/sfx_ui_error.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:52:49.461132+00:00"
+}

@@ -1,0 +1,69 @@
+{
+  "qaBatchVersion": "1.0.0",
+  "inputDir": "audio_export/drafts/music",
+  "generatedAt": "2026-05-24T15:58:28.518354+00:00",
+  "summary": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0
+  },
+  "results": [
+    {
+      "file": "audio_export/drafts/music/req_music_fanfare_item_obtain_v1.wav",
+      "status": "pass",
+      "checks": {
+        "loudness_lufs": -13.26,
+        "true_peak_dbfs": -0.3,
+        "loudness_range_lu": 2.63,
+        "has_clipping": false,
+        "clipped_samples": 0,
+        "loudness_ok": true,
+        "peak_ok": true,
+        "clipping_ok": true,
+        "spectral_low_ratio": 0.3881,
+        "spectral_mid_ratio": 0.6011,
+        "spectral_high_ratio": 0.0108,
+        "spectral_centroid_hz": 616.59,
+        "high_freq_ratio": 0.0504
+      }
+    },
+    {
+      "file": "audio_export/drafts/music/req_music_fanfare_quest_complete_v1.wav",
+      "status": "pass",
+      "checks": {
+        "loudness_lufs": -13.27,
+        "true_peak_dbfs": -0.74,
+        "loudness_range_lu": 2.47,
+        "has_clipping": false,
+        "clipped_samples": 0,
+        "loudness_ok": true,
+        "peak_ok": true,
+        "clipping_ok": true,
+        "spectral_low_ratio": 0.3416,
+        "spectral_mid_ratio": 0.6458,
+        "spectral_high_ratio": 0.0127,
+        "spectral_centroid_hz": 651.04,
+        "high_freq_ratio": 0.0554
+      }
+    },
+    {
+      "file": "audio_export/drafts/music/req_music_stinger_victory_short_v1.wav",
+      "status": "pass",
+      "checks": {
+        "loudness_lufs": -13.28,
+        "true_peak_dbfs": -0.36,
+        "loudness_range_lu": 2.26,
+        "has_clipping": false,
+        "clipped_samples": 0,
+        "loudness_ok": true,
+        "peak_ok": true,
+        "clipping_ok": true,
+        "spectral_low_ratio": 0.3633,
+        "spectral_mid_ratio": 0.6258,
+        "spectral_high_ratio": 0.0109,
+        "spectral_centroid_hz": 605.63,
+        "high_freq_ratio": 0.0465
+      }
+    }
+  ]
+}

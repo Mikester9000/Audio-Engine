@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_snowy_mountains_v1",
+  "assetId": "bgm_test_snowy_mountains",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205007,
+  "prompt": "snowy mountain traversal cue with airy pads and cold expansive tone, loopable",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_snowy_mountains_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_snowy_mountains.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:56:59.886810+00:00"
+}

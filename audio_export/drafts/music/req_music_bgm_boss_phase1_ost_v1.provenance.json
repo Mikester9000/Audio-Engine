@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_boss_phase1_ost_v1",
+  "assetId": "bgm_boss_phase1_ost",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204857,
+  "prompt": "extended boss OST suite with cinematic intro, evolving combat body, and climactic ending",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_boss_phase1_ost_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_boss_phase1_ost.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:55:12.146695+00:00"
+}

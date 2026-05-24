@@ -4,36 +4,35 @@
 
 ## Last completed change
 
-Implemented **SESSION-041**: End-to-end vertical-slice release gate automation.
+Implemented **SESSION-051**: PS2 instrument identity refinement (piano + guitar families).
 
-- Added `VerticalSliceGatePipeline` and `VerticalSliceGateReport` to `audio_engine/integration/asset_pipeline.py`.
-  - Chains four gates in order: generation → QA → license compliance → export.
-  - Each gate is individually skippable; gate status is one of `pass`, `fail`, or `skip`.
-  - Writes a combined `release_gate_report.json` with per-gate evidence and an overall `gatesPassed` boolean.
-  - Internally reuses `RequestBatchPipeline`, `DraftExportPipeline`, and `audio_engine.compliance.license_checker`.
-- Exported `VerticalSliceGatePipeline` and `VerticalSliceGateReport` from `audio_engine/integration/__init__.py`.
-- Added `_cmd_run_release_gate` handler and `run-release-gate` subcommand to `audio_engine/cli.py`.
-  - Flags: `--batch-file`, `--output-dir`, `--gate-report`, `--qa-report`, `--policy`, `--skip-qa`, `--skip-compliance`, `--skip-export`, `--check-spectral`, `--check-loop`, `--force`, `--quiet`.
-  - Exits 0 when all non-skipped gates pass; exits 1 when any gate fails.
-- Added 14 focused tests in `tests/test_release_gate.py`.
+- Refined `audio_engine/synthesizer/instrument.py` core timbres:
+  - upgraded `piano` synthesis with detuned-string layering, hammer/key transients, and controlled body resonance
+  - upgraded `electric_guitar` and `ff8_electric_guitar` with pick transients + cabinet-like post-EQ shaping
+  - upgraded `acoustic_guitar` with stronger pluck/body resonance behavior and natural high-frequency decay
+- Preserved PS2-era JRPG design target (FF8/FF10-like tonal aesthetic) by keeping constrained bandwidth, modest ambience, and deterministic synth behavior.
+- Added regression checks in `tests/test_instrument.py`:
+  - transient decay profile for piano
+  - pick-brightness decay for acoustic guitar
+  - midrange-presence guardrail for ff8 electric guitar
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_release_gate.py -v
+python -m pytest tests/test_instrument.py tests/test_ps1_era.py -k "instrument or guitar or piano"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result:
-- Targeted release gate tests pass (14 tests)
-- Full test suite passes (1108 tests)
+- Targeted instrument + PS-era slices pass (111 selected tests)
+- Full test suite passes (1129 tests)
 - Asset manifest validation passes
 
 ## Immediate next best task
 
-Continue iterative studio quality refinement and iterate on the next planned session once SESSION-041 continuity docs are synchronized.
+Execute SESSION-050 to surface style/synth alignment validation in release-gate artifacts, then continue instrument-identity refinement for additional named timbres.
 
 ## Files future agents should read first
 
@@ -62,3 +61,5 @@ Continue iterative studio quality refinement and iterate on the next planned ses
 - [x] Completion-state handoff (`docs/AI_FACTORY/COMPLETION_HANDOFF.md`, SESSION-045)
 - [x] Session control docs synchronized (SESSION_QUEUE, SESSION_STATE, CURRENT_SESSION, FACTORY_STATUS, ACTIVE_WORK)
 - [x] **Vertical-slice release gate automation** (`run-release-gate` CLI + `VerticalSliceGatePipeline`, SESSION-041)
+- [x] **Studio full-edit + style/synth alignment expansion** (`audio_engine studio` advanced controls, new styles/instruments/SFX, SESSION-049)
+- [x] **PS2 instrument identity refinement** (`piano` + guitar-family timbre updates, SESSION-051)
