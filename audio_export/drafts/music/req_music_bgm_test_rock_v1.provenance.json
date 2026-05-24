@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_rock_v1",
+  "assetId": "bgm_test_rock",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205015,
+  "prompt": "driving rock track with punchy drums and strong guitar rhythm, loopable",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_rock_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_rock.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:57:37.984075+00:00"
+}

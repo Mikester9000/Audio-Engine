@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_boss_phase1_v1",
+  "assetId": "bgm_boss_phase1",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204856,
+  "prompt": "boss loop with heavy percussion, dramatic harmony, relentless momentum",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_boss_phase1_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_boss_phase1.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:54:57.616957+00:00"
+}

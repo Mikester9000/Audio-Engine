@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_synth_wave_v1",
+  "assetId": "bgm_test_synth_wave",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205020,
+  "prompt": "synth-wave cue with nostalgic analog textures and night-city momentum, loopable",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_synth_wave_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_synth_wave.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:58:00.199689+00:00"
+}

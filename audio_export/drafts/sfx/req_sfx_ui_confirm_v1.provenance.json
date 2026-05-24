@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_sfx_ui_confirm_v1",
+  "assetId": "sfx_ui_confirm",
+  "type": "sfx",
+  "backend": "procedural",
+  "seed": 305001,
+  "prompt": "clean menu confirm click, short and readable",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/sfx/req_sfx_ui_confirm_v1.wav",
+  "targetImportPath": "Content/Audio/sfx_ui_confirm.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:52:49.454599+00:00"
+}

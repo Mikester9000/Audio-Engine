@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_emo_v1",
+  "assetId": "bgm_test_emo",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205016,
+  "prompt": "emo-inspired piece with emotional chord changes and introspective tone, loopable",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_emo_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_emo.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:57:42.913998+00:00"
+}

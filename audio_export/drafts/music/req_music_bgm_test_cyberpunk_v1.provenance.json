@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_cyberpunk_v1",
+  "assetId": "bgm_test_cyberpunk",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205013,
+  "prompt": "cyberpunk night drive cue with gritty synth bass and neon atmosphere, loopable",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_cyberpunk_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_cyberpunk.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:57:29.440921+00:00"
+}

@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_sadness_memorial_v1",
+  "assetId": "bgm_sadness_memorial",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204879,
+  "prompt": "sad memorial cue with restrained piano and strings, reflective arc, non-looping",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_sadness_memorial_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_sadness_memorial.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:55:41.489987+00:00"
+}

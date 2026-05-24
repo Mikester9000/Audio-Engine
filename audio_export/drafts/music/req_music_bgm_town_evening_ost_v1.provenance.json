@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_town_evening_ost_v1",
+  "assetId": "bgm_town_evening_ost",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204824,
+  "prompt": "extended OST arrangement of evening town theme, warm piano-led arc, non-looping",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_town_evening_ost_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_town_evening_ost.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:53:50.656059+00:00"
+}

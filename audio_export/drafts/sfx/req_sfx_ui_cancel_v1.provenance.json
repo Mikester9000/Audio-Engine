@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_sfx_ui_cancel_v1",
+  "assetId": "sfx_ui_cancel",
+  "type": "sfx",
+  "backend": "procedural",
+  "seed": 305012,
+  "prompt": "soft menu cancel tick with short tail",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/sfx/req_sfx_ui_cancel_v1.wav",
+  "targetImportPath": "Content/Audio/sfx_ui_cancel.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:52:49.457913+00:00"
+}

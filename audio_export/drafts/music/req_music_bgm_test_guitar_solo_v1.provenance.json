@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_guitar_solo_v1",
+  "assetId": "bgm_test_guitar_solo",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205011,
+  "prompt": "expressive guitar solo showcase over minimal backing, non-looping",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_guitar_solo_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_guitar_solo.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:57:18.712098+00:00"
+}

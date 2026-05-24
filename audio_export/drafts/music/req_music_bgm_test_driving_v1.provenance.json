@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_driving_v1",
+  "assetId": "bgm_test_driving",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205001,
+  "prompt": "driving action groove with steady pulse, energetic rhythm section, loopable",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_driving_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_driving.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:56:30.962422+00:00"
+}

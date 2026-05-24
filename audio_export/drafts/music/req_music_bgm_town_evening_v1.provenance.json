@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_town_evening_v1",
+  "assetId": "bgm_town_evening",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204823,
+  "prompt": "gentle evening town loop with piano and soft pad, reflective but safe mood, loopable",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_town_evening_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_town_evening.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:53:35.667696+00:00"
+}

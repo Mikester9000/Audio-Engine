@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_high_tech_city_v1",
+  "assetId": "bgm_test_high_tech_city",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205009,
+  "prompt": "high-tech city soundtrack with sleek synth pulse and modern atmosphere, loopable",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_high_tech_city_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_high_tech_city.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:57:10.737697+00:00"
+}

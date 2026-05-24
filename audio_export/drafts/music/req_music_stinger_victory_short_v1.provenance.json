@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_stinger_victory_short_v1",
+  "assetId": "stinger_victory_short",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204834,
+  "prompt": "short triumphant victory stinger with bright brass and clean ending",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_stinger_victory_short_v1.wav",
+  "targetImportPath": "Content/Audio/stinger_victory_short.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:55:56.057081+00:00"
+}

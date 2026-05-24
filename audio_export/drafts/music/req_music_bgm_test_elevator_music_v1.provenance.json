@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_elevator_music_v1",
+  "assetId": "bgm_test_elevator_music",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205010,
+  "prompt": "light elevator music style cue with soft jazz harmony and unobtrusive mood, non-looping",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_elevator_music_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_elevator_music.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:57:14.441427+00:00"
+}

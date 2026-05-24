@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_sailing_v1",
+  "assetId": "bgm_test_sailing",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205005,
+  "prompt": "open sea sailing theme with rolling rhythm and adventurous spirit, loopable",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_sailing_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_sailing.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:56:50.005801+00:00"
+}

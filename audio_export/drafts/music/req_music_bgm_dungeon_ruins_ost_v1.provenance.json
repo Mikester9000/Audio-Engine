@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_dungeon_ruins_ost_v1",
+  "assetId": "bgm_dungeon_ruins_ost",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204846,
+  "prompt": "extended OST suite of dungeon ruins theme with evolving textures and dramatic resolution",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_dungeon_ruins_ost_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_dungeon_ruins_ost.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:54:14.926311+00:00"
+}

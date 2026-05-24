@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_sfx_amb_wind_ruins_loop_v1",
+  "assetId": "amb_wind_ruins_loop",
+  "type": "sfx",
+  "backend": "procedural",
+  "seed": 305045,
+  "prompt": "ancient ruins wind ambience loop with airy tonal texture",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/sfx/req_sfx_amb_wind_ruins_loop_v1.wav",
+  "targetImportPath": "Content/Audio/amb_wind_ruins_loop.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:52:49.511017+00:00"
+}

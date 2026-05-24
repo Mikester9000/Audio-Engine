@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_tension_stealth_v1",
+  "assetId": "bgm_tension_stealth",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204868,
+  "prompt": "minimal stealth tension loop with sparse pulses, low drones, and subtle rhythmic movement",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_tension_stealth_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_tension_stealth.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:55:27.612351+00:00"
+}

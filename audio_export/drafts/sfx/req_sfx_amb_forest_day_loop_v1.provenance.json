@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_sfx_amb_forest_day_loop_v1",
+  "assetId": "amb_forest_day_loop",
+  "type": "sfx",
+  "backend": "procedural",
+  "seed": 305046,
+  "prompt": "forest day ambience loop with wind in leaves and distant birds",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/sfx/req_sfx_amb_forest_day_loop_v1.wav",
+  "targetImportPath": "Content/Audio/amb_forest_day_loop.wav",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:52:49.524742+00:00"
+}

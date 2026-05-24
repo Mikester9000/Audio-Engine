@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_dungeon_ruins_v1",
+  "assetId": "bgm_dungeon_ruins",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 204845,
+  "prompt": "dungeon exploration loop with low drones and sparse motif, mysterious and tense",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_dungeon_ruins_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_dungeon_ruins.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:54:03.304765+00:00"
+}

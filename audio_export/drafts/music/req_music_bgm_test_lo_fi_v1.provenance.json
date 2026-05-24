@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_lo_fi_v1",
+  "assetId": "bgm_test_lo_fi",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205017,
+  "prompt": "lo-fi chill loop with soft texture, vinyl-like warmth, and mellow beat",
+  "styleFamily": "melancholic-techno-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_lo_fi_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_lo_fi.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:57:47.388389+00:00"
+}

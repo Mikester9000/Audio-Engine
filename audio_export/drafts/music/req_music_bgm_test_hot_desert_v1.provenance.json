@@ -1,0 +1,14 @@
+{
+  "provenanceVersion": "1.0.0",
+  "requestId": "req_music_bgm_test_hot_desert_v1",
+  "assetId": "bgm_test_hot_desert",
+  "type": "music",
+  "backend": "procedural",
+  "seed": 205008,
+  "prompt": "hot desert journey theme with sparse percussion and mirage-like motifs, loopable",
+  "styleFamily": "heroic-sci-fantasy",
+  "generatedOutputPath": "audio_export/drafts/music/req_music_bgm_test_hot_desert_v1.ogg",
+  "targetImportPath": "Content/Audio/bgm_test_hot_desert.ogg",
+  "reviewStatus": "draft",
+  "generatedAt": "2026-05-24T15:57:04.247316+00:00"
+}
