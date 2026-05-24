@@ -400,7 +400,7 @@ def launch_studio() -> None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         from audio_engine.ai.music_gen import MusicGen
         backend_name = music_backend.get()
-        
+
         def _emit_music(prompt_value: str, *, style_override: str | None = None) -> Path:
             return MusicGen(
                 sample_rate=44100,
