@@ -19,7 +19,7 @@ Choose one:
 
 1. Check Python version
 2. Create `.venv/`
-3. Install `pip install -e ".[neural]"` (with automatic fallback to `pip install -e ".[musicgen]"` if Kokoro fails)
+3. Install `pip install -e ".[neural]"` (with automatic fallback to `pip install -e ".[musicgen]"` if that install step fails)
 4. Download AI model files into `models/`
 
 The model download is about **~1.5GB total** and may take a few minutes the first time.

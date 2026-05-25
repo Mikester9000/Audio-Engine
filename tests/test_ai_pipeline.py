@@ -359,7 +359,6 @@ class TestOptionalNeuralBackends:
     def test_kokoro_backend_requires_complete_model_snapshot(self, monkeypatch, tmp_path):
         model_dir = tmp_path / "kokoro"
         model_dir.mkdir()
-        (model_dir / "config.json").write_text("{}")
 
         monkeypatch.setattr(kokoro_backend, "can_import_module", lambda _: True)
 
