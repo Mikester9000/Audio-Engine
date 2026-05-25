@@ -640,6 +640,20 @@ class RadioPlaylistGenerator:
     ) -> np.ndarray:
         """Generate a full structured piece for one track.
 
+        Parameters
+        ----------
+        style_key:
+            Style to render.
+        entry:
+            Optional catalog metadata for the style.
+        duration:
+            Target track length in seconds.
+        with_vocals:
+            Explicit render mode for this call (`True` vocal arrangement,
+            `False` instrumental-only).
+        quiet:
+            Suppress section progress output.
+
         Notes
         -----
         ``with_vocals`` is resolved by :meth:`_resolve_use_vocals` before this

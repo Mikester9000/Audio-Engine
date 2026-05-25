@@ -1087,7 +1087,6 @@ def _violin_solo(sr: int = 44100) -> Instrument:
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
         sig = flt.high_pass(sig, 140.0)
-        sig = flt.warm_low_pass(sig, 7000.0)
         sig = flt.band_pass(sig, 180.0, 7600.0)
         sig = fx.compress(sig, threshold=0.64, ratio=2.4, makeup_gain=1.05)
         return fx.reverb(sig, room_size=0.40, wet=0.15)
@@ -1247,7 +1246,6 @@ def _nylon_guitar_ps2(sr: int = 44100) -> Instrument:
         flt = Filter(sr)
         sig = flt.high_pass(sig, 70.0)
         sig = flt.warm_low_pass(sig, 6100.0)
-        sig = flt.band_pass(sig, 90.0, 5200.0)
         sig = fx.compress(sig, threshold=0.68, ratio=2.0, makeup_gain=1.02)
         return fx.reverb(sig, room_size=0.24, wet=0.11)
 
