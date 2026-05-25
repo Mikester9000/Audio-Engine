@@ -636,7 +636,13 @@ class RadioPlaylistGenerator:
         with_vocals: bool,
         quiet: bool = False,
     ) -> np.ndarray:
-        """Generate a full structured piece for one track."""
+        """Generate a full structured piece for one track.
+
+        Notes
+        -----
+        ``with_vocals`` is resolved by :meth:`_resolve_use_vocals` before this
+        method is called so composition here is fully explicit.
+        """
         from audio_engine.ai.piece_composer import PieceComposer, SECTION_TEMPLATES
 
         track_type = entry.track_type if entry else "theme"

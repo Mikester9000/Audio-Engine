@@ -228,7 +228,22 @@ def _segment_env(n: int) -> np.ndarray:
 
 
 def _studio_vocal_post(signal: np.ndarray, sr: int) -> np.ndarray:
-    """Apply a deterministic studio-style polish pass for vocal realism."""
+    """Apply deterministic vocal post-processing polish.
+
+    Parameters
+    ----------
+    signal:
+        Mono float audio array to process.
+    sr:
+        Sample rate in Hz.
+
+    Returns
+    -------
+    np.ndarray
+        Mono float32 audio after a fixed processing chain:
+        high/low-pass cleanup, presence lift, de-essing, mild saturation,
+        and short early reflections.
+    """
     from scipy.signal import butter, sosfilt  # type: ignore[import]
 
     if len(signal) == 0:
