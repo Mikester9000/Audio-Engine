@@ -243,7 +243,8 @@ def _studio_vocal_post(signal: np.ndarray, sr: int) -> np.ndarray:
     np.ndarray
         Mono float32 audio after a fixed processing chain:
         high/low-pass cleanup, presence lift, de-essing, mild saturation,
-        and short early reflections.
+        and short early reflections. No random state is used here, so
+        deterministic behavior is preserved for a given input waveform.
     """
     from scipy.signal import butter, sosfilt  # type: ignore[import]
 

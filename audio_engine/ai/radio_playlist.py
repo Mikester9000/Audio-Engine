@@ -643,7 +643,8 @@ class RadioPlaylistGenerator:
         Notes
         -----
         ``with_vocals`` is resolved by :meth:`_resolve_use_vocals` before this
-        method is called so composition here is fully explicit.
+        method is called so composition here is fully explicit. Callers should
+        pass only a concrete ``True`` or ``False`` value (never ``None``).
         """
         from audio_engine.ai.piece_composer import PieceComposer, SECTION_TEMPLATES
 
