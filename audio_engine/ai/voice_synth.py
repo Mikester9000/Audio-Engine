@@ -282,7 +282,7 @@ def _studio_vocal_post(signal: np.ndarray, sr: int) -> np.ndarray:
         sib = sosfilt(butter(2, [s_lo, s_hi], btype="bandpass", output="sos"), sig)
         window_size = max(_DEESS_WINDOW_MIN_SAMPLES, int(_DEESS_WINDOW_SECONDS * sr))
         env = np.convolve(np.abs(sib), np.ones(window_size) / window_size, mode="same")
-        env = env / (float(np.max(env)) + 1e-9)
+        env = env / (np.max(env) + 1e-9)
         sig = sig - sib * (_DEESS_ATTENUATION * env)
 
     # Gentle non-linear smoothing + short room reflections.

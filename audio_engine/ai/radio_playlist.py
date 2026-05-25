@@ -393,6 +393,8 @@ class RadioPlaylistGenerator:
 
             _log(f"  [{i}/{len(style_keys)}] {display} ({style_key}) …")
 
+            # For vocal renders, missing companion means the pair is incomplete
+            # so we regenerate even when the primary file already exists.
             skip_track = out_path.exists() and not force
             if use_vocals and instrumental_path is not None and not instrumental_path.exists():
                 skip_track = False
