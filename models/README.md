@@ -15,7 +15,8 @@ MusicGen Medium is the chosen single-model baseline because it delivers much hig
 `setup.bat` automatically downloads this model into this folder by running:
 
 - `python tools/download_models.py`
-- dependency install step uses `pip install -e ".[neural]"` and automatically falls back to `pip install -e ".[musicgen]"` when optional Kokoro dependencies fail on a local environment.
+- dependency install step first uses `pip install -e ".[neural]"`.
+- if optional Kokoro dependencies fail locally, setup automatically falls back to `pip install -e ".[musicgen]"`.
 
 This is a one-time download. After that, the engine loads from local files only.
 

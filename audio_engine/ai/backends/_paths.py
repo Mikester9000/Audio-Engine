@@ -27,10 +27,6 @@ _MODEL_REQUIREMENTS: dict[str, ModelRequirements] = {
             ("model.safetensors", "pytorch_model.bin", "model.bin", "model.pt", "model.pth"),
         ),
     },
-    "kokoro": {
-        "required_files": (),
-        "required_any": (),
-    },
 }
 
 
