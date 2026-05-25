@@ -366,6 +366,9 @@ class TestOptionalNeuralBackends:
         backend = KokoroBackend(model_path=model_dir, sample_rate=SR, seed=7)
         assert backend.is_available() is False
 
+        (model_dir / "kokoro-v1_0.onnx").write_text("weights")
+        assert backend.is_available() is True
+
     def test_musicgen_backend_caches_loaded_model_and_processor(self, monkeypatch, tmp_path):
         model_dir = tmp_path / "musicgen-medium"
         model_dir.mkdir()
