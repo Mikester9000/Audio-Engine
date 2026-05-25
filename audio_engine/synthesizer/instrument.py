@@ -103,15 +103,15 @@ class Instrument:
     def __post_init__(self) -> None:
         self._osc = Oscillator(self.sample_rate)
         self._fx = Effects(self.sample_rate)
-        self._flt = Filter(self.sample_rate)
 
     def _apply_ps2_realism_voicing(self, signal: np.ndarray) -> np.ndarray:
         """Apply a light global PS2-era realism tint across all instruments."""
         sig = signal.astype(np.float32, copy=False)
         name = self.name.lower()
+        flt = Filter(self.sample_rate)
 
         # Console-era bandwidth shaping with family-aware top-end.
-        sig = self._flt.high_pass(sig, 30.0)
+        sig = flt.high_pass(sig, 30.0)
         if any(key in name for key in ("percussion", "timpani", "marimba", "orchestral_hit")):
             top_hz = 9200.0
         elif any(key in name for key in ("guitar", "trumpet", "brass")):
@@ -120,7 +120,7 @@ class Instrument:
             top_hz = 9800.0
         else:
             top_hz = 8200.0
-        sig = self._flt.warm_low_pass(sig, top_hz)
+        sig = flt.warm_low_pass(sig, top_hz)
 
         # Gentle bus compression + very small room glue.
         sig = self._fx.compress(sig, threshold=0.78, ratio=1.5, makeup_gain=1.015)
