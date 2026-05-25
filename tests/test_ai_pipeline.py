@@ -359,12 +359,14 @@ class TestOptionalNeuralBackends:
     def test_kokoro_backend_requires_complete_model_snapshot(self, monkeypatch, tmp_path):
         model_dir = tmp_path / "kokoro"
         model_dir.mkdir()
-        (model_dir / "config.json").write_text("{}")
 
         monkeypatch.setattr(kokoro_backend, "can_import_module", lambda _: True)
 
         backend = KokoroBackend(model_path=model_dir, sample_rate=SR, seed=7)
         assert backend.is_available() is False
+
+        (model_dir / "kokoro-v1_0.onnx").write_text("weights")
+        assert backend.is_available() is True
 
     def test_musicgen_backend_caches_loaded_model_and_processor(self, monkeypatch, tmp_path):
         model_dir = tmp_path / "musicgen-medium"

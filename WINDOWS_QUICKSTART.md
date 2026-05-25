@@ -19,7 +19,7 @@ Choose one:
 
 1. Check Python version
 2. Create `.venv/`
-3. Install `pip install -e ".[neural]"`
+3. Install `pip install -e ".[neural]"` (with automatic fallback to `pip install -e ".[musicgen]"` if that install step fails)
 4. Download AI model files into `models/`
 
 The model download is about **~1.5GB total** and may take a few minutes the first time.
@@ -76,6 +76,8 @@ https://www.python.org/downloads/windows/
 
 ### `.venv` activation or dependency install failed
 Run `setup.bat` again. If needed, delete `.venv/` and rerun setup.
+
+If stage 4 fails while installing full `.[neural]` dependencies, setup now automatically retries with the MusicGen-only dependency set (`.[musicgen]`) and continues when that succeeds.
 
 ### Model download interrupted
 Run `setup.bat` again. `tools/download_models.py` resumes incomplete downloads and skips only model folders that already contain the required local files.

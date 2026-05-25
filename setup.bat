@@ -48,8 +48,13 @@ if errorlevel 1 (
 )
 python -m pip install -e ".[neural]"
 if errorlevel 1 (
-    echo ERROR: Failed to install project dependencies.
-    exit /b 1
+    echo WARNING: Full neural dependency install failed ^(often Kokoro on some Windows environments^).
+    echo Attempting fallback install for MusicGen-only neural workflow...
+    python -m pip install -e ".[musicgen]"
+    if errorlevel 1 (
+        echo ERROR: Failed to install project dependencies.
+        exit /b 1
+    )
 )
 
 echo [5/5] Downloading MusicGen Medium model to models\ ...

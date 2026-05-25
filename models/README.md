@@ -16,6 +16,11 @@ MusicGen Medium is the chosen single-model baseline because it delivers much hig
 
 - `python tools/download_models.py`
 
+During setup, dependency installation is handled separately:
+
+- setup first tries `pip install -e ".[neural]"`.
+- if that install step fails locally, setup automatically falls back to `pip install -e ".[musicgen]"`.
+
 This is a one-time download. After that, the engine loads from local files only.
 
 ## Git behavior

@@ -27,12 +27,6 @@ _MODEL_REQUIREMENTS: dict[str, ModelRequirements] = {
             ("model.safetensors", "pytorch_model.bin", "model.bin", "model.pt", "model.pth"),
         ),
     },
-    "kokoro": {
-        "required_files": ("config.json",),
-        "required_any": (
-            ("model.safetensors", "pytorch_model.bin", "model.bin", "model.pt", "model.pth"),
-        ),
-    },
 }
 
 
@@ -55,6 +49,17 @@ def can_import_module(module_name: str) -> bool:
 
 def has_complete_model_snapshot(path: Path) -> bool:
     if not path.is_dir():
+        return False
+
+    if path.name == "kokoro":
+        for candidate in path.iterdir():
+            if not candidate.is_file():
+                continue
+            suffix = candidate.suffix.lower()
+            if suffix in {".onnx", ".pt", ".pth", ".safetensors"}:
+                return True
+            if candidate.name.lower() in {"model.bin", "pytorch_model.bin"}:
+                return True
         return False
 
     requirements = _MODEL_REQUIREMENTS.get(path.name)
