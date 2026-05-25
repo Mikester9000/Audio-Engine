@@ -24,6 +24,7 @@
 - global all-instrument PS2 realism voicing pass in `Instrument.render()` (console-era bandwidth shaping, gentle bus compression, subtle room glue)
 - SESSION-051 timbre identity refinement: `piano`, `electric_guitar`, `ff8_electric_guitar`, and `acoustic_guitar` now have stronger instrument-name alignment under PS2-era FF8/FF10-style tonal constraints
 - additive realism refinement for `violin_solo` + `trumpet` synthesis and vocal post-processing polish in `voice_synth`
+- deterministic vocal post-processing chain remains enabled in `voice_synth` (cleanup/presence/de-ess/saturation/early reflections) so voice realism improvements preserve reproducible outputs
 - FF7/FF8/FF10 presets now incorporate the new PS2-era timbres for broader arrangement variety while preserving deterministic style intent
 
 ## What is missing

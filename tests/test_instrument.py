@@ -6,6 +6,9 @@ import pytest
 from audio_engine.synthesizer.instrument import Instrument, InstrumentLibrary
 
 SR = 22050
+_LEGATO_BLOOM_RATIO_MIN = 1.15
+_NYLON_ATTACK_HIGH_RATIO_MIN = 1.3
+_SOFT_EP_ATTACK_BRIGHTNESS_RATIO_MIN = 1.05
 
 
 def _rms(signal: np.ndarray) -> float:
@@ -93,7 +96,7 @@ def test_legato_strings_ps2_has_bow_bloom_after_attack():
     audio = inst.render(329.63, 0.9)
     early = _rms(audio[: int(0.05 * SR)])
     bloom = _rms(audio[int(0.15 * SR) : int(0.35 * SR)])
-    assert bloom > early * 1.15
+    assert bloom > early * _LEGATO_BLOOM_RATIO_MIN
 
 
 def test_nylon_guitar_ps2_attack_brightness_falls_into_body():
@@ -103,7 +106,7 @@ def test_nylon_guitar_ps2_attack_brightness_falls_into_body():
     body = audio[int(0.20 * SR) : int(0.42 * SR)]
     attack_high = _band_energy(attack, SR, 1400.0, 6000.0)
     body_high = _band_energy(body, SR, 1400.0, 6000.0)
-    assert attack_high > body_high * 1.3
+    assert attack_high > body_high * _NYLON_ATTACK_HIGH_RATIO_MIN
 
 
 def test_soft_epiano_ps2_has_tine_attack_presence():
@@ -115,4 +118,6 @@ def test_soft_epiano_ps2_has_tine_attack_presence():
     tail_presence = _band_energy(tail, SR, 4200.0, 9000.0)
     attack_low = _band_energy(attack, SR, 200.0, 1200.0)
     tail_low = _band_energy(tail, SR, 200.0, 1200.0)
-    assert (attack_presence / max(attack_low, 1e-9)) > (tail_presence / max(tail_low, 1e-9)) * 1.05
+    assert (attack_presence / max(attack_low, 1e-9)) > (
+        tail_presence / max(tail_low, 1e-9)
+    ) * _SOFT_EP_ATTACK_BRIGHTNESS_RATIO_MIN
