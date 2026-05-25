@@ -20,8 +20,11 @@
 - release-gate generation now enforces and reports style/synth alignment results in `release_gate_report.json` (`gates.generation.styleAlignment`)
 - expanded style families: `hybrid_trailer`, `neo_noir`, `festival_folk`, `sci_fi_pulse`, `waltz_orchestral`
 - expanded timbres: `violin_solo`, `trumpet`, `acoustic_guitar`, `synth_lead_bright`
+- expanded PS2-era realism timbres: `legato_strings_ps2`, `nylon_guitar_ps2`, `soft_epiano_ps2`
+- global all-instrument PS2 realism voicing pass in `Instrument.render()` (console-era bandwidth shaping, gentle bus compression, subtle room glue)
 - SESSION-051 timbre identity refinement: `piano`, `electric_guitar`, `ff8_electric_guitar`, and `acoustic_guitar` now have stronger instrument-name alignment under PS2-era FF8/FF10-style tonal constraints
 - additive realism refinement for `violin_solo` + `trumpet` synthesis and vocal post-processing polish in `voice_synth`
+- FF7/FF8/FF10 presets now incorporate the new PS2-era timbres for broader arrangement variety while preserving deterministic style intent
 
 ## What is missing
 

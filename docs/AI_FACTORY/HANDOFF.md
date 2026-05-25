@@ -4,41 +4,38 @@
 
 ## Last completed change
 
-Implemented additive release-quality music/vocal follow-up work:
+Implemented additive PS2-era instrument-variety and realism expansion:
 
-- Integrated style/synth alignment enforcement into `VerticalSliceGatePipeline` gate-1 generation output:
-  - release gate now writes machine-readable `gates.generation.styleAlignment` status and issue details
-  - alignment failures now hard-fail generation gate status for deterministic remediation
-- Updated full-piece generation surfaces so vocal renders always include instrumental companions:
-  - `generate-track`, `generate-radio-playlist`, `generate-album`, and `compose-piece`
-  - companion naming contract: `__instrumental` suffix
-- Refined realism in procedural synthesis:
-  - upgraded `violin_solo` + `trumpet` timbral behavior in `audio_engine/synthesizer/instrument.py`
-  - added deterministic studio-style vocal polish pass in `audio_engine/ai/voice_synth.py`
+- Added three new PS2-oriented instrument timbres in `audio_engine/synthesizer/instrument.py`:
+  - `legato_strings_ps2`
+  - `nylon_guitar_ps2`
+  - `soft_epiano_ps2`
+- Tuned **all instruments** via a shared PS2-era realism voicing pass in `Instrument.render()`:
+  - console-style bandwidth contour
+  - gentle bus compression
+  - subtle room glue
+- Expanded FF-era style variety and realism by integrating new timbres into core presets:
+  - `ff7_overworld`, `ff7_sad`, `ff8_ballad`, `ff10_calm`, `ff10_battle`, `ff10_zanarkand`
 - Added/updated regression coverage in:
-  - `tests/test_release_gate.py`
-  - `tests/test_music_library.py`
-  - `tests/test_ps1_era.py`
+  - `tests/test_instrument.py` (new bow-bloom, nylon attack-decay, and soft-epiano tine-presence checks)
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_release_gate.py tests/test_music_library.py tests/test_ps1_era.py -k "compose_piece_with_vocals or generate_track_with_vocals or playlist_vocal_track_writes_instrumental_companion or generation_fails_when_style_alignment_fails or all_gates_skipped_except_generation"
-python -m pytest tests/test_instrument.py
-python -m pytest tests/test_ai_pipeline.py -k voice
+python -m pytest tests/test_instrument.py tests/test_generator.py -k "legato_strings_ps2 or nylon_guitar_ps2 or soft_epiano_ps2 or style_alignment"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result:
-- Targeted release-gate/music-library/piece-composer/instrument/voice slices pass
-- Full test suite passes (1136 tests)
+- Targeted instrument/style-alignment slices pass
+- Full test suite passes
 - Asset manifest validation passes
 
 ## Immediate next best task
 
-Continue iterative instrument and vocal realism refinement while preserving deterministic generation and release-gate reproducibility.
+Continue iterative FF-era instrument realism refinement for remaining families (woodwinds/brass/percussion) while preserving deterministic generation and style-alignment gate guarantees.
 
 ## Files future agents should read first
 

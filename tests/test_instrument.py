@@ -86,3 +86,33 @@ def test_ff8_guitar_has_midrange_presence_over_sub_bass():
     mid = _band_energy(audio, SR, 650.0, 3600.0)
     sub = _band_energy(audio, SR, 20.0, 120.0)
     assert mid > sub * 3.0
+
+
+def test_legato_strings_ps2_has_bow_bloom_after_attack():
+    inst = InstrumentLibrary.get("legato_strings_ps2", SR)
+    audio = inst.render(329.63, 0.9)
+    early = _rms(audio[: int(0.05 * SR)])
+    bloom = _rms(audio[int(0.15 * SR) : int(0.35 * SR)])
+    assert bloom > early * 1.15
+
+
+def test_nylon_guitar_ps2_attack_brightness_falls_into_body():
+    inst = InstrumentLibrary.get("nylon_guitar_ps2", SR)
+    audio = inst.render(196.0, 0.85)
+    attack = audio[: int(0.06 * SR)]
+    body = audio[int(0.20 * SR) : int(0.42 * SR)]
+    attack_high = _band_energy(attack, SR, 1400.0, 6000.0)
+    body_high = _band_energy(body, SR, 1400.0, 6000.0)
+    assert attack_high > body_high * 1.3
+
+
+def test_soft_epiano_ps2_has_tine_attack_presence():
+    inst = InstrumentLibrary.get("soft_epiano_ps2", SR)
+    audio = inst.render(261.63, 0.8)
+    attack = audio[: int(0.05 * SR)]
+    tail = audio[int(0.25 * SR) : int(0.45 * SR)]
+    attack_presence = _band_energy(attack, SR, 4200.0, 9000.0)
+    tail_presence = _band_energy(tail, SR, 4200.0, 9000.0)
+    attack_low = _band_energy(attack, SR, 200.0, 1200.0)
+    tail_low = _band_energy(tail, SR, 200.0, 1200.0)
+    assert (attack_presence / max(attack_low, 1e-9)) > (tail_presence / max(tail_low, 1e-9)) * 1.05
