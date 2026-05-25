@@ -386,31 +386,71 @@ class RadioPlaylistGenerator:
             display = entry.display_name if entry else style_key
             fname = f"{i:02d}-{(entry.export_filename if entry else style_key)}.{fmt}"
             out_path = output_dir / fname
+            use_vocals = self._resolve_use_vocals(entry=entry, with_vocals=with_vocals)
+            instrumental_path = (
+                self._instrumental_companion_path(out_path) if use_vocals else None
+            )
 
             _log(f"  [{i}/{len(style_keys)}] {display} ({style_key}) …")
 
-            if out_path.exists() and not force:
+            skip_track = out_path.exists() and not force
+            if use_vocals and instrumental_path is not None and not instrumental_path.exists():
+                skip_track = False
+            if skip_track:
                 _log(f"    → Skipping (already exists): {fname}")
-                track_record = self._make_track_record(i, entry, style_key, fname, track_duration, skipped=True)
+                track_record = self._make_track_record(
+                    i,
+                    entry,
+                    style_key,
+                    fname,
+                    track_duration,
+                    skipped=True,
+                    rendered_with_vocals=use_vocals,
+                    instrumental_filename=instrumental_path.name if instrumental_path is not None else None,
+                )
             else:
                 try:
                     audio = self._compose_track(
                         style_key=style_key,
                         entry=entry,
                         duration=track_duration,
-                        with_vocals=with_vocals,
+                        with_vocals=use_vocals,
                         quiet=quiet,
                     )
                     actual_duration = audio.shape[0] / self.sample_rate
                     self._export(audio, out_path, fmt)
+                    if use_vocals and instrumental_path is not None:
+                        instrumental_audio = self._compose_track(
+                            style_key=style_key,
+                            entry=entry,
+                            duration=track_duration,
+                            with_vocals=False,
+                            quiet=quiet,
+                        )
+                        self._export(instrumental_audio, instrumental_path, fmt)
                     _log(f"    → {fname} ({actual_duration:.1f}s)")
                     track_record = self._make_track_record(
-                        i, entry, style_key, fname, actual_duration, skipped=False
+                        i,
+                        entry,
+                        style_key,
+                        fname,
+                        actual_duration,
+                        skipped=False,
+                        rendered_with_vocals=use_vocals,
+                        instrumental_filename=instrumental_path.name if instrumental_path is not None else None,
                     )
                 except Exception as exc:
                     _log(f"    ! Error generating {style_key}: {exc}")
                     track_record = self._make_track_record(
-                        i, entry, style_key, fname, 0.0, skipped=False, error=str(exc)
+                        i,
+                        entry,
+                        style_key,
+                        fname,
+                        0.0,
+                        skipped=False,
+                        error=str(exc),
+                        rendered_with_vocals=use_vocals,
+                        instrumental_filename=instrumental_path.name if instrumental_path is not None else None,
                     )
 
             tracks.append(track_record)
@@ -461,9 +501,17 @@ class RadioPlaylistGenerator:
             Path to the written audio file.
         """
         entry = self._lib.get(style_key)
-        audio = self._compose_track(style_key, entry, duration, with_vocals)
+        use_vocals = self._resolve_use_vocals(entry=entry, with_vocals=with_vocals)
+        audio = self._compose_track(style_key, entry, duration, use_vocals)
         out_path = Path(output_path)
         self._export(audio, out_path, fmt)
+        if use_vocals:
+            instrumental_audio = self._compose_track(style_key, entry, duration, with_vocals=False)
+            self._export(
+                instrumental_audio,
+                self._instrumental_companion_path(out_path),
+                fmt,
+            )
         return out_path
 
     def available_presets(self) -> list[str]:
@@ -585,7 +633,7 @@ class RadioPlaylistGenerator:
         style_key: str,
         entry: TrackEntry | None,
         duration: float,
-        with_vocals: bool | None,
+        with_vocals: bool,
         quiet: bool = False,
     ) -> np.ndarray:
         """Generate a full structured piece for one track."""
@@ -600,12 +648,6 @@ class RadioPlaylistGenerator:
         if not sections:
             sections = ["intro", "verse", "chorus", "outro"]
 
-        # Decide on vocals
-        if with_vocals is None:
-            use_vocals = bool(entry and entry.with_vocals)
-        else:
-            use_vocals = with_vocals
-
         composer = PieceComposer(
             sample_rate=self.sample_rate,
             seed=self._seed,
@@ -617,10 +659,20 @@ class RadioPlaylistGenerator:
         return composer.compose(
             style=style_key,
             sections=sections,
-            with_vocals=use_vocals,
+            with_vocals=with_vocals,
             duration=duration,
             quiet=quiet,
         )
+
+    @staticmethod
+    def _resolve_use_vocals(*, entry: TrackEntry | None, with_vocals: bool | None) -> bool:
+        if with_vocals is None:
+            return bool(entry and entry.with_vocals)
+        return bool(with_vocals)
+
+    @staticmethod
+    def _instrumental_companion_path(path: Path) -> Path:
+        return path.with_name(f"{path.stem}__instrumental{path.suffix}")
 
     def _export(self, audio: np.ndarray, path: Path, fmt: str) -> None:
         from audio_engine.export.audio_exporter import AudioExporter
@@ -636,6 +688,8 @@ class RadioPlaylistGenerator:
         duration: float,
         skipped: bool = False,
         error: str | None = None,
+        rendered_with_vocals: bool | None = None,
+        instrumental_filename: str | None = None,
     ) -> dict:
         base: dict = {
             "index": index,
@@ -644,6 +698,10 @@ class RadioPlaylistGenerator:
             "duration_s": round(duration, 2),
             "skipped": skipped,
         }
+        if rendered_with_vocals is not None:
+            base["rendered_with_vocals"] = bool(rendered_with_vocals)
+        if instrumental_filename:
+            base["instrumental_filename"] = instrumental_filename
         if entry:
             base.update({
                 "display_name": entry.display_name,

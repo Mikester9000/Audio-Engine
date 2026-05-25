@@ -135,10 +135,40 @@ def test_pipeline_all_gates_skipped_except_generation(tmp_path):
 
     assert isinstance(report, VerticalSliceGateReport)
     assert report.generation["status"] == "pass"
+    assert report.generation["styleAlignment"]["status"] == "pass"
+    assert report.generation["styleAlignment"]["issues"] == {}
     assert report.qa["status"] == "skip"
     assert report.compliance["status"] == "skip"
     assert report.export["status"] == "skip"
     assert report.gates_passed is True
+
+
+def test_pipeline_generation_fails_when_style_alignment_fails(tmp_path, monkeypatch):
+    batch = _minimal_batch_json(str(tmp_path))
+    batch_path = tmp_path / "batch.json"
+    batch_path.write_text(json.dumps(batch), encoding="utf-8")
+
+    from audio_engine.ai import generator as generator_module
+
+    monkeypatch.setattr(
+        generator_module.MusicGenerator,
+        "validate_style_library_alignment",
+        staticmethod(lambda: {"broken_style": ["missing expected instrument family"]}),
+    )
+
+    pipeline = VerticalSliceGatePipeline()
+    report = pipeline.run(
+        batch_file=batch_path,
+        output_dir=tmp_path / "out",
+        skip_qa=True,
+        skip_compliance=True,
+        skip_export=True,
+    )
+
+    assert report.generation["status"] == "fail"
+    assert report.generation["styleAlignment"]["status"] == "fail"
+    assert "broken_style" in report.generation["styleAlignment"]["issues"]
+    assert report.gates_passed is False
 
 
 def test_pipeline_gate_report_written_to_disk(tmp_path):

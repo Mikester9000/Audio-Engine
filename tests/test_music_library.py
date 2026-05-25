@@ -277,6 +277,8 @@ class TestRadioPlaylistSingleTrack:
         out = tmp_path / "eyes_on_me.wav"
         path = self.gen.generate_track("ff8_ballad", out, duration=5.0, with_vocals=True)
         assert path.exists()
+        companion = tmp_path / "eyes_on_me__instrumental.wav"
+        assert companion.exists()
 
     def test_generate_track_ff10_zanarkand(self, tmp_path):
         out = tmp_path / "zanarkand.wav"
@@ -345,6 +347,20 @@ class TestRadioPlaylistFull:
         data = json.loads(manifest_path.read_text())
         assert "tracks" in data
         assert data["track_count"] == 1
+
+    def test_generate_playlist_vocal_track_writes_instrumental_companion(self, tmp_path):
+        gen = self._make_gen()
+        manifest = gen.generate_playlist(
+            ["ff8_ballad"],
+            output_dir=tmp_path,
+            track_duration=3.0,
+            quiet=True,
+        )
+        main_file = tmp_path / manifest["tracks"][0]["filename"]
+        inst_file = tmp_path / manifest["tracks"][0]["instrumental_filename"]
+        assert main_file.exists()
+        assert inst_file.exists()
+        assert manifest["tracks"][0]["rendered_with_vocals"] is True
 
     def test_generate_playlist_skips_existing(self, tmp_path):
         gen = self._make_gen()
@@ -492,6 +508,7 @@ class TestCLIMusicLibrary:
         ])
         assert rc == 0
         assert Path(out_path).exists()
+        assert Path(tmp_path / "eyes__instrumental.wav").exists()
 
     def test_generate_radio_playlist_two_tracks(self, tmp_path):
         rc = self._run([

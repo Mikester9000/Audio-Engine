@@ -4,35 +4,41 @@
 
 ## Last completed change
 
-Implemented **SESSION-051**: PS2 instrument identity refinement (piano + guitar families).
+Implemented additive release-quality music/vocal follow-up work:
 
-- Refined `audio_engine/synthesizer/instrument.py` core timbres:
-  - upgraded `piano` synthesis with detuned-string layering, hammer/key transients, and controlled body resonance
-  - upgraded `electric_guitar` and `ff8_electric_guitar` with pick transients + cabinet-like post-EQ shaping
-  - upgraded `acoustic_guitar` with stronger pluck/body resonance behavior and natural high-frequency decay
-- Preserved PS2-era JRPG design target (FF8/FF10-like tonal aesthetic) by keeping constrained bandwidth, modest ambience, and deterministic synth behavior.
-- Added regression checks in `tests/test_instrument.py`:
-  - transient decay profile for piano
-  - pick-brightness decay for acoustic guitar
-  - midrange-presence guardrail for ff8 electric guitar
+- Integrated style/synth alignment enforcement into `VerticalSliceGatePipeline` gate-1 generation output:
+  - release gate now writes machine-readable `gates.generation.styleAlignment` status and issue details
+  - alignment failures now hard-fail generation gate status for deterministic remediation
+- Updated full-piece generation surfaces so vocal renders always include instrumental companions:
+  - `generate-track`, `generate-radio-playlist`, `generate-album`, and `compose-piece`
+  - companion naming contract: `__instrumental` suffix
+- Refined realism in procedural synthesis:
+  - upgraded `violin_solo` + `trumpet` timbral behavior in `audio_engine/synthesizer/instrument.py`
+  - added deterministic studio-style vocal polish pass in `audio_engine/ai/voice_synth.py`
+- Added/updated regression coverage in:
+  - `tests/test_release_gate.py`
+  - `tests/test_music_library.py`
+  - `tests/test_ps1_era.py`
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_instrument.py tests/test_ps1_era.py -k "instrument or guitar or piano"
+python -m pytest tests/test_release_gate.py tests/test_music_library.py tests/test_ps1_era.py -k "compose_piece_with_vocals or generate_track_with_vocals or playlist_vocal_track_writes_instrumental_companion or generation_fails_when_style_alignment_fails or all_gates_skipped_except_generation"
+python -m pytest tests/test_instrument.py
+python -m pytest tests/test_ai_pipeline.py -k voice
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result:
-- Targeted instrument + PS-era slices pass (111 selected tests)
-- Full test suite passes (1129 tests)
+- Targeted release-gate/music-library/piece-composer/instrument/voice slices pass
+- Full test suite passes (1136 tests)
 - Asset manifest validation passes
 
 ## Immediate next best task
 
-Execute SESSION-050 to surface style/synth alignment validation in release-gate artifacts, then continue instrument-identity refinement for additional named timbres.
+Continue iterative instrument and vocal realism refinement while preserving deterministic generation and release-gate reproducibility.
 
 ## Files future agents should read first
 

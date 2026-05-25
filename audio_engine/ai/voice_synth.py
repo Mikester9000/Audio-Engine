@@ -206,6 +206,51 @@ def _segment_env(n: int) -> np.ndarray:
     )[:n]
 
 
+def _studio_vocal_post(signal: np.ndarray, sr: int) -> np.ndarray:
+    """Apply a deterministic studio-style polish pass for vocal realism."""
+    from scipy.signal import butter, sosfilt  # type: ignore[import]
+
+    if len(signal) == 0:
+        return signal.astype(np.float32)
+
+    sig = signal.astype(np.float64)
+    sig -= float(np.mean(sig))
+
+    # Cleanup low rumble and harsh top-end.
+    hp = butter(2, max(40.0 / (sr / 2.0), 0.001), btype="highpass", output="sos")
+    lp = butter(2, min(9800.0 / (sr / 2.0), 0.98), btype="lowpass", output="sos")
+    sig = sosfilt(hp, sig)
+    sig = sosfilt(lp, sig)
+
+    # Presence lift for intelligibility.
+    lo = max(1200.0 / (sr / 2.0), 0.01)
+    hi = min(4200.0 / (sr / 2.0), 0.97)
+    if hi > lo:
+        presence = sosfilt(butter(2, [lo, hi], btype="bandpass", output="sos"), sig)
+        sig = sig + 0.10 * presence
+
+    # De-ess: dynamic attenuation of high-band spikes.
+    s_lo = max(5200.0 / (sr / 2.0), 0.02)
+    s_hi = min(9800.0 / (sr / 2.0), 0.99)
+    if s_hi > s_lo:
+        sib = sosfilt(butter(2, [s_lo, s_hi], btype="bandpass", output="sos"), sig)
+        env = np.convolve(np.abs(sib), np.ones(max(8, int(0.004 * sr))) / max(8, int(0.004 * sr)), mode="same")
+        env = env / (float(np.max(env)) + 1e-9)
+        sig = sig - sib * (0.35 * env)
+
+    # Gentle non-linear smoothing + short room reflections.
+    sig = np.tanh(sig * 1.25)
+    d1 = max(1, int(0.011 * sr))
+    d2 = max(1, int(0.019 * sr))
+    refl = np.zeros_like(sig)
+    if len(sig) > d1:
+        refl[d1:] += 0.12 * sig[:-d1]
+    if len(sig) > d2:
+        refl[d2:] += 0.08 * sig[:-d2]
+    sig = sig + refl
+    return np.clip(sig, -1.0, 1.0).astype(np.float32)
+
+
 def synthesise_voice(
     text: str,
     voice_preset: str = "narrator",
@@ -277,6 +322,7 @@ def synthesise_voice(
     breath = _noise_layer((len(voice) + 1) / sample_rate, sample_rate, rng, 250.0, 6000.0)[: len(voice)]
     micro_amp = 1.0 + 0.025 * np.sin(2.0 * np.pi * 3.5 * np.arange(len(voice)) / sample_rate)
     voice = (voice * micro_amp.astype(np.float32)) + preset.breathiness * 0.25 * breath
+    voice = _studio_vocal_post(voice, sample_rate)
 
     fade = min(int(0.01 * sample_rate), len(voice) // 4)
     if fade > 0:

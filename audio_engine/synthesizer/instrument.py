@@ -1047,16 +1047,22 @@ def _violin_solo(sr: int = 44100) -> Instrument:
         phase = _vibrato_phase(freq, dur, sr, rate_hz=6.1, depth_semitones=0.09)
         body = _bl_saw_from_phase(phase, freq, sr)
         n = len(body)
-        noise = np.random.default_rng(_VIOLIN_NOISE_SEED).standard_normal(n).astype(np.float32)
-        noise = Filter(sr).band_pass(noise, 900.0, 5200.0) * 0.08
-        return (0.92 * body + noise).astype(np.float32)
+        t = np.arange(n, dtype=np.float64) / sr
+        harmonic = np.sin(phase * 2.0).astype(np.float32) * np.exp(-0.18 * t).astype(np.float32) * 0.12
+        bow_noise = np.random.default_rng(_VIOLIN_NOISE_SEED).standard_normal(n).astype(np.float32)
+        bow_noise = Filter(sr).band_pass(bow_noise, 900.0, 5200.0) * 0.07
+        bow_transient = np.random.default_rng(_VIOLIN_NOISE_SEED + 1).standard_normal(n).astype(np.float32)
+        bow_transient = Filter(sr).band_pass(bow_transient, 1400.0, 6800.0)
+        bow_transient = bow_transient * np.exp(-16.0 * t).astype(np.float32) * 0.09
+        return (0.86 * body + harmonic + bow_noise + bow_transient).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
         sig = flt.high_pass(sig, 140.0)
-        sig = flt.warm_low_pass(sig, 6200.0)
-        sig = fx.compress(sig, threshold=0.62, ratio=2.6, makeup_gain=1.04)
-        return fx.reverb(sig, room_size=0.42, wet=0.17)
+        sig = flt.warm_low_pass(sig, 7000.0)
+        sig = flt.band_pass(sig, 180.0, 7600.0)
+        sig = fx.compress(sig, threshold=0.64, ratio=2.4, makeup_gain=1.05)
+        return fx.reverb(sig, room_size=0.40, wet=0.15)
 
     return Instrument(
         name="violin_solo",
@@ -1073,19 +1079,23 @@ def _trumpet(sr: int = 44100) -> Instrument:
     """Bright trumpet lead with brassy buzz and controlled bite."""
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        base = osc.bl_sawtooth(freq, dur)
-        n = len(base)
-        buzz = osc.square(freq * 2.0, dur) * 0.24
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        scoop = 1.0 + 0.035 * np.exp(-18.0 * t)
+        phase = 2.0 * np.pi * np.cumsum((freq * scoop) / sr)
+        base = _bl_saw_from_phase(phase, freq, sr)
+        buzz = np.sin(phase * 2.0).astype(np.float32) * 0.22
+        edge = np.sin(phase * 3.0).astype(np.float32) * 0.10
         breath = np.random.default_rng(_TRUMPET_NOISE_SEED).standard_normal(n).astype(np.float32)
-        breath = Filter(sr).band_pass(breath, 1200.0, 6500.0) * 0.05
-        return (0.76 * base + buzz + breath).astype(np.float32)
+        breath = Filter(sr).band_pass(breath, 1200.0, 7000.0) * 0.04
+        return (0.70 * base + buzz + edge + breath).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
         sig = flt.high_pass(sig, 180.0)
-        sig = flt.band_pass(sig, 250.0, 7000.0)
-        sig = fx.compress(sig, threshold=0.55, ratio=3.2, makeup_gain=1.1)
-        return fx.reverb(sig, room_size=0.38, wet=0.15)
+        sig = flt.band_pass(sig, 240.0, 7600.0)
+        sig = fx.compress(sig, threshold=0.57, ratio=3.0, makeup_gain=1.08)
+        return fx.reverb(sig, room_size=0.35, wet=0.12)
 
     return Instrument(
         name="trumpet",

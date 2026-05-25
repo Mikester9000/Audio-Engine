@@ -4,7 +4,7 @@
 
 ## Current headline
 
-The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-only offline neural path, sample drop-in folder scaffolding, upgraded synth/mastering/DSP quality surfaces, and an implemented procedural quality-overhaul pass (structured composition + recipe-driven SFX + improved voice + expanded studio UI with preview playback controls). Latest additive work (SESSION-049/051) expands full-edit studio controls and new-file workflow templates, adds style/instrument/SFX coverage + alignment validation, and refines piano/guitar timbral identity toward PS2-era FF8/FF10 aesthetics.
+The repository now has a complete draft-to-approved pipeline, a MusicGen-Medium-only offline neural path, sample drop-in folder scaffolding, upgraded synth/mastering/DSP quality surfaces, and an implemented procedural quality-overhaul pass (structured composition + recipe-driven SFX + improved voice + expanded studio UI with preview playback controls). Latest additive work (SESSION-049/051 + follow-up) expands full-edit studio controls and new-file workflow templates, adds style/instrument/SFX coverage + alignment validation, refines piano/guitar timbral identity toward PS2-era FF8/FF10 aesthetics, adds release-gate style-alignment fail/pass reporting, and auto-emits instrumental companions for vocal full-piece outputs.
 
 Latest additive work extended procedural music coverage with new narrative/region presets and added region-aware + adaptive layer-bundle output options in `MusicGen`.
 
@@ -78,8 +78,8 @@ Latest additive work extended procedural music coverage with new narrative/regio
 
 ## Recommended next PRs
 
-1. Execute SESSION-050 release-gate integration for style/synth intent validation output.
-2. Continue iterative named-instrument identity refinement for additional timbres while preserving deterministic style profiles.
+1. Continue iterative named-instrument identity refinement for additional timbres while preserving deterministic style profiles.
+2. Continue procedural vocal realism refinement while preserving deterministic regression behavior.
 
 ## Do not deprioritize
 

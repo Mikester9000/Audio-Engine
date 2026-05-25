@@ -14,18 +14,21 @@
 - studio-side music mastering-profile selection plus preset save/load, backend/sample controls, one-click batch generation, and play/stop preview browser in `audio_engine/ui/studio.py`
 - studio-side full-edit controls for prompt/format/region/adaptive intensity plus procedural custom arrangement instrument overrides and new-file template output authoring
 - request-driven dual-path delivery mode for paired instrumental and vocal-ready outputs (`musicDeliveryMode: dual_vocal_instrumental`)
+- full-piece generation now auto-writes instrumental companion files whenever a rendered track includes vocals (`*__instrumental.wav|ogg`) across `compose-piece`, `generate-track`, `generate-radio-playlist`, and `generate-album`
 - existing integration mapping for multiple game states in `audio_engine/integration/game_state_map.py`
 - style-intent metadata and executable style/synth alignment validation via `MusicGenerator.validate_style_library_alignment()`
+- release-gate generation now enforces and reports style/synth alignment results in `release_gate_report.json` (`gates.generation.styleAlignment`)
 - expanded style families: `hybrid_trailer`, `neo_noir`, `festival_folk`, `sci_fi_pulse`, `waltz_orchestral`
 - expanded timbres: `violin_solo`, `trumpet`, `acoustic_guitar`, `synth_lead_bright`
 - SESSION-051 timbre identity refinement: `piano`, `electric_guitar`, `ff8_electric_guitar`, and `acoustic_guitar` now have stronger instrument-name alignment under PS2-era FF8/FF10-style tonal constraints
+- additive realism refinement for `violin_solo` + `trumpet` synthesis and vocal post-processing polish in `voice_synth`
 
 ## What is missing
 
 - broader style-keyword resolver coverage for every advanced preset family
 - verified non-procedural backend quality benchmarks using real downloaded model weights
-- release-gate reporting hookup for style-intent validation output (planned SESSION-050)
-- full release-gate orchestration that consumes dual-path outputs end-to-end (SESSION-041 completed; further alignment reporting integration tracked in SESSION-050)
+- broader release-gate remediation automation beyond the new style-alignment fail/pass output
+- full release-gate orchestration that consumes dual-path outputs end-to-end (SESSION-041 completed; style-alignment gate reporting now integrated)
 
 ## Backend evaluation notes (SESSION-011 + optional neural scaffolding)
 
