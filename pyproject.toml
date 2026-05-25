@@ -18,6 +18,14 @@ dependencies = [
 
 [project.optional-dependencies]
 ogg = ["soundfile>=0.12"]
+musicgen = [
+    "torch>=2.1",
+    "torchaudio>=2.1",
+    "transformers>=4.40",
+    "accelerate>=0.27",
+    "huggingface_hub>=0.22",
+    "soundfile>=0.12",
+]
 neural = [
     "torch>=2.1",
     "torchaudio>=2.1",
