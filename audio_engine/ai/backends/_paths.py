@@ -62,7 +62,7 @@ def has_complete_model_snapshot(path: Path) -> bool:
             suffix = candidate.suffix.lower()
             if suffix in {".onnx", ".pt", ".pth", ".safetensors"}:
                 return True
-            if suffix == ".bin" and ("model" in candidate.name.lower() or "kokoro" in candidate.name.lower()):
+            if candidate.name.lower() in {"model.bin", "pytorch_model.bin"}:
                 return True
         return False
 
