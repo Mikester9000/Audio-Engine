@@ -35,9 +35,9 @@ The repo is strongest in:
 
 The repo is weakest in:
 
-- runtime playback behavior in `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/integration/cpp/AudioSystem.hpp`
+- runtime playback/state coverage in `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/integration/cpp/AudioSystem.hpp`
 - full content coverage for open-world JRPG audio families
-- end-to-end “generate everything, gate it, approve it, export it” automation
+- full-game content coverage beyond the current vertical-slice fixtures
 - concrete asset request coverage for the missing music/SFX/ambience families
 
 ## What is already good
@@ -59,13 +59,13 @@ The repo is weakest in:
 
 ## What currently blocks “program complete”
 
-### 1. Runtime playback is not ready for finished JRPG use
+### 1. Runtime playback foundation exists, but full-game state coverage is still limited
 
-- `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/integration/cpp/AudioSystem.hpp:L338-L345` plays music with `ma_engine_play_sound(...)`, which is a one-shot path instead of a managed looping/crossfade channel.
-- `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/integration/cpp/AudioSystem.hpp:L592-L599` leaves crossfade as a stub.
-- `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/integration/cpp/AudioSystem.hpp:L562-L579` only maps one exploration track and one vehicle track, which is far below the needs of an FF-style open-world game.
+- `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/integration/cpp/AudioSystem.hpp:L342-L364` already plays music through managed `ma_sound` slots and starts a tracked crossfade when a new state track is requested.
+- `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/integration/cpp/AudioSystem.hpp:L708-L728` already implements `_UpdateCrossfade(...)` to blend active and pending music streams over time.
+- `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/integration/cpp/AudioSystem.hpp:L599-L616` already maps multiple gameplay states (main menu, exploring, combat, dialogue, vehicle, inventory, shopping, camping), but the shipped runtime contract still covers a narrower music/state surface than the broader full-game target described in the factory docs.
 
-**Assessment:** even if the factory generates better assets, the current downstream runtime contract will undersell or break them.
+**Assessment:** the runtime playback core is in place, but more state/asset coverage is still needed before the full game audio target is complete.
 
 ### 2. Content coverage is still far from full-game completeness
 
@@ -83,12 +83,13 @@ Missing or under-modeled families include:
 - fuller combat readability SFX
 - more spell identity families
 
-### 3. The repo still lacks a single-command completion path
+### 3. The repo has a single-command release gate, but full-game completeness still depends on broader inputs
 
-- `/tmp/workspace/Mikester9000/Audio-Engine/docs/AI_FACTORY/CURRENT_SESSION.json:L5-L37` points at SESSION-041.
-- `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/integration/asset_pipeline.py:L1809-L1843` implements plan orchestration, but not a single release-gate pipeline that runs generation → QA → compliance → approval → export as one deterministic operation.
+- `/tmp/workspace/Mikester9000/Audio-Engine/docs/AI_FACTORY/CURRENT_SESSION.json:L5-L23` now lists SESSION-051 as the current completed session, with SESSION-041 recorded in `previousSessions` as the release-gate automation milestone.
+- `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/integration/asset_pipeline.py:L2561-L2725` already implements `VerticalSliceGatePipeline`, which runs generation → QA → compliance → export and writes `release_gate_report.json`.
+- `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/cli.py:L1969-L2039` and `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/cli.py:L2203-L2233` already expose that pipeline through the `run-release-gate` CLI command.
 
-**Assessment:** the factory can do many pieces, but the repo does not yet provide the easiest trustworthy path to “all needed game audio delivered.”
+**Assessment:** the trustworthy one-command path exists for the current vertical slice; the remaining gap is expanding plans, requests, and approved content until that gate covers the full-game target.
 
 ### 4. Example fixture coverage is still only a slice
 
@@ -101,7 +102,7 @@ These fixtures are useful, but they still do not represent a full FF-style open-
 ### 5. There is still an “asset factory vs shipped game” gap
 
 - The repo mission is correct for a factory, but `GameRewritten` needs:
-  - loop-safe runtime playback
+  - broader runtime/state-aware playback coverage
   - ambience layering
   - region/state-aware music selection
   - more expressive battle transition behavior
@@ -135,10 +136,10 @@ The repository is **closer to “factory infrastructure complete” than “game
 
 To reach the requested outcome, the repo needs four things in order:
 
-1. **runtime playback fixes**
+1. **runtime playback/state-surface expansion**
 2. **taxonomy expansion**
-3. **single-command release-gate automation**
-4. **fixture/request expansion until the full checklist can actually be produced**
+3. **fixture/request expansion until the existing release gate covers the full checklist**
+4. **approval/export coverage that matches the broader full-game target**
 
 ## Highest-priority files
 
@@ -152,4 +153,4 @@ To reach the requested outcome, the repo needs four things in order:
 
 ## Bottom line
 
-This repo is already a good **AI-first audio factory**. It is not yet a completed **all-audio delivery system** for a Final Fantasy-inspired open-world game. The missing work is now mostly about turning strong infrastructure into full coverage, reliable runtime behavior, and one-command delivery.
+This repo is already a good **AI-first audio factory**. It is not yet a completed **all-audio delivery system** for a Final Fantasy-inspired open-world game. The missing work is now mostly about turning strong infrastructure into full coverage, broader runtime/state contracts, and a larger approved content set flowing through the existing release gate.
