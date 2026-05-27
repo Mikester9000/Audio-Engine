@@ -4,35 +4,38 @@
 
 ## Last completed change
 
-Implemented **SESSION-051**: PS2 instrument identity refinement (piano + guitar families).
+Implemented additive PS2-era instrument-variety and realism expansion:
 
-- Refined `audio_engine/synthesizer/instrument.py` core timbres:
-  - upgraded `piano` synthesis with detuned-string layering, hammer/key transients, and controlled body resonance
-  - upgraded `electric_guitar` and `ff8_electric_guitar` with pick transients + cabinet-like post-EQ shaping
-  - upgraded `acoustic_guitar` with stronger pluck/body resonance behavior and natural high-frequency decay
-- Preserved PS2-era JRPG design target (FF8/FF10-like tonal aesthetic) by keeping constrained bandwidth, modest ambience, and deterministic synth behavior.
-- Added regression checks in `tests/test_instrument.py`:
-  - transient decay profile for piano
-  - pick-brightness decay for acoustic guitar
-  - midrange-presence guardrail for ff8 electric guitar
+- Added three new PS2-oriented instrument timbres in `audio_engine/synthesizer/instrument.py`:
+  - `legato_strings_ps2`
+  - `nylon_guitar_ps2`
+  - `soft_epiano_ps2`
+- Tuned **all instruments** via a shared PS2-era realism voicing pass in `Instrument.render()`:
+  - console-style bandwidth contour
+  - gentle bus compression
+  - subtle room glue
+- Expanded FF-era style variety and realism by integrating new timbres into core presets:
+  - `ff7_overworld`, `ff7_sad`, `ff8_ballad`, `ff10_calm`, `ff10_battle`, `ff10_zanarkand`
+- Added/updated regression coverage in:
+  - `tests/test_instrument.py` (new bow-bloom, nylon attack-decay, and soft-epiano tine-presence checks)
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_instrument.py tests/test_ps1_era.py -k "instrument or guitar or piano"
+python -m pytest tests/test_instrument.py tests/test_generator.py -k "legato_strings_ps2 or nylon_guitar_ps2 or soft_epiano_ps2 or style_alignment"
 python -m pytest
 python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result:
-- Targeted instrument + PS-era slices pass (111 selected tests)
-- Full test suite passes (1129 tests)
+- Targeted instrument/style-alignment slices pass
+- Full test suite passes
 - Asset manifest validation passes
 
 ## Immediate next best task
 
-Execute SESSION-050 to surface style/synth alignment validation in release-gate artifacts, then continue instrument-identity refinement for additional named timbres.
+Continue iterative FF-era instrument realism refinement for remaining families (woodwinds/brass/percussion) while preserving deterministic generation and style-alignment gate guarantees.
 
 ## Files future agents should read first
 

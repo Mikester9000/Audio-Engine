@@ -786,3 +786,4 @@ class TestCLINewFlags:
         ])
         assert rc == 0
         assert Path(out_path).exists()
+        assert Path(tmp_path / "piece_vocal__instrumental.wav").exists()

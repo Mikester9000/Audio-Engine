@@ -52,6 +52,28 @@ _SUBHARMONIC_PHASE_OFFSET = 0.33
 _NOISE_BAND_MIN = 0.001  # Avoid zero-width/zero-frequency band edges during normalization.
 _NOISE_BAND_MAX = 0.949  # Leave room for the minimum high-edge spacing below Nyquist.
 _NOISE_BAND_MIN_WIDTH = 0.05  # Keep a stable minimum normalized band-pass width for low sample rates.
+_VOCAL_HP_CUTOFF_HZ = 40.0
+_VOCAL_LP_CUTOFF_HZ = 9800.0
+_PRESENCE_BAND_LO_HZ = 1200.0
+_PRESENCE_BAND_HI_HZ = 4200.0
+_DEESS_BAND_LO_HZ = 5200.0
+_DEESS_BAND_HI_HZ = 9800.0
+_PRESENCE_LIFT_GAIN = 0.10
+_DEESS_ATTENUATION = 0.35
+_SATURATION_DRIVE = 1.25
+_REFLECTION_DELAY_1_S = 0.011
+_REFLECTION_DELAY_2_S = 0.019
+_REFLECTION_GAIN_1 = 0.12
+_REFLECTION_GAIN_2 = 0.08
+_POST_MIN_NORMALIZED_FREQ = 0.001
+_POST_MAX_NORMALIZED_FREQ = 0.99
+_POST_PRESENCE_MIN_NORMALIZED = 0.01
+_POST_PRESENCE_MAX_NORMALIZED = 0.97
+_POST_DEESS_MIN_NORMALIZED = 0.02
+_POST_DEESS_MAX_NORMALIZED = 0.99
+_DEESS_WINDOW_SECONDS = 0.004
+_DEESS_WINDOW_MIN_SAMPLES = 8
+_DEESS_ENVELOPE_EPSILON = 1e-9
 
 _VOWELS = set("aeiouy")
 _PLOSIVES = set("pbtdkg")
@@ -206,6 +228,78 @@ def _segment_env(n: int) -> np.ndarray:
     )[:n]
 
 
+def _studio_vocal_post(signal: np.ndarray, sr: int) -> np.ndarray:
+    """Apply deterministic vocal post-processing polish.
+
+    Parameters
+    ----------
+    signal:
+        Mono float audio array to process.
+    sr:
+        Sample rate in Hz.
+
+    Returns
+    -------
+    np.ndarray
+        Mono float32 audio after a fixed processing chain:
+        high/low-pass cleanup, presence lift, de-essing, mild saturation,
+        and short early reflections. No random state is used here, so
+        deterministic behavior is preserved for a given input waveform.
+    """
+    from scipy.signal import butter, sosfilt  # type: ignore[import]
+
+    if len(signal) == 0:
+        return signal.astype(np.float32)
+
+    sig = signal.astype(np.float64)
+    sig -= float(np.mean(sig))
+
+    # Cleanup low rumble and harsh top-end.
+    hp = butter(
+        2,
+        max(_VOCAL_HP_CUTOFF_HZ / (sr / 2.0), _POST_MIN_NORMALIZED_FREQ),
+        btype="highpass",
+        output="sos",
+    )
+    lp = butter(
+        2,
+        min(_VOCAL_LP_CUTOFF_HZ / (sr / 2.0), _POST_MAX_NORMALIZED_FREQ),
+        btype="lowpass",
+        output="sos",
+    )
+    sig = sosfilt(hp, sig)
+    sig = sosfilt(lp, sig)
+
+    # Presence lift for intelligibility.
+    lo = max(_PRESENCE_BAND_LO_HZ / (sr / 2.0), _POST_PRESENCE_MIN_NORMALIZED)
+    hi = min(_PRESENCE_BAND_HI_HZ / (sr / 2.0), _POST_PRESENCE_MAX_NORMALIZED)
+    if hi > lo:
+        presence = sosfilt(butter(2, [lo, hi], btype="bandpass", output="sos"), sig)
+        sig = sig + _PRESENCE_LIFT_GAIN * presence
+
+    # De-ess: dynamic attenuation of high-band spikes.
+    s_lo = max(_DEESS_BAND_LO_HZ / (sr / 2.0), _POST_DEESS_MIN_NORMALIZED)
+    s_hi = min(_DEESS_BAND_HI_HZ / (sr / 2.0), _POST_DEESS_MAX_NORMALIZED)
+    if s_hi > s_lo:
+        sib = sosfilt(butter(2, [s_lo, s_hi], btype="bandpass", output="sos"), sig)
+        window_size = max(_DEESS_WINDOW_MIN_SAMPLES, int(_DEESS_WINDOW_SECONDS * sr))
+        env = np.convolve(np.abs(sib), np.ones(window_size) / window_size, mode="same")
+        env = env / (np.max(env) + _DEESS_ENVELOPE_EPSILON)
+        sig = sig - sib * (_DEESS_ATTENUATION * env)
+
+    # Gentle non-linear smoothing + short room reflections.
+    sig = np.tanh(sig * _SATURATION_DRIVE)
+    d1 = max(1, int(_REFLECTION_DELAY_1_S * sr))
+    d2 = max(1, int(_REFLECTION_DELAY_2_S * sr))
+    refl = np.zeros_like(sig)
+    if len(sig) > d1:
+        refl[d1:] += _REFLECTION_GAIN_1 * sig[:-d1]
+    if len(sig) > d2:
+        refl[d2:] += _REFLECTION_GAIN_2 * sig[:-d2]
+    sig = sig + refl
+    return np.clip(sig, -1.0, 1.0).astype(np.float32)
+
+
 def synthesise_voice(
     text: str,
     voice_preset: str = "narrator",
@@ -277,6 +371,7 @@ def synthesise_voice(
     breath = _noise_layer((len(voice) + 1) / sample_rate, sample_rate, rng, 250.0, 6000.0)[: len(voice)]
     micro_amp = 1.0 + 0.025 * np.sin(2.0 * np.pi * 3.5 * np.arange(len(voice)) / sample_rate)
     voice = (voice * micro_amp.astype(np.float32)) + preset.breathiness * 0.25 * breath
+    voice = _studio_vocal_post(voice, sample_rate)
 
     fade = min(int(0.01 * sample_rate), len(voice) // 4)
     if fade > 0:

@@ -30,6 +30,9 @@ _CHOIR_FORMANTS = (700.0, 1220.0, 2600.0)
 _VIOLIN_NOISE_SEED = 31
 _TRUMPET_NOISE_SEED = 41
 _SYNTH_LEAD_NOISE_SEED = 51
+_LEGATO_STRINGS_NOISE_SEED = 71
+_NYLON_GUITAR_NOISE_SEED = 81
+_SOFT_EP_NOISE_SEED = 91
 
 
 def _cents_to_ratio(cents: float) -> float:
@@ -100,6 +103,33 @@ class Instrument:
     def __post_init__(self) -> None:
         self._osc = Oscillator(self.sample_rate)
         self._fx = Effects(self.sample_rate)
+        self._flt = Filter(self.sample_rate)
+        self._ps2_top_hz = self._resolve_ps2_top_hz()
+
+    def _resolve_ps2_top_hz(self) -> float:
+        """Resolve the cached PS2-era top-end rolloff for this instrument."""
+        name = self.name.lower()
+        if any(key in name for key in ("percussion", "timpani", "marimba", "orchestral_hit")):
+            return 9200.0
+        if any(key in name for key in ("guitar", "trumpet", "brass")):
+            return 8600.0
+        if any(key in name for key in ("synth", "celesta", "crystal")):
+            return 9800.0
+        return 8200.0
+
+    def _apply_ps2_realism_voicing(self, signal: np.ndarray) -> np.ndarray:
+        """Apply a light global PS2-era realism tint across all instruments."""
+        sig = signal.astype(np.float32, copy=False)
+
+        # Console-era bandwidth shaping with family-aware top-end.
+        sig = self._flt.high_pass(sig, 30.0)
+        sig = self._flt.warm_low_pass(sig, self._ps2_top_hz)
+
+        # Keep lightweight dynamics/tone shaping in the per-note path.
+        # Room glue should be applied once on the mixed output rather than
+        # performing an expensive convolution reverb for every note render.
+        sig = self._fx.compress(sig, threshold=0.78, ratio=1.5, makeup_gain=1.015)
+        return np.tanh(sig * 1.05).astype(np.float32)
 
     def render(self, frequency: float, duration: float) -> np.ndarray:
         """Render a single note as a NumPy float32 array.
@@ -115,6 +145,7 @@ class Instrument:
         shaped = self.envelope.apply(raw, duration)
         if self.post_process is not None:
             shaped = self.post_process(shaped, self._fx)
+        shaped = self._apply_ps2_realism_voicing(shaped)
         peak = np.max(np.abs(shaped))
         if peak > 1e-9:
             shaped = shaped / peak
@@ -1047,16 +1078,21 @@ def _violin_solo(sr: int = 44100) -> Instrument:
         phase = _vibrato_phase(freq, dur, sr, rate_hz=6.1, depth_semitones=0.09)
         body = _bl_saw_from_phase(phase, freq, sr)
         n = len(body)
-        noise = np.random.default_rng(_VIOLIN_NOISE_SEED).standard_normal(n).astype(np.float32)
-        noise = Filter(sr).band_pass(noise, 900.0, 5200.0) * 0.08
-        return (0.92 * body + noise).astype(np.float32)
+        t = np.arange(n, dtype=np.float64) / sr
+        harmonic = np.sin(phase * 2.0).astype(np.float32) * np.exp(-0.18 * t).astype(np.float32) * 0.12
+        bow_noise = np.random.default_rng(_VIOLIN_NOISE_SEED).standard_normal(n).astype(np.float32)
+        bow_noise = Filter(sr).band_pass(bow_noise, 900.0, 5200.0) * 0.07
+        bow_transient = np.random.default_rng(_VIOLIN_NOISE_SEED + 1).standard_normal(n).astype(np.float32)
+        bow_transient = Filter(sr).band_pass(bow_transient, 1400.0, 6800.0)
+        bow_transient = bow_transient * np.exp(-16.0 * t).astype(np.float32) * 0.09
+        return (0.86 * body + harmonic + bow_noise + bow_transient).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
         sig = flt.high_pass(sig, 140.0)
-        sig = flt.warm_low_pass(sig, 6200.0)
-        sig = fx.compress(sig, threshold=0.62, ratio=2.6, makeup_gain=1.04)
-        return fx.reverb(sig, room_size=0.42, wet=0.17)
+        sig = flt.band_pass(sig, 180.0, 7600.0)
+        sig = fx.compress(sig, threshold=0.64, ratio=2.4, makeup_gain=1.05)
+        return fx.reverb(sig, room_size=0.40, wet=0.15)
 
     return Instrument(
         name="violin_solo",
@@ -1073,19 +1109,23 @@ def _trumpet(sr: int = 44100) -> Instrument:
     """Bright trumpet lead with brassy buzz and controlled bite."""
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        base = osc.bl_sawtooth(freq, dur)
-        n = len(base)
-        buzz = osc.square(freq * 2.0, dur) * 0.24
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        scoop = 1.0 + 0.035 * np.exp(-18.0 * t)
+        phase = 2.0 * np.pi * np.cumsum((freq * scoop) / sr)
+        base = _bl_saw_from_phase(phase, freq, sr)
+        buzz = np.sin(phase * 2.0).astype(np.float32) * 0.22
+        edge = np.sin(phase * 3.0).astype(np.float32) * 0.10
         breath = np.random.default_rng(_TRUMPET_NOISE_SEED).standard_normal(n).astype(np.float32)
-        breath = Filter(sr).band_pass(breath, 1200.0, 6500.0) * 0.05
-        return (0.76 * base + buzz + breath).astype(np.float32)
+        breath = Filter(sr).band_pass(breath, 1200.0, 7000.0) * 0.04
+        return (0.70 * base + buzz + edge + breath).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
         sig = flt.high_pass(sig, 180.0)
-        sig = flt.band_pass(sig, 250.0, 7000.0)
-        sig = fx.compress(sig, threshold=0.55, ratio=3.2, makeup_gain=1.1)
-        return fx.reverb(sig, room_size=0.38, wet=0.15)
+        sig = flt.band_pass(sig, 240.0, 7600.0)
+        sig = fx.compress(sig, threshold=0.57, ratio=3.0, makeup_gain=1.08)
+        return fx.reverb(sig, room_size=0.35, wet=0.12)
 
     return Instrument(
         name="trumpet",
@@ -1137,6 +1177,120 @@ def _acoustic_guitar(sr: int = 44100) -> Instrument:
         envelope=Envelope(attack=0.001, decay=0.24, sustain=0.0, release=0.22, sample_rate=sr),
         post_process=post,
         volume=0.77,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("legato_strings_ps2")
+def _legato_strings_ps2(sr: int = 44100) -> Instrument:
+    """Lush legato strings with soft bow attack (PS2-era orchestral color)."""
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        base_phase = _vibrato_phase(freq, dur, sr, rate_hz=5.2, depth_semitones=0.07)
+        upper_phase = _vibrato_phase(freq * _cents_to_ratio(4.0), dur, sr, rate_hz=5.4, depth_semitones=0.06)
+        lower_phase = _vibrato_phase(freq * _cents_to_ratio(-4.0), dur, sr, rate_hz=5.0, depth_semitones=0.06)
+
+        body = (
+            0.58 * _bl_saw_from_phase(base_phase, freq, sr)
+            + 0.24 * _bl_saw_from_phase(upper_phase, freq * _cents_to_ratio(4.0), sr)
+            + 0.18 * _bl_saw_from_phase(lower_phase, freq * _cents_to_ratio(-4.0), sr)
+        ).astype(np.float32)
+
+        bow = np.random.default_rng(_LEGATO_STRINGS_NOISE_SEED).standard_normal(n).astype(np.float32)
+        bow = Filter(sr).band_pass(bow, 280.0, 3200.0) * 0.06
+        bloom = (1.0 - np.exp(-5.5 * t)).astype(np.float32)
+        return (body * bloom + bow).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 120.0)
+        sig = flt.warm_low_pass(sig, 5400.0)
+        sig = fx.chorus(sig, depth=0.0018, rate=0.62, wet=0.16)
+        sig = fx.compress(sig, threshold=0.63, ratio=2.4, makeup_gain=1.05)
+        return fx.reverb(sig, room_size=0.55, wet=0.19)
+
+    return Instrument(
+        name="legato_strings_ps2",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.032, decay=0.18, sustain=0.75, release=0.34, sample_rate=sr),
+        post_process=post,
+        volume=0.80,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("nylon_guitar_ps2")
+def _nylon_guitar_ps2(sr: int = 44100) -> Instrument:
+    """Warm fingerstyle nylon guitar with woody body resonance."""
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+
+        fundamental = np.sin(2.0 * np.pi * freq * t) * np.exp(-4.5 * t)
+        second = 0.27 * np.sin(2.0 * np.pi * (freq * 2.0) * t) * np.exp(-6.8 * t)
+        third = 0.17 * np.sin(2.0 * np.pi * (freq * 3.0) * t) * np.exp(-8.4 * t)
+        body = (fundamental + second + third).astype(np.float32)
+
+        # Body air/wood resonances tuned lower than steel/acoustic variant.
+        resonances = (
+            0.10 * np.sin(2.0 * np.pi * 95.0 * t)
+            + 0.08 * np.sin(2.0 * np.pi * 185.0 * t)
+            + 0.06 * np.sin(2.0 * np.pi * 370.0 * t)
+        ) * np.exp(-5.8 * t)
+
+        finger = np.random.default_rng(_NYLON_GUITAR_NOISE_SEED).standard_normal(n).astype(np.float32)
+        finger = Filter(sr).band_pass(finger, 900.0, 5600.0) * np.exp(-42.0 * t).astype(np.float32) * 0.20
+        return (body + resonances.astype(np.float32) + finger).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 70.0)
+        sig = flt.warm_low_pass(sig, 6100.0)
+        sig = fx.compress(sig, threshold=0.68, ratio=2.0, makeup_gain=1.02)
+        return fx.reverb(sig, room_size=0.24, wet=0.11)
+
+    return Instrument(
+        name="nylon_guitar_ps2",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.001, decay=0.22, sustain=0.0, release=0.26, sample_rate=sr),
+        post_process=post,
+        volume=0.76,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("soft_epiano_ps2")
+def _soft_epiano_ps2(sr: int = 44100) -> Instrument:
+    """Soft electric piano with bell-tine attack and warm sustain."""
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        phase = 2.0 * np.pi * np.cumsum(freq * (1.0 + 0.004 * np.sin(2.0 * np.pi * 5.0 * t)) / sr)
+        tine = np.sin(phase * 2.0).astype(np.float32) * np.exp(-16.0 * t).astype(np.float32) * 0.30
+        body = 0.64 * _bl_saw_from_phase(phase, freq, sr)
+        sub = 0.10 * np.sin(phase * 0.5).astype(np.float32)
+        air = np.random.default_rng(_SOFT_EP_NOISE_SEED).standard_normal(n).astype(np.float32)
+        air = Filter(sr).band_pass(air, 1800.0, 7600.0) * np.exp(-38.0 * t).astype(np.float32) * 0.035
+        return (body + tine + sub + air).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 95.0)
+        sig = flt.warm_low_pass(sig, 6800.0)
+        sig = fx.chorus(sig, depth=0.0010, rate=0.85, wet=0.13)
+        sig = fx.compress(sig, threshold=0.64, ratio=2.3, makeup_gain=1.04)
+        return fx.reverb(sig, room_size=0.28, wet=0.12)
+
+    return Instrument(
+        name="soft_epiano_ps2",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.008, decay=0.18, sustain=0.58, release=0.2, sample_rate=sr),
+        post_process=post,
+        volume=0.78,
         sample_rate=sr,
     )
 

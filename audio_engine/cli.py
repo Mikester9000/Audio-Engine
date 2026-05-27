@@ -628,6 +628,17 @@ def _cmd_compose_piece(args: argparse.Namespace) -> None:
 
     exporter = AudioExporter(sample_rate=args.sample_rate)
     out_path = exporter.export(audio, args.output, fmt=args.format)
+    if args.with_vocals:
+        instrumental_audio = composer.compose(
+            style=args.style,
+            sections=sections,
+            with_vocals=False,
+            duration=args.duration,
+            quiet=True,
+        )
+        inst_path = out_path.with_name(f"{out_path.stem}__instrumental{out_path.suffix}")
+        exporter.export(instrumental_audio, inst_path, fmt=args.format)
+        print(f"Instrumental companion saved to: {inst_path}")
     print(f"\nDone. Saved to: {out_path}")
 
 

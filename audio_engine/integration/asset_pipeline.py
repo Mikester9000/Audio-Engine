@@ -2669,8 +2669,22 @@ class VerticalSliceGatePipeline:
 
         # ---- Gate 1: Generation ----
         self.progress_callback("\n[gate 1/4] Generation …")
+        style_alignment_gate: dict = {"status": "pass", "issues": {}}
         try:
+            from audio_engine.ai.generator import MusicGenerator
             from audio_engine.integration import load_generation_request_batch
+
+            style_alignment_issues = MusicGenerator.validate_style_library_alignment()
+            if style_alignment_issues:
+                style_alignment_gate = {
+                    "status": "fail",
+                    "issues": style_alignment_issues,
+                }
+                issue_count = sum(len(v) for v in style_alignment_issues.values())
+                raise ValueError(
+                    "style/synth alignment validation failed "
+                    f"({len(style_alignment_issues)} style(s), {issue_count} issue(s))"
+                )
 
             batch = load_generation_request_batch(batch_file)
             pipeline = RequestBatchPipeline(
@@ -2685,6 +2699,7 @@ class VerticalSliceGatePipeline:
                 "generated": n_generated,
                 "errors": n_errors,
                 "errorMessages": manifest.errors,
+                "styleAlignment": style_alignment_gate,
             }
             self.progress_callback(
                 f"  generation: {n_generated} file(s), {n_errors} error(s)"
@@ -2695,6 +2710,7 @@ class VerticalSliceGatePipeline:
                 "generated": 0,
                 "errors": 1,
                 "errorMessages": [str(exc)],
+                "styleAlignment": style_alignment_gate,
             }
             self.progress_callback(f"  [generation error] {exc}")
 
