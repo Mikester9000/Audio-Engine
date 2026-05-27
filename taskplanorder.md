@@ -2,7 +2,7 @@
 
 Absolute repository paths are used intentionally in this file because the task explicitly required repository file references to use absolute paths.
 
-This file now extends the canonical task plan instead of duplicating it. Tasks 01–17 remain canonical in `/tmp/workspace/Mikester9000/Audio-Engine/Task_List.md`. This document only appends the Studio GUI follow-up tasks 18–26.
+This file now extends the canonical task plan instead of duplicating it. Tasks 01–17 remain canonical in the repo-root `Task_List.md` (local clone: `/tmp/workspace/Mikester9000/Audio-Engine/Task_List.md`). This document only appends the Studio GUI follow-up tasks 18–26.
 
 ---
 

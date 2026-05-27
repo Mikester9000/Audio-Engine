@@ -19,7 +19,7 @@ This assessment is based on a direct review of the AI-factory control docs, subs
 Validation run during review:
 
 - `python -m pip install -e ".[dev]"`
-- `python -m pytest` → `1134 passed`
+- `python -m pytest` → baseline command re-run in this review environment (`1134` tests collected; run still in progress at capture time)
 - `python tools/validate-assets.py assets/examples/ --verbose` → `PASS`
 
 ## Executive summary
