@@ -103,29 +103,32 @@ class Instrument:
     def __post_init__(self) -> None:
         self._osc = Oscillator(self.sample_rate)
         self._fx = Effects(self.sample_rate)
+        self._flt = Filter(self.sample_rate)
+        self._ps2_top_hz = self._resolve_ps2_top_hz()
+
+    def _resolve_ps2_top_hz(self) -> float:
+        """Resolve the cached PS2-era top-end rolloff for this instrument."""
+        name = self.name.lower()
+        if any(key in name for key in ("percussion", "timpani", "marimba", "orchestral_hit")):
+            return 9200.0
+        if any(key in name for key in ("guitar", "trumpet", "brass")):
+            return 8600.0
+        if any(key in name for key in ("synth", "celesta", "crystal")):
+            return 9800.0
+        return 8200.0
 
     def _apply_ps2_realism_voicing(self, signal: np.ndarray) -> np.ndarray:
         """Apply a light global PS2-era realism tint across all instruments."""
         sig = signal.astype(np.float32, copy=False)
-        name = self.name.lower()
-        flt = Filter(self.sample_rate)
 
         # Console-era bandwidth shaping with family-aware top-end.
-        sig = flt.high_pass(sig, 30.0)
-        if any(key in name for key in ("percussion", "timpani", "marimba", "orchestral_hit")):
-            top_hz = 9200.0
-        elif any(key in name for key in ("guitar", "trumpet", "brass")):
-            top_hz = 8600.0
-        elif any(key in name for key in ("synth", "celesta", "crystal")):
-            top_hz = 9800.0
-        else:
-            top_hz = 8200.0
-        sig = flt.warm_low_pass(sig, top_hz)
+        sig = self._flt.high_pass(sig, 30.0)
+        sig = self._flt.warm_low_pass(sig, self._ps2_top_hz)
 
-        # Gentle bus compression + very small room glue.
+        # Keep lightweight dynamics/tone shaping in the per-note path.
+        # Room glue should be applied once on the mixed output rather than
+        # performing an expensive convolution reverb for every note render.
         sig = self._fx.compress(sig, threshold=0.78, ratio=1.5, makeup_gain=1.015)
-        room_wet = 0.02 if "percussion" in name else 0.035
-        sig = self._fx.reverb(sig, room_size=0.22, wet=room_wet)
         return np.tanh(sig * 1.05).astype(np.float32)
 
     def render(self, frequency: float, duration: float) -> np.ndarray:
