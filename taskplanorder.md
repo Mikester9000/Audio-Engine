@@ -2,6 +2,10 @@
 
 Absolute repository paths are used intentionally in this file because the task explicitly required repository file references to use absolute paths.
 
+Tasks 01-17 remain sourced from `Task_List.md` and are mirrored here so this file can serve as one complete execution order document.
+
+For execution sequencing, `taskplanorder.md` is the authoritative plan; if it ever diverges from `Task_List.md`, sync the Task 01-17 blocks to keep both documents aligned.
+
 ---
 
 ## Phase A: Core Infrastructure and Release Gate (Tasks 01-17)
@@ -227,8 +231,8 @@ Absolute repository paths are used intentionally in this file because the task e
 - **Check to adhere to Final Fantasy aesthetics:** Ambience beds should support immersive FF-style world atmosphere without imitating franchise assets.
 - **Name of the file to be edited or create:** `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/ai/ambience_synth.py`
 - **Line where code is to be edited or create:** Create new module and implement core ambience layer synthesis from `L1` onward.
-- **READ_FILE:** `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/ai/music_gen.py`
-- **READ_LINES:** `L1-L220` (new target file: `ambience_synth.py` -> N/A pre-create; use `sfx_synth.py` `L140-L880` as secondary template)
+- **READ_FILE:** Template 1: `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/ai/music_gen.py`; Template 2: `/tmp/workspace/Mikester9000/Audio-Engine/audio_engine/ai/sfx_synth.py`
+- **READ_LINES:** `music_gen.py L1-L220`; `sfx_synth.py L140-L880` (new target file `ambience_synth.py` is N/A pre-create)
 
 ## Task 30
 
@@ -326,8 +330,8 @@ Absolute repository paths are used intentionally in this file because the task e
 - **Check to adhere to Final Fantasy aesthetics:** Ambience prompts should cover FF-inspired biomes/moods while staying style-safe and original.
 - **Name of the file to be edited or create:** `/tmp/workspace/Mikester9000/Audio-Engine/docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.ambience.v1.json`
 - **Line where code is to be edited or create:** Create new fixture file and define ambience request array from `L1` onward.
-- **READ_FILE:** `/tmp/workspace/Mikester9000/Audio-Engine/docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json`
-- **READ_LINES:** `L1-L520` (new target fixture: `generation_requests.ambience.v1.json` -> N/A pre-create; use `generation_requests.sfx.v1.json` `L1-L227` as secondary template)
+- **READ_FILE:** Template 1: `/tmp/workspace/Mikester9000/Audio-Engine/docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.music.v1.json`; Template 2: `/tmp/workspace/Mikester9000/Audio-Engine/docs/AI_FACTORY/EXAMPLES/gamerewritten_vertical_slice/generation_requests.sfx.v1.json`
+- **READ_LINES:** `music L1-L520`; `sfx L1-L227` (new target fixture `generation_requests.ambience.v1.json` is N/A pre-create)
 
 ## Task 39
 
@@ -451,7 +455,7 @@ Absolute repository paths are used intentionally in this file because the task e
 A “fully developed program” for GameRewritten delivery means all of the following are true:
 
 - Tasks 01-17 (core infrastructure/release-gate) are complete and validated.
-- Tasks 27-39 (content expansion/full-game coverage) close assessment gaps documented in repo-root `/tmp/workspace/Mikester9000/Audio-Engine/assessment27.md` for:
+- Tasks 27-39 (content expansion/full-game coverage) close assessment gaps documented in repo-root `/tmp/workspace/Mikester9000/Audio-Engine/assessment27.md` for (read this assessment before Phase B execution):
   - content expansion (music families, SFX breadth, ambience system),
   - runtime integration (region/state-aware music, ambience layering, transition intensity),
   - fixture expansion (including `generation_requests.ambience.v1.json`),
