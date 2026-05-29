@@ -227,6 +227,80 @@ def _set_status(label: _StatusLabel, text: str) -> None:
     label.update_idletasks()
 
 
+_SYNTH_WAVEFORMS = ["sine", "square", "sawtooth", "triangle", "noise", "bl_sawtooth", "bl_square"]
+_SYNTH_FILTER_TYPES = ["none", "lowpass", "highpass", "bandpass"]
+
+
+def _build_synth_patch(
+    *,
+    waveform: str,
+    frequency: float,
+    duration: float,
+    amplitude: float,
+    attack: float,
+    decay: float,
+    sustain: float,
+    release: float,
+    filter_type: str,
+    filter_cutoff: float,
+    filter_q: float,
+    sample_rate: int = 44100,
+) -> "np.ndarray":
+    """Build a raw synth sound using oscillator + ADSR + optional filter.
+
+    Returns a mono float32 NumPy array normalised to the range [-1, 1].
+    """
+    import numpy as np
+    from audio_engine.synthesizer.oscillator import Oscillator
+    from audio_engine.synthesizer.envelope import Envelope
+    from audio_engine.synthesizer.filter import Filter
+
+    osc = Oscillator(sample_rate=sample_rate)
+    wave_fn = getattr(osc, waveform, None)
+    if wave_fn is None:
+        raise ValueError(f"Unknown waveform: {waveform!r}")
+    if waveform == "noise":
+        raw: np.ndarray = osc.noise(duration, amplitude)
+    else:
+        raw = wave_fn(frequency, duration, amplitude)
+
+    env = Envelope(
+        attack=attack,
+        decay=decay,
+        sustain=max(0.0, min(1.0, sustain)),
+        release=release,
+        sample_rate=sample_rate,
+    )
+    shaped = env.apply(raw, duration)
+
+    if filter_type != "none":
+        filt = Filter(sample_rate=sample_rate)
+        cutoff = max(20.0, min(filter_cutoff, sample_rate / 2.0 - 1.0))
+        if filter_type == "lowpass":
+            shaped = filt.low_pass(shaped, cutoff)
+        elif filter_type == "highpass":
+            shaped = filt.high_pass(shaped, cutoff)
+        elif filter_type == "bandpass":
+            band_low = max(20.0, cutoff * 0.5)
+            band_high = min(sample_rate / 2.0 - 1.0, cutoff * 2.0)
+            shaped = filt.band_pass(shaped, band_low, band_high)
+
+    peak = float(np.max(np.abs(shaped)))
+    if peak > 1e-9:
+        shaped = shaped / peak * min(amplitude, 1.0)
+
+    return shaped.astype(np.float32)
+
+
+def _export_synth_patch(audio: "np.ndarray", output_path: Path, *, sample_rate: int = 44100) -> Path:
+    """Write *audio* as a 16-bit WAV file to *output_path*."""
+    from audio_engine.export.audio_exporter import AudioExporter
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    exporter = AudioExporter(sample_rate=sample_rate)
+    return exporter.export(audio, output_path, fmt="wav")
+
+
 def launch_studio() -> None:
     import tkinter as tk
     from tkinter import filedialog, ttk
@@ -282,9 +356,11 @@ def launch_studio() -> None:
     music_tab = ttk.Frame(notebook)
     sfx_tab = ttk.Frame(notebook)
     voice_tab = ttk.Frame(notebook)
+    synth_tab = ttk.Frame(notebook)
     notebook.add(music_tab, text="Music")
     notebook.add(sfx_tab, text="SFX")
     notebook.add(voice_tab, text="Voice")
+    notebook.add(synth_tab, text="Synth Workbench")
 
     # Music tab
     ttk.Label(music_tab, text="Style").grid(row=0, column=0, sticky="w", padx=8, pady=6)
@@ -633,6 +709,115 @@ def launch_studio() -> None:
             _set_status(global_status, f"Voice failed — {exc}")
 
     ttk.Button(voice_tab, text="Generate", command=_generate_voice).grid(row=6, column=0, columnspan=2, pady=8)
+
+    # ---------------------------------------------------------------------------
+    # Synth Workbench tab — manual waveform/ADSR/filter/WAV creation without AI
+    # ---------------------------------------------------------------------------
+    _sw_counter = [0]
+
+    def _sw_row() -> int:
+        r = _sw_counter[0]
+        _sw_counter[0] += 1
+        return r
+
+    ttk.Label(synth_tab, text="Waveform").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_waveform = tk.StringVar(value="sine")
+    ttk.Combobox(synth_tab, textvariable=synth_waveform, values=_SYNTH_WAVEFORMS, state="readonly").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(synth_tab, text="Frequency (Hz)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_freq = tk.StringVar(value="440.0")
+    ttk.Entry(synth_tab, textvariable=synth_freq).grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(synth_tab, text="Duration (s)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_dur = tk.StringVar(value="1.0")
+    ttk.Entry(synth_tab, textvariable=synth_dur).grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(synth_tab, text="Amplitude (0–1)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_amp = tk.DoubleVar(value=0.8)
+    ttk.Scale(synth_tab, from_=0.0, to=1.0, variable=synth_amp, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
+    ttk.Label(synth_tab, text="— ADSR Envelope —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=2, pady=2)
+
+    ttk.Label(synth_tab, text="Attack (s)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_attack = tk.DoubleVar(value=0.01)
+    ttk.Scale(synth_tab, from_=0.0, to=2.0, variable=synth_attack, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(synth_tab, text="Decay (s)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_decay = tk.DoubleVar(value=0.1)
+    ttk.Scale(synth_tab, from_=0.0, to=2.0, variable=synth_decay, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(synth_tab, text="Sustain (0–1)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_sustain = tk.DoubleVar(value=0.7)
+    ttk.Scale(synth_tab, from_=0.0, to=1.0, variable=synth_sustain, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(synth_tab, text="Release (s)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_release = tk.DoubleVar(value=0.3)
+    ttk.Scale(synth_tab, from_=0.0, to=2.0, variable=synth_release, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
+    ttk.Label(synth_tab, text="— Filter —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=2, pady=2)
+
+    ttk.Label(synth_tab, text="Filter type").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_filter_type = tk.StringVar(value="none")
+    ttk.Combobox(synth_tab, textvariable=synth_filter_type, values=_SYNTH_FILTER_TYPES, state="readonly").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(synth_tab, text="Cutoff (Hz)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_cutoff = tk.StringVar(value="2000.0")
+    ttk.Entry(synth_tab, textvariable=synth_cutoff).grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
+
+    ttk.Label(synth_tab, text="Output path").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_out = tk.StringVar(value="synth_patch.wav")
+    ttk.Entry(synth_tab, textvariable=synth_out).grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    synth_status = ttk.Label(synth_tab, text="")
+    synth_status.grid(row=_sw_row(), column=0, columnspan=2, sticky="w", padx=8, pady=8)
+
+    synth_tab.columnconfigure(1, weight=1)
+
+    def _run_synth_patch() -> Path:
+        try:
+            freq = float(synth_freq.get())
+        except ValueError:
+            freq = 440.0
+        try:
+            dur = max(0.05, float(synth_dur.get()))
+        except ValueError:
+            dur = 1.0
+        try:
+            cutoff = float(synth_cutoff.get())
+        except ValueError:
+            cutoff = 2000.0
+        out_path = Path(synth_out.get())
+        audio = _build_synth_patch(
+            waveform=synth_waveform.get(),
+            frequency=freq,
+            duration=dur,
+            amplitude=float(synth_amp.get()),
+            attack=float(synth_attack.get()),
+            decay=float(synth_decay.get()),
+            sustain=float(synth_sustain.get()),
+            release=float(synth_release.get()),
+            filter_type=synth_filter_type.get(),
+            filter_cutoff=cutoff,
+            filter_q=1.0,
+        )
+        return _export_synth_patch(audio, out_path)
+
+    def _generate_synth_patch() -> None:
+        try:
+            _set_status(synth_status, "Building synth patch...")
+            out_path = _run_synth_patch()
+            _set_status(synth_status, f"Done — saved to {out_path}")
+            _set_status(global_status, "Synth patch saved.")
+            _refresh_preview_files()
+        except Exception as exc:  # pragma: no cover - UI path
+            _set_status(synth_status, f"Error: {exc}")
+            _set_status(global_status, f"Synth workbench failed — {exc}")
+
+    ttk.Button(synth_tab, text="Generate WAV", command=_generate_synth_patch).grid(row=_sw_row(), column=0, columnspan=2, pady=8)
 
     def _build_current_preset() -> dict[str, object]:
         return {

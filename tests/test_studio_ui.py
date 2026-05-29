@@ -3,15 +3,20 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from audio_engine.ui.studio import (
     _build_preview_catalog,
     _build_new_file_template,
+    _build_synth_patch,
     _discover_wav_files,
+    _export_synth_patch,
     _new_file_output_targets,
     _parse_float_field,
     _read_studio_preset,
+    _SYNTH_FILTER_TYPES,
+    _SYNTH_WAVEFORMS,
     _write_new_file_template,
     _write_studio_preset,
 )
@@ -147,3 +152,149 @@ def test_write_new_file_template_roundtrip(tmp_path: Path):
     loaded = json.loads(path.read_text(encoding="utf-8"))
     assert loaded["projectName"] == "quest_intro"
     assert loaded["outputTargets"]["music"].endswith("quest_intro_music.wav")
+
+
+# ---------------------------------------------------------------------------
+# Synth Workbench helpers
+# ---------------------------------------------------------------------------
+
+
+def test_synth_waveforms_list_is_nonempty():
+    assert len(_SYNTH_WAVEFORMS) > 0
+    assert "sine" in _SYNTH_WAVEFORMS
+
+
+def test_synth_filter_types_includes_none():
+    assert "none" in _SYNTH_FILTER_TYPES
+
+
+def test_build_synth_patch_returns_float32_array():
+    audio = _build_synth_patch(
+        waveform="sine",
+        frequency=440.0,
+        duration=0.5,
+        amplitude=0.8,
+        attack=0.01,
+        decay=0.1,
+        sustain=0.7,
+        release=0.3,
+        filter_type="none",
+        filter_cutoff=2000.0,
+        filter_q=1.0,
+    )
+    assert isinstance(audio, np.ndarray)
+    assert audio.dtype == np.float32
+
+
+def test_build_synth_patch_correct_length():
+    sample_rate = 44100
+    duration = 0.5
+    audio = _build_synth_patch(
+        waveform="sine",
+        frequency=440.0,
+        duration=duration,
+        amplitude=0.8,
+        attack=0.01,
+        decay=0.1,
+        sustain=0.7,
+        release=0.3,
+        filter_type="none",
+        filter_cutoff=2000.0,
+        filter_q=1.0,
+        sample_rate=sample_rate,
+    )
+    expected_len = int(sample_rate * duration)
+    assert len(audio) == expected_len
+
+
+def test_build_synth_patch_amplitude_bounded():
+    audio = _build_synth_patch(
+        waveform="square",
+        frequency=220.0,
+        duration=0.3,
+        amplitude=0.5,
+        attack=0.0,
+        decay=0.0,
+        sustain=1.0,
+        release=0.0,
+        filter_type="none",
+        filter_cutoff=2000.0,
+        filter_q=1.0,
+    )
+    assert float(np.max(np.abs(audio))) <= 1.0 + 1e-6
+
+
+@pytest.mark.parametrize("waveform", ["sine", "square", "sawtooth", "triangle", "noise"])
+def test_build_synth_patch_all_waveforms(waveform):
+    audio = _build_synth_patch(
+        waveform=waveform,
+        frequency=440.0,
+        duration=0.2,
+        amplitude=0.8,
+        attack=0.01,
+        decay=0.05,
+        sustain=0.7,
+        release=0.1,
+        filter_type="none",
+        filter_cutoff=2000.0,
+        filter_q=1.0,
+    )
+    assert len(audio) > 0
+    assert np.all(np.isfinite(audio))
+
+
+@pytest.mark.parametrize("filter_type", ["lowpass", "highpass", "bandpass"])
+def test_build_synth_patch_filters_produce_finite_output(filter_type):
+    audio = _build_synth_patch(
+        waveform="sawtooth",
+        frequency=440.0,
+        duration=0.3,
+        amplitude=0.8,
+        attack=0.01,
+        decay=0.05,
+        sustain=0.7,
+        release=0.1,
+        filter_type=filter_type,
+        filter_cutoff=1000.0,
+        filter_q=1.0,
+    )
+    assert np.all(np.isfinite(audio))
+
+
+def test_build_synth_patch_invalid_waveform_raises():
+    with pytest.raises((AttributeError, ValueError)):
+        _build_synth_patch(
+            waveform="invalid_waveform_xyz",
+            frequency=440.0,
+            duration=0.1,
+            amplitude=0.5,
+            attack=0.01,
+            decay=0.05,
+            sustain=0.5,
+            release=0.05,
+            filter_type="none",
+            filter_cutoff=2000.0,
+            filter_q=1.0,
+        )
+
+
+def test_export_synth_patch_writes_wav_file(tmp_path: Path):
+    audio = _build_synth_patch(
+        waveform="sine",
+        frequency=440.0,
+        duration=0.2,
+        amplitude=0.8,
+        attack=0.01,
+        decay=0.05,
+        sustain=0.7,
+        release=0.1,
+        filter_type="none",
+        filter_cutoff=2000.0,
+        filter_q=1.0,
+    )
+    out = tmp_path / "out" / "patch.wav"
+    result = _export_synth_patch(audio, out)
+    assert result.exists()
+    assert result.suffix == ".wav"
+    assert result.stat().st_size > 44  # at least a WAV header
+
