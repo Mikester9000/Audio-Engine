@@ -20,6 +20,11 @@ def test_backend_default_model_path_is_medium():
     assert backend.model_path.name == "musicgen-medium"
 
 
+def test_supported_model_sizes_instantiate():
+    assert MusicGenBackend(sample_rate=22050, model_size="medium").model_path.name == "musicgen-medium"
+    assert MusicGenBackend(sample_rate=22050, model_size="small").model_path.name == "musicgen-small"
+
+
 def test_invalid_model_size_raises_clear_error():
     with pytest.raises(ValueError, match="Allowed sizes: medium, small"):
         MusicGenBackend(sample_rate=22050, model_size="smol")
