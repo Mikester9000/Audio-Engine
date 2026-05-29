@@ -20,6 +20,11 @@ def test_backend_default_model_path_is_medium():
     assert backend.model_path.name == "musicgen-medium"
 
 
+def test_default_model_size_instantiates_successfully():
+    backend = MusicGenBackend(sample_rate=22050)
+    assert backend.model_size == "medium"
+
+
 def test_supported_model_sizes_instantiate():
     assert MusicGenBackend(sample_rate=22050, model_size="medium").model_path.name == "musicgen-medium"
     assert MusicGenBackend(sample_rate=22050, model_size="small").model_path.name == "musicgen-small"
