@@ -6,6 +6,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import audio_engine.ui.studio as studio_module
+
 from audio_engine.ui.studio import (
     _build_preview_catalog,
     _build_new_file_template,
@@ -120,6 +122,12 @@ def test_build_preview_catalog_excludes_missing_outputs(tmp_path: Path):
     assert catalog["SFX"] == []
     assert catalog["Vocal"] == []
     assert catalog["Examples"] == []
+
+
+def test_studio_source_includes_scrollable_tabs_and_play_latest_controls():
+    content = Path(studio_module.__file__).read_text(encoding="utf-8")
+    assert "_make_scrollable_tab" in content
+    assert "Play latest" in content
 
 
 def test_new_file_output_targets_use_base_name_and_dir(tmp_path: Path):
@@ -314,4 +322,3 @@ def test_export_synth_patch_writes_wav_file(tmp_path: Path):
     assert result.exists()
     assert result.suffix == ".wav"
     assert result.stat().st_size > 44  # at least a WAV header
-

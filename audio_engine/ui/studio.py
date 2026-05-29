@@ -355,14 +355,47 @@ def launch_studio() -> None:
     notebook = ttk.Notebook(root)
     notebook.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
-    music_tab = ttk.Frame(notebook)
-    sfx_tab = ttk.Frame(notebook)
-    voice_tab = ttk.Frame(notebook)
-    synth_tab = ttk.Frame(notebook)
-    notebook.add(music_tab, text="Music")
-    notebook.add(sfx_tab, text="SFX")
-    notebook.add(voice_tab, text="Voice")
-    notebook.add(synth_tab, text="Synth Workbench")
+    def _make_scrollable_tab(label: str) -> ttk.Frame:
+        outer = ttk.Frame(notebook)
+        canvas = tk.Canvas(outer, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        inner = ttk.Frame(canvas)
+        window_id = canvas.create_window((0, 0), window=inner, anchor="nw")
+
+        def _on_inner_configure(_event: object | None = None) -> None:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _on_canvas_configure(event: object) -> None:
+            width = getattr(event, "width", None)
+            if width is not None:
+                canvas.itemconfigure(window_id, width=width)
+
+        def _on_mousewheel(event: object) -> None:
+            delta = int(getattr(event, "delta", 0))
+            if delta:
+                canvas.yview_scroll(int(-delta / 120), "units")
+            else:
+                button = getattr(event, "num", None)
+                if button == 4:
+                    canvas.yview_scroll(-1, "units")
+                elif button == 5:
+                    canvas.yview_scroll(1, "units")
+
+        inner.bind("<Configure>", _on_inner_configure)
+        canvas.bind("<Configure>", _on_canvas_configure)
+        canvas.bind("<MouseWheel>", _on_mousewheel)
+        canvas.bind("<Button-4>", _on_mousewheel)
+        canvas.bind("<Button-5>", _on_mousewheel)
+        notebook.add(outer, text=label)
+        return inner
+
+    music_tab = _make_scrollable_tab("Music")
+    sfx_tab = _make_scrollable_tab("SFX")
+    voice_tab = _make_scrollable_tab("Voice")
+    synth_tab = _make_scrollable_tab("Synth Workbench")
 
     # Music tab
     ttk.Label(music_tab, text="Style").grid(row=0, column=0, sticky="w", padx=8, pady=6)
@@ -563,7 +596,12 @@ def launch_studio() -> None:
             _set_status(music_status, f"Error: {exc}")
             _set_status(global_status, f"Music failed — {exc}")
 
-    ttk.Button(music_tab, text="Generate", command=_generate_music).grid(row=19, column=0, columnspan=2, pady=8)
+    ttk.Button(music_tab, text="Generate", command=_generate_music).grid(row=19, column=0, sticky="ew", padx=8, pady=8)
+    ttk.Button(
+        music_tab,
+        text="Play latest",
+        command=lambda: _play_output_path(Path(music_out.get()), "Music"),
+    ).grid(row=19, column=1, sticky="ew", padx=8, pady=8)
 
     # SFX tab
     ttk.Label(sfx_tab, text="Category").grid(row=0, column=0, sticky="w", padx=8, pady=6)
@@ -636,7 +674,12 @@ def launch_studio() -> None:
             _set_status(sfx_status, f"Error: {exc}")
             _set_status(global_status, f"SFX failed — {exc}")
 
-    ttk.Button(sfx_tab, text="Generate", command=_generate_sfx).grid(row=6, column=0, columnspan=2, pady=8)
+    ttk.Button(sfx_tab, text="Generate", command=_generate_sfx).grid(row=6, column=0, sticky="ew", padx=8, pady=8)
+    ttk.Button(
+        sfx_tab,
+        text="Play latest",
+        command=lambda: _play_output_path(Path(sfx_out.get()), "SFX"),
+    ).grid(row=6, column=1, sticky="ew", padx=8, pady=8)
 
     # Voice tab
     ttk.Label(voice_tab, text="Text").grid(row=0, column=0, sticky="nw", padx=8, pady=6)
@@ -710,7 +753,12 @@ def launch_studio() -> None:
             _set_status(voice_status, f"Error: {exc}")
             _set_status(global_status, f"Voice failed — {exc}")
 
-    ttk.Button(voice_tab, text="Generate", command=_generate_voice).grid(row=6, column=0, columnspan=2, pady=8)
+    ttk.Button(voice_tab, text="Generate", command=_generate_voice).grid(row=6, column=0, sticky="ew", padx=8, pady=8)
+    ttk.Button(
+        voice_tab,
+        text="Play latest",
+        command=lambda: _play_output_path(Path(voice_out.get()), "Vocal"),
+    ).grid(row=6, column=1, sticky="ew", padx=8, pady=8)
 
     # ---------------------------------------------------------------------------
     # Synth Workbench tab — manual waveform/ADSR/filter/WAV creation without AI
@@ -1061,6 +1109,15 @@ def launch_studio() -> None:
         if playback_handle is not None:
             playback_handle.stop()
             playback_handle = None
+
+    def _play_output_path(output_path: Path, category: str) -> None:
+        path = output_path.expanduser()
+        if not path.exists():
+            _set_status(global_status, f"File not found for preview: {path}")
+            return
+        _refresh_preview_files(select_category=category)
+        preview_file.set(str(path))
+        _play_selected()
 
     def _refresh_preview_files(*_args: object, select_category: str | None = None) -> None:
         nonlocal preview_catalog

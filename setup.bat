@@ -119,7 +119,7 @@ if "%SETUP_MODE%"=="1" (
     echo  Run the studio GUI with:
     echo    audio-engine studio
     echo.
-    echo  Or double-click run.bat for CLI help.
+    echo  Or double-click run.bat to launch the Studio GUI.
     echo ============================================================
 )
 
