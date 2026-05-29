@@ -284,6 +284,8 @@ def _build_synth_patch(
             band_low = max(20.0, cutoff * 0.5)
             band_high = min(sample_rate / 2.0 - 1.0, cutoff * 2.0)
             shaped = filt.band_pass(shaped, band_low, band_high)
+        else:
+            raise ValueError(f"Unknown filter_type: {filter_type!r}")
 
     peak = float(np.max(np.abs(shaped)))
     if peak > 1e-9:

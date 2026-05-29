@@ -22,6 +22,8 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Studio creation-tooling full-edit controls (arrangement/new-file templates), preset/profile/backend sample controls/batch/retry workflow + preview playback browser | Implemented | `audio_engine/ui/studio.py`, `tests/test_studio_ui.py` |
 | Studio Synth Workbench — manual waveform/ADSR/filter/WAV creation without AI | Implemented | `audio_engine/ui/studio.py` (`_build_synth_patch`, `_export_synth_patch`), `tests/test_studio_ui.py` |
 | DSP/mastering/QA | Implemented | `audio_engine/dsp/*`, `audio_engine/render/*`, `audio_engine/qa/*` |
+| Export to WAV / optional OGG | Implemented | `audio_engine/export/audio_exporter.py` |
+| Batch game asset generation | Implemented | `audio_engine/integration/asset_pipeline.py` |
 | Typed audio plan + generation request loading | Implemented | `audio_engine/integration/factory_inputs.py`, `tests/test_integration.py` |
 | Request-batch generation pipeline | Implemented | `audio_engine/integration/asset_pipeline.py` (`RequestBatchPipeline`, `AssetPipeline.execute_request_batch`), `audio_engine/cli.py` (`generate-request-batch`) |
 | Plan-driven batch orchestration | Implemented | `audio_engine/integration/asset_pipeline.py` (`PlanBatchOrchestrator`), `audio_engine/cli.py` (`generate-plan-batch`) |
