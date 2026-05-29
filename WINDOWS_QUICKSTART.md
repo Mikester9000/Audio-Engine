@@ -15,43 +15,88 @@ Choose one:
 
 ## Step 2: Double-click `setup.bat`
 
-`setup.bat` will automatically:
+`setup.bat` now asks you to choose a setup mode:
 
-1. Check Python version
-2. Create `.venv/`
-3. Install `pip install -e ".[neural]"` (with automatic fallback to `pip install -e ".[musicgen]"` if that install step fails)
-4. Download AI model files into `models/`
+```
+Choose a setup mode:
+  1  Manual / procedural only  (no AI models, fastest setup)
+  2  AI workflow               (installs MusicGen + downloads ~1.5 GB model)
+```
 
-The model download is about **~1.5GB total** and may take a few minutes the first time.
+### Mode 1 — Manual / Procedural Only (recommended for first-time users)
 
-## Step 3: Double-click `run.bat`
+- Installs the core package only (`pip install -e "."`)
+- No AI model download required
+- All audio uses the built-in procedural synthesiser
+- You can use the Studio GUI and all CLI commands immediately
+
+### Mode 2 — AI Workflow
+
+- Attempts `pip install -e ".[neural]"` (includes Kokoro voice)
+- If that fails (common on Windows), automatically retries with `pip install -e ".[musicgen]"`
+- Downloads MusicGen Medium (~1.5 GB) into `models/musicgen-medium/`
+- Model download may be slow on first run; see troubleshooting below if it stalls
+
+## Step 3: Launch the Studio GUI
+
+After setup, start the GUI:
+
+```bat
+audio-engine studio
+```
+
+The **Studio** has four tabs:
+
+| Tab | What it does |
+|---|---|
+| **Music** | Generate background music from style presets, with custom instrument arrangement |
+| **SFX** | Generate sound effects by category |
+| **Voice** | Generate voice lines from text |
+| **Synth Workbench** | Manually create any sound from scratch: choose waveform, set ADSR envelope, apply filter, export WAV — no AI required |
+
+### Synth Workbench
+
+The **Synth Workbench** tab gives you direct control over:
+
+- **Waveform**: sine, square, sawtooth, triangle, noise, band-limited sawtooth/square
+- **Frequency**: in Hz (any pitch)
+- **Duration**: how long the sound plays
+- **Amplitude**: overall volume (0–1)
+- **ADSR Envelope**: Attack / Decay / Sustain / Release sliders
+- **Filter**: lowpass, highpass, bandpass, or none — with adjustable cutoff frequency
+- **Output path**: where to save the WAV
+
+Click **Generate WAV** to create the sound immediately. No AI model needed.
+
+## Step 4: Double-click `run.bat` (optional)
 
 `run.bat` activates the virtual environment and shows Audio Engine CLI commands.
 
 After setup has finished once, generation runs fully offline from local files.
 
-## What the AI model does
+## What the AI model does (Mode 2 only)
 
 - **MusicGen Medium (`models/musicgen-medium/`)**: prompt-driven background music and sound effects
 
-MusicGen Medium handles both music and sound effect generation. Voice synthesis uses the built-in procedural synthesiser.
+MusicGen Medium handles AI music and sound effect generation. Voice synthesis and procedural audio use the built-in synthesiser and do not require the model.
 
-## Generating audio
+## Generating audio without AI (procedural mode)
 
-Examples (run from a terminal in the repo after `run.bat`):
+All commands below work with no AI model:
+
+```bat
+audio-engine generate-music --prompt "battle" --duration 30 --output battle.wav
+audio-engine generate-sfx --prompt "explosion" --duration 1.5 --output boom.wav
+audio-engine generate-voice --text "Welcome, hero." --voice narrator --output voice.wav
+```
+
+Or launch the Studio and use the Synth Workbench for full manual control.
+
+## Generating audio with MusicGen (AI mode)
 
 ```bat
 audio-engine generate-music --prompt "epic orchestral battle theme" --duration 30 --output battle.wav --backend musicgen
 audio-engine generate-sfx --prompt "large explosion with deep rumble" --duration 1.5 --output explosion.wav --backend musicgen
-audio-engine generate-voice --text "Welcome, hero." --voice narrator --output voice.wav
-```
-
-## Generating general music for YouTube/streaming
-
-```bat
-audio-engine generate-music --prompt "cinematic orchestral music, emotional arc, suitable for YouTube" --duration 90 --output youtube_cinematic.wav --backend musicgen
-audio-engine generate-music --prompt "solo piano composition, expressive, professional" --duration 120 --output youtube_piano.wav --backend musicgen
-audio-engine generate-music --prompt "ambient atmospheric music, relaxing layered pads" --duration 120 --output youtube_ambient.wav --backend musicgen
 ```
 
 ## If you already have the model
@@ -60,13 +105,14 @@ Place the pre-downloaded model folder in `models/` using this exact name:
 
 - `models/musicgen-medium/`
 
-Then run `setup.bat` anyway to install Python dependencies.
+Then run `setup.bat` (choose mode 2) to install Python dependencies.
 
 ## Hardware notes
 
-- CPU-only works (slower generation)
-- GPU is optional and can accelerate generation significantly
-- Once models are local, normal generation does not require internet
+- CPU-only works (slower AI generation)
+- GPU is optional and can accelerate MusicGen significantly
+- Procedural generation (mode 1) is fast on any hardware
+- Once models are local, AI generation does not require internet
 
 ## Troubleshooting
 
@@ -77,10 +123,31 @@ https://www.python.org/downloads/windows/
 ### `.venv` activation or dependency install failed
 Run `setup.bat` again. If needed, delete `.venv/` and rerun setup.
 
-If stage 4 fails while installing full `.[neural]` dependencies, setup now automatically retries with the MusicGen-only dependency set (`.[musicgen]`) and continues when that succeeds.
+In AI mode, if the neural install fails (common for Kokoro on Windows), setup automatically retries with the MusicGen-only dependency set (`.[musicgen]`).
 
-### Model download interrupted
-Run `setup.bat` again. `tools/download_models.py` resumes incomplete downloads and skips only model folders that already contain the required local files.
+If the install still fails, choose **mode 1** (Manual/Procedural) instead — all non-AI features work with no extra dependencies.
+
+### Model download stalls or freezes
+
+The MusicGen download is ~1.5 GB. If it stalls:
+
+1. Press **Ctrl+C** to cancel
+2. Set a Hugging Face token for faster authenticated downloads:
+   ```bat
+   set HF_TOKEN=your_token_here
+   ```
+   Get a free token at: https://huggingface.co/settings/tokens
+3. Retry the download only:
+   ```bat
+   .venv\Scripts\activate.bat
+   python tools\download_models.py
+   ```
+
+To skip the download and get manual placement instructions:
+```bat
+.venv\Scripts\activate.bat
+python tools\download_models.py --skip
+```
 
 ### Backend not available
 Run:
@@ -89,4 +156,6 @@ Run:
 audio-engine list-backends
 ```
 
-If `musicgen` shows unavailable, verify `models/musicgen-medium/` exists and that `setup.bat` finished successfully.
+If `musicgen` shows unavailable, verify `models/musicgen-medium/` exists and that `setup.bat` finished successfully in AI mode.
+
+Procedural generation is always available even without the model.

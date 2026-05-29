@@ -1,11 +1,16 @@
-"""Download and cache required local AI models for offline use."""
+"""Download and cache required local AI models for offline use.
+
+Usage
+-----
+  python tools/download_models.py           # download all missing models
+  python tools/download_models.py --skip    # skip download, show manual placement instructions
+"""
 
 from __future__ import annotations
 
+import argparse
+import sys
 from pathlib import Path
-
-from huggingface_hub import snapshot_download
-from audio_engine.ai.backends._paths import has_complete_model_snapshot
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -20,21 +25,67 @@ MODEL_SPECS = (
     },
 )
 
+_MANUAL_INSTRUCTIONS = """\
+Manual model placement instructions
+------------------------------------
+If the download stalls or fails, you can download the model yourself:
+
+  1. Visit: https://huggingface.co/facebook/musicgen-medium/tree/main
+  2. Download all files in that repository.
+  3. Place them in: {models_dir}\\musicgen-medium\\
+
+Setting a Hugging Face token (recommended for faster authenticated downloads):
+  Windows:  set HF_TOKEN=your_token_here
+  Linux:    export HF_TOKEN=your_token_here
+
+You can get a free token at: https://huggingface.co/settings/tokens
+
+After placing the model files manually, re-run:
+  python tools\\download_models.py
+to verify the model is recognised.
+"""
+
 
 def _is_model_present(path: Path) -> bool:
+    try:
+        from audio_engine.ai.backends._paths import has_complete_model_snapshot
+    except ImportError:
+        return path.is_dir() and any(path.iterdir())
     return has_complete_model_snapshot(path)
 
 
 def _download_model(repo_id: str, target: Path) -> None:
+    try:
+        from huggingface_hub import snapshot_download
+    except ImportError as exc:
+        raise RuntimeError(
+            "huggingface_hub is not installed. Install AI dependencies first:\n"
+            "  pip install -e \".[musicgen]\""
+        ) from exc
     snapshot_download(
         repo_id=repo_id,
         local_dir=str(target),
-        local_dir_use_symlinks=False,
-        resume_download=True,
     )
 
 
-def main() -> int:
+def _print_manual_instructions() -> None:
+    print(_MANUAL_INSTRUCTIONS.format(models_dir=MODELS_DIR))
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Download Audio Engine AI models.")
+    parser.add_argument(
+        "--skip",
+        action="store_true",
+        help="Skip download and print manual placement instructions instead.",
+    )
+    args = parser.parse_args(argv)
+
+    if args.skip:
+        print("Download skipped. Printing manual placement instructions...\n")
+        _print_manual_instructions()
+        return 0
+
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     failed_downloads: list[str] = []
 
@@ -45,6 +96,10 @@ def main() -> int:
             continue
 
         print(f"Downloading {spec['label']} ({spec['size']})...")
+        print(f"  Repository: {spec['repo_id']}")
+        print(f"  Destination: {target}")
+        if not sys.stdout.isatty():
+            print("  (progress output may be buffered in non-interactive terminals)")
         target.mkdir(parents=True, exist_ok=True)
         try:
             _download_model(spec["repo_id"], target)
@@ -69,6 +124,8 @@ def main() -> int:
             print("ERROR: Some model folders are missing after download:")
             for name in missing:
                 print(f"  - {name}")
+        print()
+        _print_manual_instructions()
         return 1
 
     print("All required models are present in models/.")

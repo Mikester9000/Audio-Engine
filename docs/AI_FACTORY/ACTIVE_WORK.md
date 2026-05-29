@@ -75,11 +75,14 @@ Latest additive work extended procedural music coverage with new narrative/regio
 - [x] Execute SESSION-041 — end-to-end vertical-slice release gate automation (`VerticalSliceGatePipeline`, `run-release-gate` CLI)
 - [x] Execute SESSION-049 — studio full-edit workflow + synthesis/theory alignment expansion
 - [x] Execute SESSION-051 — PS2 instrument identity refinement (piano + guitar families)
+- [x] Fix Windows setup flow — `setup.bat` interactive mode selector (manual/AI), non-blocking model download, HF deprecated arg cleanup in `tools/download_models.py`, `--skip` flag
+- [x] Add Synth Workbench tab to studio UI — manual waveform/ADSR/filter/WAV creation without AI, backed by `_build_synth_patch` / `_export_synth_patch` helpers
 
 ## Recommended next PRs
 
 1. Continue iterative named-instrument identity refinement for additional timbres while preserving deterministic style profiles.
 2. Continue procedural vocal realism refinement while preserving deterministic regression behavior.
+3. Add more Synth Workbench presets (e.g. kick drum, hi-hat, bass sub, pad) as one-click starting templates in the manual GUI.
 
 ## Do not deprioritize
 

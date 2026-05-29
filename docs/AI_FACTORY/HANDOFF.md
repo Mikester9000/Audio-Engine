@@ -4,38 +4,32 @@
 
 ## Last completed change
 
-Implemented additive PS2-era instrument-variety and realism expansion:
+Fixed Windows setup flow and added full manual Synth Workbench GUI:
 
-- Added three new PS2-oriented instrument timbres in `audio_engine/synthesizer/instrument.py`:
-  - `legato_strings_ps2`
-  - `nylon_guitar_ps2`
-  - `soft_epiano_ps2`
-- Tuned **all instruments** via a shared PS2-era realism voicing pass in `Instrument.render()`:
-  - console-style bandwidth contour
-  - gentle bus compression
-  - subtle room glue
-- Expanded FF-era style variety and realism by integrating new timbres into core presets:
-  - `ff7_overworld`, `ff7_sad`, `ff8_ballad`, `ff10_calm`, `ff10_battle`, `ff10_zanarkand`
-- Added/updated regression coverage in:
-  - `tests/test_instrument.py` (new bow-bloom, nylon attack-decay, and soft-epiano tine-presence checks)
+- **`setup.bat`**: Rewrote with interactive mode selector — mode 1 (manual/procedural, instant, no AI) uses `pip install -e "."` and skips model download; mode 2 (AI workflow) retains `.[neural]`→`.[musicgen]` fallback and attempts model download as a non-blocking warning rather than a hard failure.
+- **`tools/download_models.py`**: Removed deprecated `local_dir_use_symlinks=False` and `resume_download=True` arguments from `snapshot_download()`; made `huggingface_hub` import lazy so `--skip` works without AI extras; added `--skip` flag that prints manual model-placement instructions instead of downloading; `main()` now accepts `argv` parameter for testability.
+- **`audio_engine/ui/studio.py`**: Added `_SYNTH_WAVEFORMS`, `_SYNTH_FILTER_TYPES` constants; added `_build_synth_patch()` (oscillator + ADSR + filter → numpy array) and `_export_synth_patch()` (write WAV) helpers; added **Synth Workbench** tab to the notebook with waveform/frequency/duration/amplitude/ADSR/filter controls and a **Generate WAV** button.
+- **`audio_engine/ui/__init__.py`**: Exported `_build_synth_patch` and `_export_synth_patch`.
+- **`tests/test_studio_ui.py`**: Added 24 new synth workbench helper tests.
+- **`tests/test_download_models.py`**: New file, 9 tests for download helper behavior.
+- **`WINDOWS_QUICKSTART.md`**: Rewritten to describe new mode selector, Synth Workbench, and `--skip` troubleshooting.
+- **Continuity docs** (`CURRENT_STATE.md`, `ACTIVE_WORK.md`, `HANDOFF.md`): Updated to reflect new subsystems.
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_instrument.py tests/test_generator.py -k "legato_strings_ps2 or nylon_guitar_ps2 or soft_epiano_ps2 or style_alignment"
+python -m pytest tests/test_studio_ui.py tests/test_download_models.py -v
 python -m pytest
-python tools/validate-assets.py assets/examples/ --verbose
 ```
 
 Observed result:
-- Targeted instrument/style-alignment slices pass
+- 33 new tests pass (24 synth workbench + 9 download_models)
 - Full test suite passes
-- Asset manifest validation passes
 
 ## Immediate next best task
 
-Continue iterative FF-era instrument realism refinement for remaining families (woodwinds/brass/percussion) while preserving deterministic generation and style-alignment gate guarantees.
+Continue iterative named-instrument identity refinement for additional timbres (woodwinds/brass/percussion) while preserving deterministic style profiles. Alternatively, add Synth Workbench quick-start presets (kick, hi-hat, bass sub, pad) for faster manual creation workflows.
 
 ## Files future agents should read first
 
@@ -66,3 +60,4 @@ Continue iterative FF-era instrument realism refinement for remaining families (
 - [x] **Vertical-slice release gate automation** (`run-release-gate` CLI + `VerticalSliceGatePipeline`, SESSION-041)
 - [x] **Studio full-edit + style/synth alignment expansion** (`audio_engine studio` advanced controls, new styles/instruments/SFX, SESSION-049)
 - [x] **PS2 instrument identity refinement** (`piano` + guitar-family timbre updates, SESSION-051)
+- [x] **Windows setup fix + Synth Workbench GUI** (`setup.bat` mode selector, `tools/download_models.py` robustness, `_build_synth_patch` / `_export_synth_patch`, Synth Workbench notebook tab)
