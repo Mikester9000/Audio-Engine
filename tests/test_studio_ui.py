@@ -278,6 +278,23 @@ def test_build_synth_patch_invalid_waveform_raises():
         )
 
 
+def test_build_synth_patch_invalid_filter_type_raises():
+    with pytest.raises(ValueError, match="Unknown filter_type"):
+        _build_synth_patch(
+            waveform="sine",
+            frequency=440.0,
+            duration=0.1,
+            amplitude=0.5,
+            attack=0.01,
+            decay=0.05,
+            sustain=0.5,
+            release=0.05,
+            filter_type="invalid_filter_xyz",
+            filter_cutoff=2000.0,
+            filter_q=1.0,
+        )
+
+
 def test_export_synth_patch_writes_wav_file(tmp_path: Path):
     audio = _build_synth_patch(
         waveform="sine",
