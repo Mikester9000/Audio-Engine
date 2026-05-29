@@ -1393,3 +1393,38 @@ def test_cli_export_wav_delivery_normalizes_invalid_seed_to_zero(tmp_path):
     entry = data["entries"][0]
     assert "__seed0000.wav" in entry["deliveryName"]
     assert entry["seed"] == 0
+
+
+def test_build_parser_succeeds_and_qa_batch_check_spectral_help_is_parseable():
+    """Regression: qa-batch --check-spectral help contained a bare % which
+    crashes argparse on Python 3.14+ (% is treated as a printf format
+    specifier). The help string must use %% to produce a literal percent sign.
+
+    Argparse stores the raw escaped form (%%) in action.help and renders it as
+    a single % in format_help() output. This test verifies both invariants so
+    the fix cannot regress: the source must use %% and the rendered output must
+    show a plain % (confirming argparse processes it correctly)."""
+    parser = build_parser()
+    # Retrieve the qa-batch subparser.
+    subparsers_action = next(
+        a for a in parser._actions
+        if hasattr(a, "_name_parser_map")
+    )
+    qab_parser = subparsers_action._name_parser_map["qa-batch"]
+    check_spectral_action = next(
+        a for a in qab_parser._actions
+        if "--check-spectral" in getattr(a, "option_strings", [])
+    )
+    # The raw help attribute must use %% (the escaped form required by argparse).
+    raw_help = check_spectral_action.help
+    assert "%%" in raw_help, (
+        "--check-spectral help must use '%%' to escape percent signs for argparse"
+    )
+    # format_help() must not raise and must render %% as a single literal %.
+    formatted = qab_parser.format_help()
+    assert "90%" in formatted, (
+        "format_help() should render '90%%' as '90%' in the help output"
+    )
+    assert "90%%" not in formatted, (
+        "format_help() output must not contain raw '90%%'; argparse should have resolved it"
+    )
