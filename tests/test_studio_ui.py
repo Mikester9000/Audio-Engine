@@ -28,6 +28,7 @@ from audio_engine.ui.studio import (
     _SYNTH_WAVEFORMS,
     _write_new_file_template,
     _write_studio_preset,
+    _render_piano_roll_to_file,
 )
 
 
@@ -455,6 +456,78 @@ class TestComposePieceToFile:
             mastering_profile="game",
             samples_dir="samples",
             sample_base_backend="procedural",
+            fmt="wav",
+        )
+        assert result.exists()
+        assert result.stat().st_size > 44
+
+
+class TestRenderPianoRollToFile:
+    def test_single_track_with_notes(self, tmp_path: Path):
+        tracks = {
+            "Lead": {
+                "instrument": "piano",
+                "pan": 0.0,
+                "volume": 1.0,
+                "role": "melody",
+                "notes": [
+                    {"beat": 0.0, "note": "C4", "duration_beats": 1.0, "velocity": 1.0},
+                    {"beat": 1.0, "note": "E4", "duration_beats": 1.0, "velocity": 0.8},
+                ],
+            }
+        }
+        out = tmp_path / "roll.wav"
+        result = _render_piano_roll_to_file(
+            tracks,
+            bpm=120,
+            time_signature=4,
+            output_path=out,
+            mastering_profile="game",
+            fmt="wav",
+        )
+        assert result.exists()
+        assert result.stat().st_size > 44
+
+    def test_no_notes_produces_file(self, tmp_path: Path):
+        tracks = {
+            "Bass": {
+                "instrument": "bass",
+                "pan": 0.0,
+                "volume": 1.0,
+                "role": "bass",
+                "notes": [],
+            }
+        }
+        out = tmp_path / "empty_roll.wav"
+        result = _render_piano_roll_to_file(
+            tracks,
+            bpm=100,
+            time_signature=4,
+            output_path=out,
+            mastering_profile="game",
+            fmt="wav",
+        )
+        assert result.exists()
+
+    def test_unknown_note_falls_back(self, tmp_path: Path):
+        tracks = {
+            "Pad": {
+                "instrument": "piano",
+                "pan": 0.0,
+                "volume": 1.0,
+                "role": "harmony",
+                "notes": [
+                    {"beat": 0.0, "note": "XYZZY", "duration_beats": 1.0, "velocity": 1.0},
+                ],
+            }
+        }
+        out = tmp_path / "fallback_roll.wav"
+        result = _render_piano_roll_to_file(
+            tracks,
+            bpm=120,
+            time_signature=4,
+            output_path=out,
+            mastering_profile="game",
             fmt="wav",
         )
         assert result.exists()
