@@ -526,9 +526,9 @@ def _render_piano_roll_to_file(
 
     audio = seq.render()
     # Guard against empty render (no notes at all) — produce 0.5 s of silence
-    import numpy as _np_pr
+    import numpy as _np
     if audio.size == 0:
-        audio = _np_pr.zeros((int(sample_rate * 0.5), 2), dtype=_np_pr.float32)
+        audio = _np.zeros((int(sample_rate * 0.5), 2), dtype=_np.float32)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     bouncer = OfflineBounce(sample_rate=sample_rate, profile=mastering_profile)
     return bouncer.process_and_export(audio, output_path, fmt=fmt)
@@ -1259,8 +1259,6 @@ def launch_studio() -> None:
     ttk.Button(btn_col, text="← Remove", command=_pc_remove_section).pack(fill="x", pady=2)
     ttk.Button(btn_col, text="↑ Up", command=_pc_move_up).pack(fill="x", pady=2)
     ttk.Button(btn_col, text="↓ Down", command=_pc_move_down).pack(fill="x", pady=2)
-
-    ttk.Label(piece_tab, text="Section column 3 scroll").grid(row=9, column=3, sticky="n", padx=4)
 
     ttk.Separator(piece_tab, orient="horizontal").grid(row=13, column=0, columnspan=4, sticky="ew", padx=8, pady=4)
 
