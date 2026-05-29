@@ -1,14 +1,20 @@
 {
-  "version": "1.18.0",
+  "version": "1.19.0",
   "lastUpdated": "2026-05-29",
   "currentSession": {
-    "id": "SESSION-050",
-    "title": "Release-gate alignment checks for style/synth intent",
+    "id": "SESSION-052",
+    "title": "Kokoro 0.9.4 fix, MusicGen Small backend, Studio ergonomics, Voice synth intelligibility",
     "status": "completed",
-    "taskType": "qa + orchestration",
-    "objective": "Integrate style/synth alignment checks into release-gate reporting surfaces and document failure/remediation flow for deterministic factory runs.",
-    "outcome": "Added standalone check-style-alignment CLI command, 5 CLI smoke tests, and remediation flow docs in MUSIC.md.",
+    "taskType": "backend + ui + dsp",
+    "objective": "Fix Kokoro KPipeline API for 0.9.x; add MusicGen Small (300M) as selectable backend; ergonomic Studio GUI pass; improve procedural voice synth intelligibility.",
+    "outcome": "Kokoro pinned >=0.9.4 with correct KPipeline API; MusicGenSmallBackend added and registered; Studio window enlarged, value labels/Browse buttons on all sliders/paths, style info panel on Music tab; voice_synth.py fully rewritten with word-boundary pauses, per-vowel formants, per-consonant-class synthesis, nasal resonance, plosive aspiration, and de-essing/presence-lift post-processing.",
     "previousSessions": [
+      {
+        "id": "SESSION-050",
+        "title": "Release-gate alignment checks for style/synth intent",
+        "status": "completed",
+        "notes": "Added standalone check-style-alignment CLI command, 5 CLI smoke tests, and remediation flow docs in MUSIC.md."
+      },
       {
         "id": "SESSION-051",
         "title": "PS2 instrument identity refinement (piano + guitar families)",
