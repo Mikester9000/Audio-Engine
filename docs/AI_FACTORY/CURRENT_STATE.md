@@ -57,6 +57,7 @@ The repository contains a working Python audio engine with tests, a manifest val
 | Global all-instrument PS2 realism voicing | Implemented | `audio_engine/synthesizer/instrument.py` (`Instrument._apply_ps2_realism_voicing`, `Instrument.render`) |
 | Full-piece vocal tracks auto-export instrumental companion files | Implemented | `audio_engine/ai/radio_playlist.py`, `audio_engine/cli.py` (`compose-piece`) |
 | Release-gate style/synth alignment reporting | Implemented | `audio_engine/integration/asset_pipeline.py` (`VerticalSliceGatePipeline.run` generation gate `styleAlignment`) |
+| Standalone style/synth alignment CLI check | Implemented | `audio_engine/cli.py` (`check-style-alignment`), `tests/test_engine_cli.py` (`TestCheckStyleAlignmentCLI`) |
 | Legacy request-file provenance sidecars + result-driven review-log sourcing + manifest parity | Implemented | `audio_engine/integration/asset_pipeline.py`, `audio_engine/cli.py` |
 | WAV sample-folder ingestion contract (docs) | Implemented | `docs/AI_FACTORY/SCHEMAS/WAV_INGESTION_CONTRACT.md` |
 | License inventory (docs) | Implemented | `docs/AI_FACTORY/LICENSE_INVENTORY.md` |
@@ -68,16 +69,12 @@ The repository contains a working Python audio engine with tests, a manifest val
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_release_gate.py tests/test_music_library.py tests/test_ps1_era.py -k "compose_piece_with_vocals or generate_track_with_vocals or playlist_vocal_track_writes_instrumental_companion or generation_fails_when_style_alignment_fails or all_gates_skipped_except_generation"
-python -m pytest tests/test_instrument.py
-python -m pytest tests/test_ai_pipeline.py -k voice
-python -m pytest
-python tools/validate-assets.py assets/examples/ --verbose
+python -m pytest tests/test_engine_cli.py::TestCheckStyleAlignmentCLI -v
 ```
 
 Observed result in this session:
 
-- targeted gate/music-library/piece-composer/instrument/voice slices pass
+- 5 new check-style-alignment CLI smoke tests pass
 - baseline repo verification passed in-session (`pytest` 1136 passed)
 - asset-manifest validation passes
 

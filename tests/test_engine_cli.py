@@ -1428,3 +1428,85 @@ def test_build_parser_succeeds_and_qa_batch_check_spectral_help_is_parseable():
     assert "90%%" not in formatted, (
         "format_help() output must not contain raw '90%%'; argparse should have resolved it"
     )
+
+
+# ---------------------------------------------------------------------------
+# check-style-alignment CLI smoke tests
+# ---------------------------------------------------------------------------
+
+class TestCheckStyleAlignmentCLI:
+    def _run(self, argv, *, expect_exit=None):
+        try:
+            rc = main(argv)
+        except SystemExit as exc:
+            rc = exc.code
+        if expect_exit is not None:
+            assert rc == expect_exit, f"Expected exit {expect_exit}, got {rc}"
+        return rc
+
+    def test_all_styles_pass_exits_zero(self, tmp_path):
+        """All styles in the real library should align; command must exit 0."""
+        out = tmp_path / "align.json"
+        rc = self._run(
+            ["check-style-alignment", "--output-report", str(out), "--quiet"],
+            expect_exit=0,
+        )
+        assert out.exists()
+        data = json.loads(out.read_text())
+        assert data["compliant"] is True
+        assert data["issueCount"] == 0
+        assert data["issues"] == {}
+
+    def test_stdout_json_when_no_output_report(self, capsys):
+        """Without --output-report the JSON report is printed to stdout."""
+        self._run(["check-style-alignment", "--quiet"])
+        captured = capsys.readouterr()
+        data = json.loads(captured.out.strip())
+        assert "compliant" in data
+        assert "issues" in data
+
+    def test_human_readable_output_on_pass(self, capsys, tmp_path):
+        """Without --quiet the human-readable summary should mention 'pass'."""
+        out = tmp_path / "align.json"
+        self._run(["check-style-alignment", "--output-report", str(out)])
+        captured = capsys.readouterr()
+        assert "pass" in captured.out.lower() or "align" in captured.out.lower()
+
+    def test_exits_one_on_misaligned_style(self, tmp_path, monkeypatch):
+        """When validate_style_library_alignment reports issues, exit code must be 1."""
+        from audio_engine.ai import generator as _gen
+
+        fake_issues = {"bad_style": ["instrument 'nonexistent' not found"]}
+        monkeypatch.setattr(
+            _gen.MusicGenerator,
+            "validate_style_library_alignment",
+            staticmethod(lambda: fake_issues),
+        )
+        out = tmp_path / "align_fail.json"
+        rc = self._run(
+            ["check-style-alignment", "--output-report", str(out), "--quiet"],
+            expect_exit=1,
+        )
+        assert out.exists()
+        data = json.loads(out.read_text())
+        assert data["compliant"] is False
+        assert data["styleCount"] == 1
+        assert data["issueCount"] == 1
+        assert "bad_style" in data["issues"]
+
+    def test_report_path_parent_created(self, tmp_path, monkeypatch):
+        """--output-report should create missing parent directories."""
+        from audio_engine.ai import generator as _gen
+
+        monkeypatch.setattr(
+            _gen.MusicGenerator,
+            "validate_style_library_alignment",
+            staticmethod(lambda: {}),
+        )
+        out = tmp_path / "nested" / "dir" / "report.json"
+        self._run(
+            ["check-style-alignment", "--output-report", str(out), "--quiet"],
+            expect_exit=0,
+        )
+        assert out.exists()
+
