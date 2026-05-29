@@ -61,7 +61,10 @@ class MusicGenBackend(InferenceBackend):
         model_size: str = "medium",
     ) -> None:
         super().__init__(sample_rate=sample_rate)
-        self.model_size = model_size if model_size in MUSICGEN_MODEL_SIZES else "medium"
+        if model_size not in MUSICGEN_MODEL_SIZES:
+            allowed_sizes = ", ".join(sorted(MUSICGEN_MODEL_SIZES))
+            raise ValueError(f"Unsupported MusicGen model_size {model_size!r}. Allowed sizes: {allowed_sizes}.")
+        self.model_size = model_size
         folder = MUSICGEN_MODEL_SIZES[self.model_size]
         default_path = default_model_dir(folder)
         self.model_path = Path(model_path) if model_path is not None else default_path

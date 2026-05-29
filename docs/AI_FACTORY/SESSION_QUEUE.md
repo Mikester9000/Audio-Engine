@@ -301,6 +301,17 @@
 
 ## Recently completed sessions
 
+### SESSION-052 — Kokoro 0.9.4 fix, MusicGen Small backend, Studio ergonomics, Voice synth intelligibility
+
+- **Status:** `completed`
+- **Task type:** `backend + ui + dsp`
+- **Objective:** Fix Kokoro KPipeline API for 0.9.x; add MusicGen Small (300M) as selectable backend; ergonomic Studio GUI pass; improve procedural voice synth intelligibility.
+- **Notes:**
+  - Updated the Kokoro backend for the 0.9.x API/result shape while preserving deterministic fallback behavior.
+  - Added `musicgen-small` as a registered backend/model option and downloader target.
+  - Improved Studio ergonomics with a larger layout, value labels, browse buttons, and music-style guidance.
+  - Reworked `voice_synth.py` for better intelligibility via word-boundary pauses, vowel/consonant shaping, and post-processing cleanup.
+
 ### SESSION-050 — Release-gate alignment checks for style/synth intent
 
 - **Status:** `completed`
@@ -316,6 +327,17 @@
 ## Remaining planned sessions (post-baseline)
 
 ### Recently completed session context
+
+### SESSION-052 — Kokoro 0.9.4 fix, MusicGen Small backend, Studio ergonomics, Voice synth intelligibility
+
+- **Status:** `completed`
+- **Task type:** `backend + ui + dsp`
+- **Objective:** Fix Kokoro KPipeline API for 0.9.x; add MusicGen Small (300M) as selectable backend; ergonomic Studio GUI pass; improve procedural voice synth intelligibility.
+- **Notes:**
+  - Updated the Kokoro backend for the 0.9.x API/result shape while preserving deterministic fallback behavior.
+  - Added `musicgen-small` as a registered backend/model option and downloader target.
+  - Improved Studio ergonomics with a larger layout, value labels, browse buttons, and music-style guidance.
+  - Reworked `voice_synth.py` for better intelligibility via word-boundary pauses, vowel/consonant shaping, and post-processing cleanup.
 
 ### SESSION-051 — PS2 instrument identity refinement (piano + guitar families)
 

@@ -4,11 +4,12 @@ This folder stores local AI model weights used by the Audio Engine.
 
 ## Model layout
 
+- `models/musicgen-small/` → `facebook/musicgen-small`
 - `models/musicgen-medium/` → `facebook/musicgen-medium`
 
-## Why one model
+## Why these models
 
-MusicGen Medium is the chosen single-model baseline because it delivers much higher musical quality than small variants while still being practical for local/offline CPU workflows. It also provides acceptable sound-effect generation with strong prompting, which avoids maintaining separate AudioGen/Kokoro model downloads by default.
+MusicGen Medium remains the higher-quality baseline for local/offline workflows, while MusicGen Small provides a lighter-weight option with faster load times and lower memory requirements. Both are supported so users can trade quality for hardware practicality without changing the overall workflow.
 
 ## How models get here
 
@@ -32,4 +33,5 @@ The folder itself is tracked so the expected path exists.
 
 If you already downloaded the model separately, place it in the folder above using the exact name:
 
+- `models/musicgen-small/`
 - `models/musicgen-medium/`

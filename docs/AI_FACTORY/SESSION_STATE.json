@@ -1,11 +1,11 @@
 {
-  "version": "1.17.0",
-  "lastUpdated": "2026-05-24",
+  "version": "1.18.0",
+  "lastUpdated": "2026-05-29",
   "currentSession": {
-    "id": "SESSION-051",
-    "title": "PS2 instrument identity refinement (piano + guitar families)",
+    "id": "SESSION-052",
+    "title": "Kokoro 0.9.4 fix, MusicGen Small backend, Studio ergonomics, Voice synth intelligibility",
     "status": "completed",
-    "taskType": "synthesis + regression"
+    "taskType": "backend + ui + dsp"
   },
   "completedSessions": [
     {
@@ -267,6 +267,11 @@
       "id": "SESSION-051",
       "status": "completed",
       "completedDate": "2026-05-23"
+    },
+    {
+      "id": "SESSION-052",
+      "status": "completed",
+      "completedDate": "2026-05-29"
     }
   ]
 }

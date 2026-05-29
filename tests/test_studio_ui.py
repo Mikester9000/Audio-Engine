@@ -461,6 +461,40 @@ class TestComposePieceToFile:
         assert result.exists()
         assert result.stat().st_size > 44
 
+    def test_sample_backend_forwards_sample_kwargs(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        out = tmp_path / "piece.wav"
+        captured: dict[str, object] = {}
+
+        class DummyPieceComposer:
+            def __init__(self, **kwargs):
+                captured.update(kwargs)
+
+            def compose(self, **kwargs):
+                return np.zeros((4410, 2), dtype=np.float32)
+
+        monkeypatch.setattr(studio_module, "PieceComposer", DummyPieceComposer)
+
+        result = _compose_piece_to_file(
+            style="battle",
+            sections=["intro"],
+            with_vocals=False,
+            duration=1.0,
+            backend_name="sample",
+            vocal_preset="soprano",
+            seed=42,
+            output_path=out,
+            mastering_profile="game",
+            samples_dir="custom-samples",
+            sample_base_backend="procedural",
+            fmt="wav",
+        )
+
+        assert result.exists()
+        assert captured["backend_kwargs"] == {
+            "samples_dir": "custom-samples",
+            "base_backend": "procedural",
+        }
+
 
 class TestRenderPianoRollToFile:
     def test_single_track_with_notes(self, tmp_path: Path):

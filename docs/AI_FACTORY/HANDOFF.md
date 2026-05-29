@@ -4,22 +4,23 @@
 
 ## Last completed change
 
-SESSION-050: Added standalone `check-style-alignment` CLI command + remediation docs:
+SESSION-052: Landed Kokoro 0.9.4 compatibility, MusicGen Small backend support, Studio ergonomics, and voice-synth intelligibility fixes:
 
-- **`audio_engine/cli.py`**: Added `_cmd_check_style_alignment()` handler and `check-style-alignment` subparser with `--output-report` and `--quiet` flags; registered in the dispatch table.
-- **`tests/test_engine_cli.py`**: Added 5 `TestCheckStyleAlignmentCLI` smoke tests covering pass, monkeypatched-fail, stdout JSON, `--output-report`, and nested-dir creation.
-- **`docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md`**: Added `check-style-alignment` to "What exists now", added "Style/synth alignment: check and remediation flow" section with quick-check examples, report schema, release-gate integration note, and step-by-step remediation instructions; removed resolved "missing" bullet.
+- **`audio_engine/ai/backends/kokoro_backend.py`**: Updated the Kokoro integration for the 0.9.x `KPipeline` result shape/API while keeping graceful fallback behavior.
+- **`audio_engine/ai/backends/musicgen_backend.py` / `audio_engine/ai/backends/__init__.py` / `tools/download_models.py`**: Added `musicgen-small` model-path support, a dedicated `MusicGenSmallBackend`, and downloader coverage for `facebook/musicgen-small`.
+- **`audio_engine/ui/studio.py`**: Improved Studio ergonomics with a larger window, per-control value labels, browse buttons for path fields, and style metadata guidance in the Music tab.
+- **`audio_engine/ai/voice_synth.py`**: Reworked procedural intelligibility with clearer word boundaries, vowel/consonant shaping, nasal/plosive handling, and post-processing presence control.
 
 ## Verified in this session
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m pytest tests/test_engine_cli.py::TestCheckStyleAlignmentCLI -v
+python -m pytest tests/test_studio_ui.py tests/test_musicgen_backend.py -v
 ```
 
 Observed result:
-- 5 new tests pass
-- Full test suite unaffected
+- Focused Studio + MusicGen backend tests pass
+- Continuity and inventory docs updated to match SESSION-052
 
 ## Immediate next best task
 

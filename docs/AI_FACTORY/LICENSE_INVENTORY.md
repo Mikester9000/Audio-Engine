@@ -49,11 +49,12 @@ Users must download them separately via `tools/download_models.py` or manually.
 
 | Model | Publisher | Model License | Policy | Notes |
 |-------|-----------|--------------|--------|-------|
+| `facebook/musicgen-small` | Meta AI | CC BY-NC 4.0 | `block` | **Non-commercial only.** Do not use in commercial products. |
 | `facebook/musicgen-medium` | Meta AI | CC BY-NC 4.0 | `block` | **Non-commercial only.** Do not use in commercial products. |
 | `facebook/audiogen-medium` | Meta AI | CC BY-NC 4.0 | `block` | **Non-commercial only.** |
 | `kokoro-82M` | Kokoro team | Apache-2.0 | `allow` | Commercial use permitted |
 
-> **Warning:** `musicgen-medium` and `audiogen-medium` are licensed CC BY-NC 4.0,
+> **Warning:** `musicgen-small`, `musicgen-medium`, and `audiogen-medium` are licensed CC BY-NC 4.0,
 > which explicitly prohibits commercial use.  All factory outputs generated using
 > these models inherit this restriction.
 > The default `procedural` backend uses zero licensed model weights; outputs from

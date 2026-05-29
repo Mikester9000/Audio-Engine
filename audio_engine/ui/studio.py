@@ -296,11 +296,18 @@ def _compose_piece_to_file(
     fmt: str,
 ) -> Path:
     """Generate a full multi-section musical piece and write it to *output_path*."""
+    backend_kwargs: dict[str, object] | None = None
+    if backend_name == "sample":
+        backend_kwargs = {
+            "samples_dir": samples_dir or _DEFAULT_SAMPLE_ROOT,
+            "base_backend": sample_base_backend,
+        }
     composer = PieceComposer(
         sample_rate=44100,
         seed=seed,
         backend=backend_name,
         vocal_preset=vocal_preset,
+        backend_kwargs=backend_kwargs,
     )
     audio = composer.compose(
         style=style,
