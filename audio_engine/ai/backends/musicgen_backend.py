@@ -42,16 +42,28 @@ _MAX_CHUNK_DURATION_SECONDS = 30.0
 _MIN_CHUNK_DURATION_SECONDS = 0.1
 _STITCH_CROSSFADE_SECONDS = 1.0
 
+# Human-readable labels for each supported model size
+MUSICGEN_MODEL_SIZES: dict[str, str] = {
+    "small": "musicgen-small",
+    "medium": "musicgen-medium",
+}
+
 
 class MusicGenBackend(InferenceBackend):
+    """MusicGen backend.  Defaults to the medium model; pass model_size='small' for the
+    lighter 300 M-parameter variant which requires less VRAM and loads faster."""
+
     def __init__(
         self,
         model_path: str | Path | None = None,
         sample_rate: int = 32000,
         seed: int | None = None,
+        model_size: str = "medium",
     ) -> None:
         super().__init__(sample_rate=sample_rate)
-        default_path = default_model_dir("musicgen-medium")
+        self.model_size = model_size if model_size in MUSICGEN_MODEL_SIZES else "medium"
+        folder = MUSICGEN_MODEL_SIZES[self.model_size]
+        default_path = default_model_dir(folder)
         self.model_path = Path(model_path) if model_path is not None else default_path
         self.seed = seed
         self._fallback = ProceduralBackend(sample_rate=sample_rate, seed=seed)
@@ -59,7 +71,7 @@ class MusicGenBackend(InferenceBackend):
 
     @property
     def name(self) -> str:
-        return "musicgen"
+        return "musicgen" if self.model_size == "medium" else f"musicgen-{self.model_size}"
 
     def is_available(self) -> bool:
         return (
@@ -69,9 +81,10 @@ class MusicGenBackend(InferenceBackend):
         )
 
     def dependency_summary(self) -> str:
+        folder = MUSICGEN_MODEL_SIZES[self.model_size]
         return (
-            "Requires torch + transformers and local model files at "
-            f"{self.model_path} (musicgen-medium). Install with: pip install -e '.[neural]'"
+            f"Requires torch + transformers and local model files at "
+            f"{self.model_path} ({folder}). Install with: pip install -e '.[neural]'"
         )
 
     def generate_music_audio(
@@ -221,3 +234,20 @@ class MusicGenBackend(InferenceBackend):
             stitched = np.vstack([stitched[:-fade_len], cross, chunk[fade_len:]])
 
         return stitched.astype(np.float32, copy=False)
+
+
+class MusicGenSmallBackend(MusicGenBackend):
+    """Convenience subclass pre-configured for the MusicGen Small (300 M) model.
+
+    Uses ``models/musicgen-small/`` by default.  Registered as the ``musicgen-small``
+    backend, providing a lighter alternative to the default MusicGen Medium backend
+    with faster load times and lower VRAM requirements.
+    """
+
+    def __init__(
+        self,
+        model_path: str | Path | None = None,
+        sample_rate: int = 32000,
+        seed: int | None = None,
+    ) -> None:
+        super().__init__(model_path=model_path, sample_rate=sample_rate, seed=seed, model_size="small")

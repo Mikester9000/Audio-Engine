@@ -228,6 +228,43 @@ def _set_status(label: _StatusLabel, text: str) -> None:
     label.update_idletasks()
 
 
+def _attach_value_label(
+    parent: object,
+    variable: object,
+    *,
+    row: int,
+    col: int = 2,
+    fmt: str = "{:.2f}",
+    width: int = 7,
+) -> None:
+    """Place a live read-only label beside a slider showing its current value."""
+    import tkinter as tk
+    from tkinter import ttk
+
+    val_str = tk.StringVar(value=fmt.format(variable.get()))  # type: ignore[attr-defined]
+    lbl = ttk.Label(parent, textvariable=val_str, width=width, anchor="w")
+    lbl.grid(row=row, column=col, sticky="w", padx=(2, 8))
+
+    def _update(*_args: object) -> None:
+        try:
+            val_str.set(fmt.format(variable.get()))  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    variable.trace_add("write", _update)  # type: ignore[attr-defined]
+
+
+def _browse_output_path(path_var: object, *, title: str = "Save As", filetypes: list | None = None) -> None:
+    """Open a Save As dialog and write the chosen path into path_var."""
+    from tkinter import filedialog
+
+    if filetypes is None:
+        filetypes = [("WAV files", "*.wav"), ("OGG files", "*.ogg"), ("All files", "*.*")]
+    chosen = filedialog.asksaveasfilename(title=title, filetypes=filetypes)
+    if chosen:
+        path_var.set(chosen)  # type: ignore[attr-defined]
+
+
 _SYNTH_WAVEFORMS = ["sine", "square", "sawtooth", "triangle", "noise", "bl_sawtooth", "bl_square"]
 _SYNTH_FILTER_TYPES = ["none", "lowpass", "highpass", "bandpass"]
 _PC_SECTION_TYPES = list(SECTION_TEMPLATES.keys())  # available section names for Piece Composer
@@ -540,7 +577,7 @@ def launch_studio() -> None:
 
     root = tk.Tk()
     root.title("Audio Engine Studio")
-    root.geometry("980x720")
+    root.geometry("1100x800")
     style_metadata = MusicGenerator.available_style_metadata()
     last_failed_action: str | None = None
     playback_handle: _PlaybackHandle | None = None
@@ -638,6 +675,11 @@ def launch_studio() -> None:
     style_box = ttk.Combobox(music_tab, textvariable=music_style, values=MusicGenerator.available_styles(), state="readonly")
     style_box.grid(row=0, column=1, sticky="ew", padx=8, pady=6)
 
+    # Style info panel — shows BPM, scale, and instruments for the selected style
+    style_info_var = tk.StringVar(value="")
+    style_info_lbl = ttk.Label(music_tab, textvariable=style_info_var, justify="left", foreground="#555555")
+    style_info_lbl.grid(row=0, column=2, rowspan=4, sticky="nw", padx=(0, 8), pady=6)
+
     ttk.Label(music_tab, text="Backend").grid(row=1, column=0, sticky="w", padx=8, pady=6)
     music_backend = tk.StringVar(value="procedural")
     ttk.Combobox(
@@ -673,6 +715,11 @@ def launch_studio() -> None:
     ttk.Label(music_tab, text="Output path").grid(row=6, column=0, sticky="w", padx=8, pady=6)
     music_out = tk.StringVar(value="music.wav")
     ttk.Entry(music_tab, textvariable=music_out).grid(row=6, column=1, sticky="ew", padx=8, pady=6)
+    ttk.Button(
+        music_tab,
+        text="Browse…",
+        command=lambda: _browse_output_path(music_out, title="Save Music As"),
+    ).grid(row=6, column=2, padx=(2, 8), pady=6)
 
     ttk.Label(music_tab, text="Prompt override").grid(row=7, column=0, sticky="w", padx=8, pady=6)
     music_prompt = tk.StringVar(value="")
@@ -727,13 +774,22 @@ def launch_studio() -> None:
     ttk.Combobox(music_tab, textvariable=custom_percussion, values=["", *instrument_choices], state="readonly").grid(row=18, column=1, sticky="ew", padx=8, pady=6)
 
     music_status = ttk.Label(music_tab, text="")
-    music_status.grid(row=20, column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    music_status.grid(row=20, column=0, columnspan=3, sticky="w", padx=8, pady=8)
 
     def _refresh_bpm(*_args: object) -> None:
         style = music_style.get()
-        bpm_var.set(str(int(style_metadata.get(style, style_metadata["battle"])["bpm"])))
+        meta = style_metadata.get(style, style_metadata["battle"])
+        bpm_var.set(str(int(meta["bpm"])))
+        scale = meta.get("scale_name", "")
+        root = meta.get("root", "")
+        instrs = ", ".join(meta.get("instruments", []))
+        style_info_var.set(
+            f"BPM: {int(meta['bpm'])}  Key: {root} {scale}\nLeads: {instrs}"
+        )
 
     style_box.bind("<<ComboboxSelected>>", _refresh_bpm)
+    _refresh_bpm()  # populate style info on startup
+    music_tab.columnconfigure(1, weight=1)
 
     def _run_music_generation() -> Path:
         seed = _safe_int(music_seed.get(), 0)
@@ -855,6 +911,7 @@ def launch_studio() -> None:
     ttk.Label(sfx_tab, text="Duration (s)").grid(row=2, column=0, sticky="w", padx=8, pady=6)
     sfx_duration = tk.DoubleVar(value=0.8)
     ttk.Scale(sfx_tab, from_=0.05, to=4.0, variable=sfx_duration, orient="horizontal").grid(row=2, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(sfx_tab, sfx_duration, row=2, fmt="{:.2f}s")
 
     ttk.Label(sfx_tab, text="Pitch override (Hz)").grid(row=3, column=0, sticky="w", padx=8, pady=6)
     sfx_pitch = tk.StringVar(value="")
@@ -867,9 +924,16 @@ def launch_studio() -> None:
     ttk.Label(sfx_tab, text="Output path").grid(row=5, column=0, sticky="w", padx=8, pady=6)
     sfx_out = tk.StringVar(value="sfx.wav")
     ttk.Entry(sfx_tab, textvariable=sfx_out).grid(row=5, column=1, sticky="ew", padx=8, pady=6)
+    ttk.Button(
+        sfx_tab,
+        text="Browse…",
+        command=lambda: _browse_output_path(sfx_out, title="Save SFX As"),
+    ).grid(row=5, column=2, padx=(2, 8), pady=6)
 
     sfx_status = ttk.Label(sfx_tab, text="")
-    sfx_status.grid(row=7, column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    sfx_status.grid(row=7, column=0, columnspan=3, sticky="w", padx=8, pady=8)
+    sfx_tab.columnconfigure(1, weight=1)
+
 
     def _run_sfx_generation() -> Path:
         seed = _safe_int(sfx_seed.get(), 0)
@@ -938,6 +1002,7 @@ def launch_studio() -> None:
     ttk.Label(voice_tab, text="Speed").grid(row=3, column=0, sticky="w", padx=8, pady=6)
     voice_speed = tk.DoubleVar(value=1.0)
     ttk.Scale(voice_tab, from_=0.6, to=2.0, variable=voice_speed, orient="horizontal").grid(row=3, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(voice_tab, voice_speed, row=3, fmt="{:.2f}x")
 
     ttk.Label(voice_tab, text="Seed").grid(row=4, column=0, sticky="w", padx=8, pady=6)
     voice_seed = tk.StringVar(value="0")
@@ -946,9 +1011,15 @@ def launch_studio() -> None:
     ttk.Label(voice_tab, text="Output path").grid(row=5, column=0, sticky="w", padx=8, pady=6)
     voice_out = tk.StringVar(value="voice.wav")
     ttk.Entry(voice_tab, textvariable=voice_out).grid(row=5, column=1, sticky="ew", padx=8, pady=6)
+    ttk.Button(
+        voice_tab,
+        text="Browse…",
+        command=lambda: _browse_output_path(voice_out, title="Save Voice As"),
+    ).grid(row=5, column=2, padx=(2, 8), pady=6)
 
     voice_status = ttk.Label(voice_tab, text="")
-    voice_status.grid(row=7, column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    voice_status.grid(row=7, column=0, columnspan=3, sticky="w", padx=8, pady=8)
+    voice_tab.columnconfigure(1, weight=1)
 
     def _run_voice_generation() -> Path:
         seed = _safe_int(voice_seed.get(), 0)
@@ -1020,28 +1091,33 @@ def launch_studio() -> None:
     ttk.Label(synth_tab, text="Amplitude (0–1)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_amp = tk.DoubleVar(value=0.8)
     ttk.Scale(synth_tab, from_=0.0, to=1.0, variable=synth_amp, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_amp, row=_sw_counter[0] - 1)
 
-    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
-    ttk.Label(synth_tab, text="— ADSR Envelope —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=2, pady=2)
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=3, sticky="ew", padx=8, pady=4)
+    ttk.Label(synth_tab, text="— ADSR Envelope —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=3, pady=2)
 
     ttk.Label(synth_tab, text="Attack (s)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_attack = tk.DoubleVar(value=0.01)
     ttk.Scale(synth_tab, from_=0.0, to=2.0, variable=synth_attack, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_attack, row=_sw_counter[0] - 1)
 
     ttk.Label(synth_tab, text="Decay (s)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_decay = tk.DoubleVar(value=0.1)
     ttk.Scale(synth_tab, from_=0.0, to=2.0, variable=synth_decay, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_decay, row=_sw_counter[0] - 1)
 
     ttk.Label(synth_tab, text="Sustain (0–1)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_sustain = tk.DoubleVar(value=0.7)
     ttk.Scale(synth_tab, from_=0.0, to=1.0, variable=synth_sustain, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_sustain, row=_sw_counter[0] - 1)
 
     ttk.Label(synth_tab, text="Release (s)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_release = tk.DoubleVar(value=0.3)
     ttk.Scale(synth_tab, from_=0.0, to=2.0, variable=synth_release, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_release, row=_sw_counter[0] - 1)
 
-    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
-    ttk.Label(synth_tab, text="— Filter —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=2, pady=2)
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=3, sticky="ew", padx=8, pady=4)
+    ttk.Label(synth_tab, text="— Filter —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=3, pady=2)
 
     ttk.Label(synth_tab, text="Filter type").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_filter_type = tk.StringVar(value="none")
@@ -1051,8 +1127,8 @@ def launch_studio() -> None:
     synth_cutoff = tk.StringVar(value="2000.0")
     ttk.Entry(synth_tab, textvariable=synth_cutoff).grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
 
-    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
-    ttk.Label(synth_tab, text="— Oscillator 2 —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=2, pady=2)
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=3, sticky="ew", padx=8, pady=4)
+    ttk.Label(synth_tab, text="— Oscillator 2 —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=3, pady=2)
 
     ttk.Label(synth_tab, text="Waveform 2").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_waveform2 = tk.StringVar(value="none")
@@ -1061,6 +1137,7 @@ def launch_studio() -> None:
     ttk.Label(synth_tab, text="Osc 2 mix (0–1)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_osc2_mix = tk.DoubleVar(value=0.0)
     ttk.Scale(synth_tab, from_=0.0, to=1.0, variable=synth_osc2_mix, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_osc2_mix, row=_sw_counter[0] - 1)
 
     ttk.Label(synth_tab, text="Osc 2 octave").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_osc2_octave = tk.IntVar(value=0)
@@ -1069,30 +1146,38 @@ def launch_studio() -> None:
     ttk.Label(synth_tab, text="Detune (cents)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_detune = tk.DoubleVar(value=0.0)
     ttk.Scale(synth_tab, from_=-50.0, to=50.0, variable=synth_detune, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_detune, row=_sw_counter[0] - 1, fmt="{:+.1f}¢")
 
-    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
-    ttk.Label(synth_tab, text="— LFO —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=2, pady=2)
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=3, sticky="ew", padx=8, pady=4)
+    ttk.Label(synth_tab, text="— LFO —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=3, pady=2)
 
     ttk.Label(synth_tab, text="LFO rate (Hz)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_lfo_rate = tk.DoubleVar(value=0.0)
     ttk.Scale(synth_tab, from_=0.0, to=20.0, variable=synth_lfo_rate, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_lfo_rate, row=_sw_counter[0] - 1, fmt="{:.1f}Hz")
 
     ttk.Label(synth_tab, text="LFO depth").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_lfo_depth = tk.DoubleVar(value=0.0)
     ttk.Scale(synth_tab, from_=0.0, to=1.0, variable=synth_lfo_depth, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_lfo_depth, row=_sw_counter[0] - 1)
 
     ttk.Label(synth_tab, text="LFO target").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_lfo_target = tk.StringVar(value="pitch")
     ttk.Combobox(synth_tab, textvariable=synth_lfo_target, values=["pitch", "amplitude", "filter"], state="readonly").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
 
-    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=3, sticky="ew", padx=8, pady=4)
 
     ttk.Label(synth_tab, text="Output path").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_out = tk.StringVar(value="synth_patch.wav")
     ttk.Entry(synth_tab, textvariable=synth_out).grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    ttk.Button(
+        synth_tab,
+        text="Browse…",
+        command=lambda: _browse_output_path(synth_out, title="Save Synth Patch As"),
+    ).grid(row=_sw_counter[0] - 1, column=2, padx=(2, 8), pady=6)
 
     synth_status = ttk.Label(synth_tab, text="")
-    synth_status.grid(row=_sw_row(), column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    synth_status.grid(row=_sw_row(), column=0, columnspan=3, sticky="w", padx=8, pady=8)
 
     synth_tab.columnconfigure(1, weight=1)
 

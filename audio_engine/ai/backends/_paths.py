@@ -20,6 +20,13 @@ _MODEL_REQUIREMENTS: dict[str, ModelRequirements] = {
             ("model.safetensors", "pytorch_model.bin", "model.bin", "model.pt", "model.pth"),
         ),
     },
+    "musicgen-small": {
+        "required_files": ("config.json",),
+        "required_any": (
+            ("preprocessor_config.json", "processor_config.json", "tokenizer_config.json"),
+            ("model.safetensors", "pytorch_model.bin", "model.bin", "model.pt", "model.pth"),
+        ),
+    },
     "audiogen-medium": {
         "required_files": ("config.json",),
         "required_any": (
