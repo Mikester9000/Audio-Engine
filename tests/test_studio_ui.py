@@ -12,10 +12,17 @@ from audio_engine.ui.studio import (
     _build_preview_catalog,
     _build_new_file_template,
     _build_synth_patch,
+    _build_synth_patch_ext,
+    _compose_piece_to_file,
     _discover_wav_files,
     _export_synth_patch,
     _new_file_output_targets,
+    _NOTE_FREQS,
+    _NOTE_NAMES,
     _parse_float_field,
+    _PC_SECTION_TYPES,
+    _PC_VOCAL_PRESETS,
+    _preview_instrument_note,
     _read_studio_preset,
     _SYNTH_FILTER_TYPES,
     _SYNTH_WAVEFORMS,
@@ -322,3 +329,133 @@ def test_export_synth_patch_writes_wav_file(tmp_path: Path):
     assert result.exists()
     assert result.suffix == ".wav"
     assert result.stat().st_size > 44  # at least a WAV header
+
+
+# ---------------------------------------------------------------------------
+# Tests for new GUI helpers added in expansion: Piece Composer + Instruments
+# ---------------------------------------------------------------------------
+
+class TestNoteFreqs:
+    def test_note_freqs_has_expected_keys(self):
+        assert "A4" in _NOTE_FREQS
+        assert "C4" in _NOTE_FREQS
+        assert "C2" in _NOTE_FREQS
+        assert "B5" in _NOTE_FREQS
+
+    def test_a4_is_440(self):
+        assert abs(_NOTE_FREQS["A4"] - 440.0) < 0.1
+
+    def test_note_names_matches_freqs_keys(self):
+        assert set(_NOTE_NAMES) == set(_NOTE_FREQS.keys())
+
+
+class TestPCSectionTypes:
+    def test_includes_standard_sections(self):
+        for sec in ("intro", "verse", "chorus", "bridge", "outro"):
+            assert sec in _PC_SECTION_TYPES
+
+    def test_is_list(self):
+        assert isinstance(_PC_SECTION_TYPES, list)
+
+
+class TestPCVocalPresets:
+    def test_includes_soprano(self):
+        assert "soprano" in _PC_VOCAL_PRESETS
+
+    def test_includes_choir_ah(self):
+        assert "choir_ah" in _PC_VOCAL_PRESETS
+
+
+class TestBuildSynthPatchExt:
+    """Tests for the extended synth patch builder."""
+
+    def _base_kwargs(self, **overrides) -> dict:
+        kw = dict(
+            waveform="sine",
+            frequency=440.0,
+            duration=0.1,
+            amplitude=0.5,
+            attack=0.01,
+            decay=0.05,
+            sustain=0.5,
+            release=0.05,
+            filter_type="none",
+            filter_cutoff=2000.0,
+            filter_q=1.0,
+        )
+        kw.update(overrides)
+        return kw
+
+    def test_basic_renders_array(self):
+        audio = _build_synth_patch_ext(**self._base_kwargs())
+        assert audio.ndim == 1
+        assert len(audio) > 0
+
+    def test_dual_oscillator_square(self):
+        audio = _build_synth_patch_ext(
+            **self._base_kwargs(waveform2="square", osc2_mix=0.5)
+        )
+        assert len(audio) > 0
+
+    def test_detune_nonzero(self):
+        audio = _build_synth_patch_ext(**self._base_kwargs(detune_cents=25.0))
+        assert len(audio) > 0
+
+    def test_lfo_amplitude_modulation(self):
+        audio = _build_synth_patch_ext(
+            **self._base_kwargs(lfo_rate=5.0, lfo_depth=0.3, lfo_target="amplitude")
+        )
+        assert len(audio) > 0
+
+    def test_lfo_filter_modulation(self):
+        audio = _build_synth_patch_ext(
+            **self._base_kwargs(
+                filter_type="lowpass",
+                lfo_rate=2.0,
+                lfo_depth=0.5,
+                lfo_target="filter",
+            )
+        )
+        assert len(audio) > 0
+
+    def test_unknown_waveform_raises(self):
+        with pytest.raises(ValueError, match="Unknown waveform"):
+            _build_synth_patch_ext(**self._base_kwargs(waveform="kazoo"))
+
+    def test_output_dtype_float32(self):
+        audio = _build_synth_patch_ext(**self._base_kwargs())
+        assert audio.dtype.name == "float32"
+
+
+class TestPreviewInstrumentNote:
+    def test_renders_wav_for_known_instrument(self, tmp_path: Path):
+        out = tmp_path / "instr.wav"
+        result = _preview_instrument_note("piano", "A4", 0.3, out)
+        assert result.exists()
+        assert result.stat().st_size > 44
+
+    def test_unknown_note_falls_back_to_440(self, tmp_path: Path):
+        out = tmp_path / "instr_fallback.wav"
+        result = _preview_instrument_note("piano", "X99", 0.2, out)
+        assert result.exists()
+
+
+class TestComposePieceToFile:
+    def test_compose_minimal_piece(self, tmp_path: Path):
+        out = tmp_path / "piece.wav"
+        result = _compose_piece_to_file(
+            style="battle",
+            sections=["intro", "chorus"],
+            with_vocals=False,
+            duration=8.0,
+            backend_name="procedural",
+            vocal_preset="soprano",
+            seed=42,
+            output_path=out,
+            mastering_profile="game",
+            samples_dir="samples",
+            sample_base_backend="procedural",
+            fmt="wav",
+        )
+        assert result.exists()
+        assert result.stat().st_size > 44
