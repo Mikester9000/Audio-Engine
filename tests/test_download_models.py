@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import types
 import sys
 from pathlib import Path
 
@@ -110,3 +111,41 @@ def test_download_failure_shows_manual_instructions(dm, tmp_path, monkeypatch, c
     assert rc == 1
     captured = capsys.readouterr()
     assert "manual" in captured.out.lower() or "ERROR" in captured.out
+
+
+def test_download_model_retries_and_passes_hf_token(dm, monkeypatch):
+    calls = []
+
+    def fake_snapshot_download(**kwargs):
+        calls.append(kwargs)
+        if len(calls) < 3:
+            raise RuntimeError("transient network error")
+        return "ok"
+
+    fake_hf = types.ModuleType("huggingface_hub")
+    fake_hf.snapshot_download = fake_snapshot_download
+    monkeypatch.setitem(sys.modules, "huggingface_hub", fake_hf)
+    monkeypatch.setattr(dm.time, "sleep", lambda *_: None)
+    monkeypatch.setenv("HF_TOKEN", "token-123")
+
+    dm._download_model("facebook/musicgen-small", Path("/tmp/target"))
+
+    assert len(calls) == 3
+    assert calls[-1]["repo_id"] == "facebook/musicgen-small"
+    assert calls[-1]["local_dir"] == "/tmp/target"
+    assert calls[-1]["token"] == "token-123"
+    assert calls[-1]["resume_download"] is True
+    assert calls[-1]["etag_timeout"] == dm.DOWNLOAD_ETAG_TIMEOUT_SECONDS
+
+
+def test_download_model_raises_after_all_retries(dm, monkeypatch):
+    def fake_snapshot_download(**kwargs):
+        raise RuntimeError("persistent network error")
+
+    fake_hf = types.ModuleType("huggingface_hub")
+    fake_hf.snapshot_download = fake_snapshot_download
+    monkeypatch.setitem(sys.modules, "huggingface_hub", fake_hf)
+    monkeypatch.setattr(dm.time, "sleep", lambda *_: None)
+
+    with pytest.raises(RuntimeError, match="multiple attempts"):
+        dm._download_model("facebook/musicgen-medium", Path("/tmp/target"))

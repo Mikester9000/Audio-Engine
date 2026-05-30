@@ -11,12 +11,18 @@ Usage
 from __future__ import annotations
 
 import argparse
+import inspect
+import os
+import time
 import sys
 from pathlib import Path
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 MODELS_DIR = ROOT_DIR / "models"
+DOWNLOAD_RETRY_ATTEMPTS = 3
+DOWNLOAD_RETRY_DELAY_SECONDS = 3
+DOWNLOAD_ETAG_TIMEOUT_SECONDS = 30
 
 MODEL_SPECS = (
     {
@@ -78,10 +84,48 @@ def _download_model(repo_id: str, target: Path) -> None:
             "huggingface_hub is not installed. Install AI dependencies first:\n"
             "  pip install -e \".[musicgen]\""
         ) from exc
-    snapshot_download(
-        repo_id=repo_id,
-        local_dir=str(target),
-    )
+
+    hf_token = os.environ.get("HF_TOKEN")
+    base_kwargs = {
+        "repo_id": repo_id,
+        "local_dir": str(target),
+    }
+    optional_kwargs = {
+        "token": hf_token if hf_token else None,
+        "resume_download": True,
+        "etag_timeout": DOWNLOAD_ETAG_TIMEOUT_SECONDS,
+        "max_workers": 4,
+        "local_dir_use_symlinks": False,
+    }
+    signature = inspect.signature(snapshot_download)
+    for key, value in optional_kwargs.items():
+        if key in signature.parameters and value is not None:
+            base_kwargs[key] = value
+
+    last_exc: Exception | None = None
+    for attempt in range(1, DOWNLOAD_RETRY_ATTEMPTS + 1):
+        try:
+            snapshot_download(**base_kwargs)
+            return
+        except Exception as exc:  # pragma: no cover - exercised via monkeypatch in tests
+            last_exc = exc
+            detail = str(exc).strip() or exc.__class__.__name__
+            print(
+                f"  Download attempt {attempt}/{DOWNLOAD_RETRY_ATTEMPTS} failed: {detail}",
+                file=sys.stderr,
+            )
+            if attempt < DOWNLOAD_RETRY_ATTEMPTS:
+                print(
+                    f"  Retrying in {DOWNLOAD_RETRY_DELAY_SECONDS}s "
+                    "(set HF_TOKEN for faster authenticated downloads)...",
+                    file=sys.stderr,
+                )
+                time.sleep(DOWNLOAD_RETRY_DELAY_SECONDS)
+    assert last_exc is not None
+    raise RuntimeError(
+        "Download failed after multiple attempts. "
+        "Check network connectivity or set HF_TOKEN and retry."
+    ) from last_exc
 
 
 def _print_manual_instructions() -> None:
