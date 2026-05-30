@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import sys
+import types
 from pathlib import Path
 
 import numpy as np
@@ -19,11 +21,20 @@ from audio_engine.ui.studio import (
     _new_file_output_targets,
     _NOTE_FREQS,
     _NOTE_NAMES,
+    _piano_roll_duplicate_notes,
+    _piano_roll_humanize_notes,
+    _piano_roll_index_to_note,
+    _piano_roll_nudge_notes,
+    _piano_roll_note_to_index,
+    _piano_roll_quantize_notes,
+    _piano_roll_snap_beat,
+    _piano_roll_transpose_notes,
     _parse_float_field,
     _PC_SECTION_TYPES,
     _PC_VOCAL_PRESETS,
     _preview_instrument_note,
     _read_studio_preset,
+    _save_preview_note_sample,
     _SYNTH_FILTER_TYPES,
     _SYNTH_WAVEFORMS,
     _write_new_file_template,
@@ -136,6 +147,59 @@ def test_studio_source_includes_scrollable_tabs_and_play_latest_controls():
     content = Path(studio_module.__file__).read_text(encoding="utf-8")
     assert "_make_scrollable_tab" in content
     assert "Play latest" in content
+    assert "Canvas workflow: click to place, drag to move/resize, right-click to delete." in content
+    assert "Add Starter Tracks" in content
+    assert "Save as Sample Note" in content
+
+
+def test_piano_roll_note_lane_roundtrip():
+    idx = _piano_roll_note_to_index("C4")
+    assert _piano_roll_index_to_note(idx) == "C4"
+    assert _piano_roll_index_to_note(999) == _NOTE_NAMES[-1]
+
+
+def test_piano_roll_note_tools_quantize_transpose_and_nudge():
+    notes = [
+        {"beat": 0.18, "note": "C4", "duration_beats": 0.78, "velocity": 0.9},
+        {"beat": 1.14, "note": "E4", "duration_beats": 1.11, "velocity": 0.7},
+    ]
+    quantized = _piano_roll_quantize_notes(notes, snap=0.25)
+    assert [n["beat"] for n in quantized] == [0.25, 1.25]
+    assert [n["duration_beats"] for n in quantized] == [0.75, 1.0]
+
+    transposed = _piano_roll_transpose_notes(quantized, semitones=1)
+    assert [n["note"] for n in transposed] == ["D4", "F4"]
+
+    nudged = _piano_roll_nudge_notes(transposed, beat_delta=-0.25, snap=0.25)
+    assert [n["beat"] for n in nudged] == [0.0, 1.0]
+
+
+def test_piano_roll_humanize_and_duplicate_are_stable():
+    notes = [{"beat": 0.0, "note": "A4", "duration_beats": 1.0, "velocity": 0.8}]
+    duplicated = _piano_roll_duplicate_notes(notes, beat_offset=4.0)
+    assert duplicated[0]["beat"] == 4.0
+    assert duplicated[0]["note"] == "A4"
+    humanized = _piano_roll_humanize_notes(notes, timing_amount=0.05, velocity_amount=0.1, seed=42)
+    assert 0.0 <= float(humanized[0]["velocity"]) <= 1.0
+    assert float(humanized[0]["beat"]) >= 0.0
+
+
+def test_piano_roll_snap_beat():
+    assert _piano_roll_snap_beat(0.37, 0.25) == 0.25
+    assert _piano_roll_snap_beat(-1.0, 0.25) == 0.0
+
+
+def test_save_preview_note_sample_copies_to_sample_root(tmp_path: Path):
+    preview = tmp_path / "preview.wav"
+    preview.write_bytes(b"RIFFfake")
+    out = _save_preview_note_sample(
+        preview_path=preview,
+        sample_root=tmp_path / "samples",
+        instrument_name="legato strings ps2",
+        note="C4",
+    )
+    assert out.exists()
+    assert out.read_bytes() == b"RIFFfake"
 
 
 def test_new_file_output_targets_use_base_name_and_dir(tmp_path: Path):
@@ -601,3 +665,58 @@ class TestRenderPianoRollToFile:
         )
         assert result.exists()
         assert result.stat().st_size > 44
+
+    def test_mute_and_solo_filter_tracks(self, monkeypatch, tmp_path: Path):
+        captured: dict[str, list[str]] = {"tracks": []}
+
+        class _FakeSequencer:
+            def __init__(self, **_kwargs):
+                pass
+
+            def add_track(self, name, instrument, pan, volume, role):  # noqa: ANN001
+                captured["tracks"].append(name)
+
+            def add_note(self, *args, **kwargs):  # noqa: ANN002, ANN003
+                return None
+
+            def render(self):
+                return np.zeros((128, 2), dtype=np.float32)
+
+        class _FakeBounce:
+            def __init__(self, **_kwargs):
+                pass
+
+            def process_and_export(self, audio, output_path, fmt):  # noqa: ANN001
+                output_path.write_bytes(b"RIFFfake")
+                return output_path
+
+        monkeypatch.setitem(sys.modules, "audio_engine.composer.sequencer", types.SimpleNamespace(Sequencer=_FakeSequencer))
+        monkeypatch.setattr(studio_module, "OfflineBounce", _FakeBounce)
+
+        tracks = {
+            "Lead": {"instrument": "piano", "pan": 0.0, "volume": 1.0, "role": "melody", "mute": False, "solo": False, "notes": []},
+            "Pad": {"instrument": "piano", "pan": 0.0, "volume": 1.0, "role": "harmony", "mute": True, "solo": False, "notes": []},
+        }
+        out = tmp_path / "mute.wav"
+        _render_piano_roll_to_file(
+            tracks,
+            bpm=120,
+            time_signature=4,
+            output_path=out,
+            mastering_profile="game",
+            fmt="wav",
+        )
+        assert captured["tracks"] == ["Lead"]
+
+        captured["tracks"].clear()
+        tracks["Lead"]["solo"] = False
+        tracks["Pad"]["solo"] = True
+        _render_piano_roll_to_file(
+            tracks,
+            bpm=120,
+            time_signature=4,
+            output_path=tmp_path / "solo.wav",
+            mastering_profile="game",
+            fmt="wav",
+        )
+        assert captured["tracks"] == ["Pad"]

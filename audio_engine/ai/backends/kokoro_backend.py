@@ -75,32 +75,28 @@ class KokoroBackend(InferenceBackend):
             os.environ.setdefault("KOKORO_MODEL_PATH", str(self.model_path))
 
             audio: np.ndarray | None = None
+            output: Any = None
 
-            if hasattr(kokoro, "KPipeline"):
-                # kokoro 0.9.x API: KPipeline(lang_code=...) → iterable of result objects
-                lang_code = kwargs.get("lang_code", "a")  # 'a' = American English
-                try:
-                    pipeline = kokoro.KPipeline(lang_code=lang_code)
-                except TypeError:
-                    pipeline = kokoro.KPipeline()
-
-                chunks: list[np.ndarray] = []
-                for result in pipeline(text, voice=voice_preset, speed=speed):
-                    # Each result may be a (graphemes, phonemes, audio) tuple
-                    # or an object with a .audio attribute.
-                    chunk = self._extract_audio(result)
-                    if chunk is not None and chunk.size > 0:
-                        chunks.append(chunk)
-                if chunks:
-                    audio = np.concatenate(chunks, axis=0).astype(np.float32)
-
-            elif hasattr(kokoro, "generate"):
+            if hasattr(kokoro, "generate"):
                 output = kokoro.generate(
                     text=text,
                     voice=voice_preset,
                     speed=speed,
                     model_path=str(self.model_path),
                 )
+                audio = self._extract_audio(output)
+
+            elif hasattr(kokoro, "KPipeline"):
+                try:
+                    pipeline = kokoro.KPipeline(model_path=str(self.model_path))
+                except TypeError:
+                    pipeline = kokoro.KPipeline()
+                output = pipeline(text=text, voice=voice_preset, speed=speed)
+                audio = self._extract_iterable_audio(output)
+                if audio is None and output is not None:
+                    audio = self._extract_audio(output)
+
+            if audio is None:
                 audio = self._extract_audio(output)
 
             if audio is None or audio.size == 0:
@@ -115,18 +111,14 @@ class KokoroBackend(InferenceBackend):
             return None
         if isinstance(output, np.ndarray):
             return output
-        # kokoro 0.9.x: result is a tuple (graphemes, phonemes, audio)
-        if isinstance(output, tuple) and len(output) == 3:
-            candidate = output[2]
-            if isinstance(candidate, np.ndarray):
-                return candidate
-            if hasattr(candidate, "__array__"):
-                return np.asarray(candidate, dtype=np.float32)
         if isinstance(output, (list, tuple)):
-            if output and isinstance(output[-1], np.ndarray):
-                return output[-1]
-            if output and hasattr(output[-1], "__array__"):
-                return np.asarray(output[-1], dtype=np.float32)
+            for candidate in output:
+                if isinstance(candidate, np.ndarray):
+                    return candidate.astype(np.float32, copy=False)
+                if hasattr(candidate, "__array__"):
+                    arr = np.asarray(candidate, dtype=np.float32)
+                    if arr.ndim >= 1 and arr.size > 1:
+                        return arr
         if isinstance(output, dict):
             for key in ("audio", "wav", "waveform", "samples"):
                 if key in output:
@@ -138,6 +130,20 @@ class KokoroBackend(InferenceBackend):
         if hasattr(output, "waveform"):
             return np.asarray(output.waveform, dtype=np.float32)
         return None
+
+    def _extract_iterable_audio(self, output: Any) -> np.ndarray | None:
+        if isinstance(output, (str, bytes, dict, np.ndarray)):
+            return None
+        if not hasattr(output, "__iter__"):
+            return None
+        chunks: list[np.ndarray] = []
+        for item in output:
+            chunk = self._extract_audio(item)
+            if chunk is not None and chunk.size > 0:
+                chunks.append(chunk)
+        if not chunks:
+            return None
+        return np.concatenate(chunks, axis=0).astype(np.float32)
 
     def _ensure_mono(self, audio: np.ndarray) -> np.ndarray:
         arr = np.asarray(audio, dtype=np.float32)

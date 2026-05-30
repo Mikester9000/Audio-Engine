@@ -278,6 +278,114 @@ _NOTE_FREQS: dict[str, float] = {
     "C5": 523.25, "D5": 587.33, "E5": 659.25, "F5": 698.46, "G5": 784.00, "A5": 880.00, "B5": 987.77,
 }
 _NOTE_NAMES = list(_NOTE_FREQS.keys())
+_NOTE_TO_INDEX = {name: idx for idx, name in enumerate(_NOTE_NAMES)}
+_INDEX_TO_NOTE = {idx: name for idx, name in enumerate(_NOTE_NAMES)}
+
+_PR_TRACK_TEMPLATES: dict[str, list[dict[str, object]]] = {
+    "PS2 Starter Trio": [
+        {"name": "Lead", "instrument": "legato_strings_ps2", "role": "melody", "volume": 1.0, "pan": -0.1},
+        {"name": "Bass", "instrument": "bass", "role": "bass", "volume": 0.9, "pan": 0.0},
+        {"name": "Rhythm", "instrument": "nylon_guitar_ps2", "role": "harmony", "volume": 0.85, "pan": 0.12},
+    ],
+    "Modern Starter": [
+        {"name": "Lead", "instrument": "synth_lead_bright", "role": "melody", "volume": 1.0, "pan": 0.0},
+        {"name": "Pad", "instrument": "soft_epiano_ps2", "role": "texture", "volume": 0.8, "pan": -0.15},
+        {"name": "Bass", "instrument": "bass", "role": "bass", "volume": 0.9, "pan": 0.0},
+    ],
+}
+
+
+def _piano_roll_snap_beat(beat: float, snap: float) -> float:
+    snap_value = max(0.0, float(snap))
+    if snap_value <= 0.0:
+        return max(0.0, float(beat))
+    return max(0.0, round(float(beat) / snap_value) * snap_value)
+
+
+def _piano_roll_note_to_index(note: str) -> int:
+    return _NOTE_TO_INDEX.get(note, _NOTE_TO_INDEX["A4"])
+
+
+def _piano_roll_index_to_note(index: int) -> str:
+    if index < 0:
+        index = 0
+    if index >= len(_NOTE_NAMES):
+        index = len(_NOTE_NAMES) - 1
+    return _INDEX_TO_NOTE[index]
+
+
+def _piano_roll_clone_note(note: dict[str, object]) -> dict[str, object]:
+    return {
+        "beat": float(note.get("beat", 0.0)),
+        "note": str(note.get("note", "A4")),
+        "duration_beats": max(0.05, float(note.get("duration_beats", 1.0))),
+        "velocity": min(1.0, max(0.0, float(note.get("velocity", 1.0)))),
+    }
+
+
+def _piano_roll_duplicate_notes(notes: list[dict[str, object]], *, beat_offset: float) -> list[dict[str, object]]:
+    clones = [_piano_roll_clone_note(note) for note in notes]
+    for note in clones:
+        note["beat"] = max(0.0, float(note["beat"]) + float(beat_offset))
+    return sorted(clones, key=lambda item: float(item["beat"]))
+
+
+def _piano_roll_transpose_notes(notes: list[dict[str, object]], *, semitones: int) -> list[dict[str, object]]:
+    shifted: list[dict[str, object]] = []
+    for note in notes:
+        clone = _piano_roll_clone_note(note)
+        lane = _piano_roll_note_to_index(str(clone["note"]))
+        clone["note"] = _piano_roll_index_to_note(lane + int(semitones))
+        shifted.append(clone)
+    return shifted
+
+
+def _piano_roll_nudge_notes(
+    notes: list[dict[str, object]],
+    *,
+    beat_delta: float,
+    snap: float | None = None,
+) -> list[dict[str, object]]:
+    shifted: list[dict[str, object]] = []
+    for note in notes:
+        clone = _piano_roll_clone_note(note)
+        beat = max(0.0, float(clone["beat"]) + float(beat_delta))
+        if snap is not None:
+            beat = _piano_roll_snap_beat(beat, snap)
+        clone["beat"] = beat
+        shifted.append(clone)
+    return sorted(shifted, key=lambda item: float(item["beat"]))
+
+
+def _piano_roll_quantize_notes(notes: list[dict[str, object]], *, snap: float) -> list[dict[str, object]]:
+    quantized: list[dict[str, object]] = []
+    for note in notes:
+        clone = _piano_roll_clone_note(note)
+        clone["beat"] = _piano_roll_snap_beat(float(clone["beat"]), snap)
+        clone["duration_beats"] = max(float(snap), _piano_roll_snap_beat(float(clone["duration_beats"]), snap))
+        quantized.append(clone)
+    return sorted(quantized, key=lambda item: float(item["beat"]))
+
+
+def _piano_roll_humanize_notes(
+    notes: list[dict[str, object]],
+    *,
+    timing_amount: float,
+    velocity_amount: float,
+    seed: int = 0,
+) -> list[dict[str, object]]:
+    import random
+
+    rng = random.Random(seed)
+    humanized: list[dict[str, object]] = []
+    for note in notes:
+        clone = _piano_roll_clone_note(note)
+        beat_shift = rng.uniform(-abs(timing_amount), abs(timing_amount))
+        vel_shift = rng.uniform(-abs(velocity_amount), abs(velocity_amount))
+        clone["beat"] = max(0.0, float(clone["beat"]) + beat_shift)
+        clone["velocity"] = min(1.0, max(0.0, float(clone["velocity"]) + vel_shift))
+        humanized.append(clone)
+    return sorted(humanized, key=lambda item: float(item["beat"]))
 
 
 def _compose_piece_to_file(
@@ -337,6 +445,24 @@ def _preview_instrument_note(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     exporter = AudioExporter(sample_rate=sample_rate)
     return exporter.export(audio, output_path, fmt="wav")
+
+
+def _save_preview_note_sample(
+    *,
+    preview_path: Path,
+    sample_root: Path,
+    instrument_name: str,
+    note: str,
+) -> Path:
+    if not preview_path.exists():
+        raise FileNotFoundError(f"Preview file does not exist: {preview_path}")
+    safe_instrument = re.sub(r"[^A-Za-z0-9_-]+", "_", instrument_name).strip("_") or "instrument"
+    safe_note = re.sub(r"[^A-Za-z0-9#_-]+", "_", note).strip("_") or "A4"
+    target_dir = sample_root / safe_instrument
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target_path = target_dir / f"{safe_note}.wav"
+    shutil.copy2(preview_path, target_path)
+    return target_path
 
 
 def _build_synth_patch_ext(
@@ -550,8 +676,17 @@ def _render_piano_roll_to_file(
 
     seq = Sequencer(bpm=bpm, time_signature=time_signature, sample_rate=sample_rate)
     beat_dur = 60.0 / bpm
+    solo_tracks = {
+        tname
+        for tname, tcfg in tracks_data.items()
+        if bool(tcfg.get("solo", False))
+    }
 
     for track_name, tcfg in tracks_data.items():
+        if solo_tracks and track_name not in solo_tracks:
+            continue
+        if not solo_tracks and bool(tcfg.get("mute", False)):
+            continue
         instrument = InstrumentLibrary.get(str(tcfg.get("instrument", "piano")), sample_rate=sample_rate)
         seq.add_track(
             name=track_name,
@@ -1468,6 +1603,20 @@ def launch_studio() -> None:
             _set_status(instr_status, f"Error: {exc}")
             _set_status(global_status, f"Instrument preview failed — {exc}")
 
+    def _save_instr_preview_to_samples() -> None:
+        try:
+            target = _save_preview_note_sample(
+                preview_path=Path(instr_out.get()),
+                sample_root=Path(sample_root.get().strip() or _DEFAULT_SAMPLE_ROOT),
+                instrument_name=instr_choice.get(),
+                note=instr_note.get(),
+            )
+            _set_status(instr_status, f"Sample note saved: {target}")
+            _set_status(global_status, "Sample note saved.")
+        except Exception as exc:  # pragma: no cover - UI path
+            _set_status(instr_status, f"Save sample failed: {exc}")
+            _set_status(global_status, f"Sample note save failed — {exc}")
+
     btn_row_instr = ttk.Frame(instr_tab)
     btn_row_instr.grid(row=4, column=0, columnspan=2, pady=4)
     ttk.Button(btn_row_instr, text="Preview Note", command=_generate_instr_preview).pack(side="left", padx=8)
@@ -1476,20 +1625,21 @@ def launch_studio() -> None:
         text="Play latest",
         command=lambda: _play_output_path(Path(instr_out.get()), "Music"),
     ).pack(side="left", padx=8)
+    ttk.Button(
+        btn_row_instr,
+        text="Save as Sample Note",
+        command=_save_instr_preview_to_samples,
+    ).pack(side="left", padx=8)
 
     # ---------------------------------------------------------------------------
-    # Piano Roll tab — manual note-by-note multi-track composition
+    # Piano Roll tab — visual grid editing + precise note inspector
     # ---------------------------------------------------------------------------
-    # Internal state: tracks_data is the live data model
-    # {track_name: {"instrument": str, "pan": float, "volume": float,
-    #               "role": str, "notes": [{"beat": float, "note": str,
-    #               "duration_beats": float, "velocity": float}, ...]}}
     _pr_tracks: dict[str, dict] = {}
-    _pr_selected_track: list[str | None] = [None]  # mutable cell
-
+    _pr_selected_track: list[str | None] = [None]
+    _pr_selected_note_index: list[int | None] = [None]
     _TRACK_ROLES = ["melody", "counter", "harmony", "bass", "texture", "percussion"]
+    _PR_SNAP_VALUES = {"1 bar": 4.0, "1 beat": 1.0, "1/2": 0.5, "1/4": 0.25, "1/8": 0.125, "1/16": 0.0625}
 
-    # -- Top controls bar --
     pr_top = ttk.Frame(piano_roll_outer)
     pr_top.pack(fill="x", padx=8, pady=6)
 
@@ -1501,33 +1651,38 @@ def launch_studio() -> None:
     pr_time_sig = tk.IntVar(value=4)
     ttk.Spinbox(pr_top, from_=2, to=12, textvariable=pr_time_sig, width=4).grid(row=0, column=3, sticky="w", padx=4)
 
-    ttk.Label(pr_top, text="Profile").grid(row=0, column=4, sticky="w", padx=4)
+    ttk.Label(pr_top, text="Snap").grid(row=0, column=4, sticky="w", padx=4)
+    pr_snap = tk.StringVar(value="1/4")
+    ttk.Combobox(pr_top, textvariable=pr_snap, values=list(_PR_SNAP_VALUES.keys()), state="readonly", width=8).grid(row=0, column=5, sticky="w", padx=4)
+
+    ttk.Label(pr_top, text="Profile").grid(row=0, column=6, sticky="w", padx=4)
     pr_profile = tk.StringVar(value="ost")
-    ttk.Combobox(pr_top, textvariable=pr_profile, values=VALID_PROFILES, state="readonly", width=10).grid(row=0, column=5, sticky="w", padx=4)
+    ttk.Combobox(pr_top, textvariable=pr_profile, values=VALID_PROFILES, state="readonly", width=10).grid(row=0, column=7, sticky="w", padx=4)
 
-    ttk.Label(pr_top, text="Format").grid(row=0, column=6, sticky="w", padx=4)
+    ttk.Label(pr_top, text="Format").grid(row=0, column=8, sticky="w", padx=4)
     pr_format = tk.StringVar(value="wav")
-    ttk.Combobox(pr_top, textvariable=pr_format, values=["wav", "ogg"], state="readonly", width=6).grid(row=0, column=7, sticky="w", padx=4)
+    ttk.Combobox(pr_top, textvariable=pr_format, values=["wav", "ogg"], state="readonly", width=6).grid(row=0, column=9, sticky="w", padx=4)
 
-    ttk.Label(pr_top, text="Output").grid(row=0, column=8, sticky="w", padx=4)
+    ttk.Label(pr_top, text="Output").grid(row=0, column=10, sticky="w", padx=4)
     pr_out = tk.StringVar(value="piano_roll.wav")
-    ttk.Entry(pr_top, textvariable=pr_out, width=22).grid(row=0, column=9, sticky="ew", padx=4)
-    pr_top.columnconfigure(9, weight=1)
+    ttk.Entry(pr_top, textvariable=pr_out, width=22).grid(row=0, column=11, sticky="ew", padx=4)
+    pr_top.columnconfigure(11, weight=1)
 
-    pr_status = ttk.Label(piano_roll_outer, text="Ready — add tracks and notes, then Render.")
+    pr_status = ttk.Label(
+        piano_roll_outer,
+        text="Canvas workflow: click to place, drag to move/resize, right-click to delete.",
+    )
     pr_status.pack(fill="x", padx=8, pady=2)
 
-    # -- Main split: tracks (left) | notes (right) --
     pr_pane = ttk.PanedWindow(piano_roll_outer, orient="horizontal")
     pr_pane.pack(fill="both", expand=True, padx=8, pady=4)
 
-    # -- Left: Track list panel --
     pr_left = ttk.LabelFrame(pr_pane, text="Tracks")
     pr_pane.add(pr_left, weight=1)
 
     pr_track_tree = ttk.Treeview(
         pr_left,
-        columns=("instrument", "role", "vol", "pan"),
+        columns=("instrument", "role", "vol", "pan", "mute", "solo"),
         show="headings",
         selectmode="browse",
         height=12,
@@ -1535,14 +1690,27 @@ def launch_studio() -> None:
     for col, hdr, w in [
         ("instrument", "Instrument", 120),
         ("role", "Role", 80),
-        ("vol", "Vol", 50),
+        ("vol", "Vol", 45),
         ("pan", "Pan", 50),
+        ("mute", "M", 30),
+        ("solo", "S", 30),
     ]:
         pr_track_tree.heading(col, text=hdr)
         pr_track_tree.column(col, width=w, anchor="center")
     pr_track_tree.pack(fill="both", expand=True, padx=4, pady=4)
 
-    # Track form (inline, below the tree)
+    pr_template_frame = ttk.Frame(pr_left)
+    pr_template_frame.pack(fill="x", padx=4, pady=(0, 4))
+    ttk.Label(pr_template_frame, text="Starter tracks").pack(side="left")
+    pr_track_template = tk.StringVar(value="PS2 Starter Trio")
+    ttk.Combobox(
+        pr_template_frame,
+        textvariable=pr_track_template,
+        values=list(_PR_TRACK_TEMPLATES.keys()),
+        state="readonly",
+        width=18,
+    ).pack(side="left", padx=4)
+
     pr_track_form = ttk.LabelFrame(pr_left, text="Add / Edit Track")
     pr_track_form.pack(fill="x", padx=4, pady=4)
 
@@ -1565,79 +1733,29 @@ def launch_studio() -> None:
     ttk.Label(pr_track_form, text="Pan").grid(row=2, column=0, sticky="w", padx=4, pady=3)
     pr_tf_pan = tk.DoubleVar(value=0.0)
     ttk.Scale(pr_track_form, from_=-1.0, to=1.0, variable=pr_tf_pan, orient="horizontal", length=80).grid(row=2, column=1, sticky="ew", padx=4, pady=3)
+    pr_tf_mute = tk.BooleanVar(value=False)
+    pr_tf_solo = tk.BooleanVar(value=False)
+    ttk.Checkbutton(pr_track_form, text="Mute", variable=pr_tf_mute).grid(row=2, column=2, sticky="w", padx=4, pady=3)
+    ttk.Checkbutton(pr_track_form, text="Solo", variable=pr_tf_solo).grid(row=2, column=3, sticky="w", padx=4, pady=3)
     pr_track_form.columnconfigure(3, weight=1)
 
-    def _pr_refresh_track_tree() -> None:
-        pr_track_tree.delete(*pr_track_tree.get_children())
-        for tname, tcfg in _pr_tracks.items():
-            pr_track_tree.insert(
-                "",
-                "end",
-                iid=tname,
-                text=tname,
-                values=(
-                    tcfg.get("instrument", ""),
-                    tcfg.get("role", ""),
-                    f"{tcfg.get('volume', 1.0):.2f}",
-                    f"{tcfg.get('pan', 0.0):+.2f}",
-                ),
-            )
-        # Re-tag the selected track name as heading in tree
-        pr_track_tree.heading("#0", text="Track")
-        pr_track_tree["show"] = "headings"
-
-    def _pr_add_track() -> None:
-        name = pr_tf_name.get().strip()
-        if not name:
-            _set_status(pr_status, "Track name cannot be empty.")
-            return
-        _pr_tracks[name] = {
-            "instrument": pr_tf_instr.get(),
-            "role": pr_tf_role.get(),
-            "volume": float(pr_tf_vol.get()),
-            "pan": float(pr_tf_pan.get()),
-            "notes": [],
-        }
-        _pr_refresh_track_tree()
-        _pr_refresh_note_tree()
-        _set_status(pr_status, f"Track '{name}' added.")
-
-    def _pr_remove_track() -> None:
-        sel = pr_track_tree.selection()
-        if not sel:
-            _set_status(pr_status, "Select a track to remove.")
-            return
-        name = sel[0]
-        _pr_tracks.pop(name, None)
-        if _pr_selected_track[0] == name:
-            _pr_selected_track[0] = None
-        _pr_refresh_track_tree()
-        _pr_refresh_note_tree()
-        _set_status(pr_status, f"Track '{name}' removed.")
-
-    def _pr_on_track_select(_event: object = None) -> None:
-        sel = pr_track_tree.selection()
-        if sel:
-            _pr_selected_track[0] = sel[0]
-            _pr_refresh_note_tree()
-
-    pr_track_tree.bind("<<TreeviewSelect>>", _pr_on_track_select)
-
-    pr_track_btns = ttk.Frame(pr_left)
-    pr_track_btns.pack(fill="x", padx=4, pady=4)
-    ttk.Button(pr_track_btns, text="Add Track", command=_pr_add_track).pack(side="left", padx=4)
-    ttk.Button(pr_track_btns, text="Remove Track", command=_pr_remove_track).pack(side="left", padx=4)
-
-    # -- Right: Note editor panel --
-    pr_right = ttk.LabelFrame(pr_pane, text="Notes")
+    pr_right = ttk.LabelFrame(pr_pane, text="Piano Roll + Inspector")
     pr_pane.add(pr_right, weight=2)
+
+    pr_grid_frame = ttk.Frame(pr_right)
+    pr_grid_frame.pack(fill="both", expand=True, padx=4, pady=4)
+    pr_canvas = tk.Canvas(pr_grid_frame, bg="#17171c", height=360, highlightthickness=1, highlightbackground="#424254")
+    pr_canvas.pack(side="left", fill="both", expand=True)
+    pr_canvas_scroll = ttk.Scrollbar(pr_grid_frame, orient="horizontal", command=pr_canvas.xview)
+    pr_canvas_scroll.pack(side="bottom", fill="x")
+    pr_canvas.configure(xscrollcommand=pr_canvas_scroll.set)
 
     pr_note_tree = ttk.Treeview(
         pr_right,
         columns=("beat", "note", "dur", "vel"),
         show="headings",
         selectmode="browse",
-        height=12,
+        height=8,
     )
     for col, hdr, w in [
         ("beat", "Start beat", 80),
@@ -1647,7 +1765,34 @@ def launch_studio() -> None:
     ]:
         pr_note_tree.heading(col, text=hdr)
         pr_note_tree.column(col, width=w, anchor="center")
-    pr_note_tree.pack(fill="both", expand=True, padx=4, pady=4)
+    pr_note_tree.pack(fill="x", padx=4, pady=4)
+
+    def _pr_snap_value() -> float:
+        return float(_PR_SNAP_VALUES.get(pr_snap.get(), 0.25))
+
+    def _pr_note_rect(note: dict[str, object], *, beat_width: float, lane_height: float) -> tuple[float, float, float, float]:
+        beat = float(note.get("beat", 0.0))
+        dur = max(0.05, float(note.get("duration_beats", 1.0)))
+        lane = _piano_roll_note_to_index(str(note.get("note", "A4")))
+        y_lane = len(_NOTE_NAMES) - lane - 1
+        return (beat * beat_width, y_lane * lane_height, (beat + dur) * beat_width, (y_lane + 1) * lane_height)
+
+    def _pr_refresh_track_tree() -> None:
+        pr_track_tree.delete(*pr_track_tree.get_children())
+        for tname, tcfg in _pr_tracks.items():
+            pr_track_tree.insert(
+                "",
+                "end",
+                iid=tname,
+                values=(
+                    tcfg.get("instrument", ""),
+                    tcfg.get("role", ""),
+                    f"{tcfg.get('volume', 1.0):.2f}",
+                    f"{tcfg.get('pan', 0.0):+.2f}",
+                    "●" if bool(tcfg.get("mute", False)) else "",
+                    "●" if bool(tcfg.get("solo", False)) else "",
+                ),
+            )
 
     def _pr_refresh_note_tree() -> None:
         pr_note_tree.delete(*pr_note_tree.get_children())
@@ -1660,30 +1805,163 @@ def launch_studio() -> None:
                 "end",
                 iid=str(i),
                 values=(
-                    f"{nd['beat']:.2f}",
+                    f"{float(nd['beat']):.2f}",
                     nd["note"],
-                    f"{nd['duration_beats']:.2f}",
-                    f"{nd['velocity']:.2f}",
+                    f"{float(nd['duration_beats']):.2f}",
+                    f"{float(nd['velocity']):.2f}",
                 ),
             )
 
-    # Note add/edit form
-    pr_note_form = ttk.LabelFrame(pr_right, text="Add / Edit Note")
+    def _pr_refresh_canvas() -> None:
+        pr_canvas.delete("all")
+        beat_width = 24.0
+        lane_height = 18.0
+        max_beats = 64
+        total_width = beat_width * max_beats
+        total_height = lane_height * len(_NOTE_NAMES)
+        pr_canvas.configure(scrollregion=(0, 0, total_width, total_height))
+        for lane in range(len(_NOTE_NAMES)):
+            y = lane * lane_height
+            note_name = _piano_roll_index_to_note(len(_NOTE_NAMES) - lane - 1)
+            fill = "#1e1e24" if "#" in note_name else "#23232b"
+            pr_canvas.create_rectangle(0, y, total_width, y + lane_height, fill=fill, outline="#2d2d39")
+            if note_name.endswith("C3") or note_name.endswith("C4") or note_name.endswith("C5"):
+                pr_canvas.create_line(0, y, total_width, y, fill="#6e6eb0")
+                pr_canvas.create_text(2, y + lane_height * 0.5, text=note_name, fill="#b9b9f6", anchor="w", font=("TkDefaultFont", 8))
+        for beat in range(max_beats + 1):
+            color = "#65658f" if beat % int(max(1, pr_time_sig.get())) == 0 else "#3c3c4d"
+            width = 2 if beat % int(max(1, pr_time_sig.get())) == 0 else 1
+            pr_canvas.create_line(beat * beat_width, 0, beat * beat_width, total_height, fill=color, width=width)
+
+        tname = _pr_selected_track[0]
+        if not tname or tname not in _pr_tracks:
+            return
+        notes = _pr_tracks[tname]["notes"]
+        for idx, nd in enumerate(notes):
+            x1, y1, x2, y2 = _pr_note_rect(nd, beat_width=beat_width, lane_height=lane_height)
+            fill = "#42a5f5" if idx != _pr_selected_note_index[0] else "#ffb74d"
+            pr_canvas.create_rectangle(x1 + 1, y1 + 1, x2 - 1, y2 - 1, fill=fill, outline="#101018", tags=(f"note:{idx}", "note"))
+
+    def _pr_unique_track_name(base_name: str) -> str:
+        name = base_name
+        suffix = 2
+        while name in _pr_tracks:
+            name = f"{base_name} {suffix}"
+            suffix += 1
+        return name
+
+    def _pr_add_track() -> None:
+        name = pr_tf_name.get().strip()
+        if not name:
+            _set_status(pr_status, "Track name cannot be empty.")
+            return
+        if name in _pr_tracks:
+            name = _pr_unique_track_name(name)
+        _pr_tracks[name] = {
+            "instrument": pr_tf_instr.get(),
+            "role": pr_tf_role.get(),
+            "volume": float(pr_tf_vol.get()),
+            "pan": float(pr_tf_pan.get()),
+            "mute": bool(pr_tf_mute.get()),
+            "solo": bool(pr_tf_solo.get()),
+            "notes": [],
+        }
+        _pr_selected_track[0] = name
+        _pr_refresh_track_tree()
+        _pr_refresh_note_tree()
+        _pr_refresh_canvas()
+        _set_status(pr_status, f"Track '{name}' added.")
+
+    def _pr_apply_template() -> None:
+        template = _PR_TRACK_TEMPLATES.get(pr_track_template.get(), [])
+        if not template:
+            return
+        for item in template:
+            name = _pr_unique_track_name(str(item.get("name", "Track")))
+            _pr_tracks[name] = {
+                "instrument": str(item.get("instrument", "piano")),
+                "role": str(item.get("role", "harmony")),
+                "volume": float(item.get("volume", 1.0)),
+                "pan": float(item.get("pan", 0.0)),
+                "mute": False,
+                "solo": False,
+                "notes": [],
+            }
+        _pr_refresh_track_tree()
+        _set_status(pr_status, f"Added starter tracks from '{pr_track_template.get()}'.")
+
+    def _pr_update_track() -> None:
+        tname = _pr_selected_track[0]
+        if not tname or tname not in _pr_tracks:
+            _set_status(pr_status, "Select a track to update.")
+            return
+        track = _pr_tracks[tname]
+        track["instrument"] = pr_tf_instr.get()
+        track["role"] = pr_tf_role.get()
+        track["volume"] = float(pr_tf_vol.get())
+        track["pan"] = float(pr_tf_pan.get())
+        track["mute"] = bool(pr_tf_mute.get())
+        track["solo"] = bool(pr_tf_solo.get())
+        _pr_refresh_track_tree()
+        _set_status(pr_status, f"Track '{tname}' updated.")
+
+    def _pr_remove_track() -> None:
+        sel = pr_track_tree.selection()
+        if not sel:
+            _set_status(pr_status, "Select a track to remove.")
+            return
+        name = sel[0]
+        _pr_tracks.pop(name, None)
+        if _pr_selected_track[0] == name:
+            _pr_selected_track[0] = None
+        _pr_selected_note_index[0] = None
+        _pr_refresh_track_tree()
+        _pr_refresh_note_tree()
+        _pr_refresh_canvas()
+        _set_status(pr_status, f"Track '{name}' removed.")
+
+    def _pr_on_track_select(_event: object = None) -> None:
+        sel = pr_track_tree.selection()
+        if not sel:
+            return
+        _pr_selected_track[0] = sel[0]
+        _pr_selected_note_index[0] = None
+        track = _pr_tracks.get(sel[0], {})
+        pr_tf_name.set(sel[0])
+        pr_tf_instr.set(str(track.get("instrument", "piano")))
+        pr_tf_role.set(str(track.get("role", "melody")))
+        pr_tf_vol.set(float(track.get("volume", 1.0)))
+        pr_tf_pan.set(float(track.get("pan", 0.0)))
+        pr_tf_mute.set(bool(track.get("mute", False)))
+        pr_tf_solo.set(bool(track.get("solo", False)))
+        _pr_refresh_note_tree()
+        _pr_refresh_canvas()
+
+    pr_track_tree.bind("<<TreeviewSelect>>", _pr_on_track_select)
+
+    pr_track_btns = ttk.Frame(pr_left)
+    pr_track_btns.pack(fill="x", padx=4, pady=4)
+    ttk.Button(pr_track_btns, text="Add Track", command=_pr_add_track).pack(side="left", padx=2)
+    ttk.Button(pr_track_btns, text="Update", command=_pr_update_track).pack(side="left", padx=2)
+    ttk.Button(pr_track_btns, text="Remove", command=_pr_remove_track).pack(side="left", padx=2)
+    ttk.Button(pr_track_btns, text="Add Starter Tracks", command=_pr_apply_template).pack(side="left", padx=2)
+
+    pr_note_form = ttk.LabelFrame(pr_right, text="Selected note / precise values")
     pr_note_form.pack(fill="x", padx=4, pady=4)
 
     ttk.Label(pr_note_form, text="Start beat").grid(row=0, column=0, sticky="w", padx=4, pady=3)
-    pr_nf_beat = tk.StringVar(value="0.0")
-    ttk.Entry(pr_note_form, textvariable=pr_nf_beat, width=8).grid(row=0, column=1, sticky="ew", padx=4, pady=3)
+    pr_nf_beat = tk.DoubleVar(value=0.0)
+    ttk.Spinbox(pr_note_form, from_=0.0, to=256.0, increment=0.25, textvariable=pr_nf_beat, width=8).grid(row=0, column=1, sticky="ew", padx=4, pady=3)
 
     ttk.Label(pr_note_form, text="Note").grid(row=0, column=2, sticky="w", padx=4, pady=3)
     pr_nf_note = tk.StringVar(value="C4")
     ttk.Combobox(pr_note_form, textvariable=pr_nf_note, values=_NOTE_NAMES, state="readonly", width=6).grid(row=0, column=3, sticky="ew", padx=4, pady=3)
 
-    ttk.Label(pr_note_form, text="Duration (beats)").grid(row=1, column=0, sticky="w", padx=4, pady=3)
-    pr_nf_dur = tk.StringVar(value="1.0")
-    ttk.Entry(pr_note_form, textvariable=pr_nf_dur, width=8).grid(row=1, column=1, sticky="ew", padx=4, pady=3)
+    ttk.Label(pr_note_form, text="Duration").grid(row=1, column=0, sticky="w", padx=4, pady=3)
+    pr_nf_dur = tk.DoubleVar(value=1.0)
+    ttk.Spinbox(pr_note_form, from_=0.05, to=64.0, increment=0.25, textvariable=pr_nf_dur, width=8).grid(row=1, column=1, sticky="ew", padx=4, pady=3)
 
-    ttk.Label(pr_note_form, text="Velocity (0–1)").grid(row=1, column=2, sticky="w", padx=4, pady=3)
+    ttk.Label(pr_note_form, text="Velocity").grid(row=1, column=2, sticky="w", padx=4, pady=3)
     pr_nf_vel = tk.DoubleVar(value=1.0)
     ttk.Scale(pr_note_form, from_=0.0, to=1.0, variable=pr_nf_vel, orient="horizontal", length=100).grid(row=1, column=3, sticky="ew", padx=4, pady=3)
     pr_note_form.columnconfigure(1, weight=1)
@@ -1694,99 +1972,260 @@ def launch_studio() -> None:
         if not tname or tname not in _pr_tracks:
             _set_status(pr_status, "Select a track first.")
             return
-        try:
-            beat = float(pr_nf_beat.get())
-            dur = max(0.05, float(pr_nf_dur.get()))
-        except ValueError:
-            _set_status(pr_status, "Invalid beat or duration — enter a number.")
-            return
+        beat = _piano_roll_snap_beat(float(pr_nf_beat.get()), _pr_snap_value())
+        dur = max(_pr_snap_value(), float(pr_nf_dur.get()))
         nd = {
             "beat": beat,
             "note": pr_nf_note.get(),
             "duration_beats": dur,
             "velocity": float(pr_nf_vel.get()),
         }
-        _pr_tracks[tname]["notes"].append(nd)
-        _pr_tracks[tname]["notes"].sort(key=lambda x: x["beat"])
+        notes = _pr_tracks[tname]["notes"]
+        notes.append(nd)
+        notes.sort(key=lambda item: float(item["beat"]))
         _pr_refresh_note_tree()
-        # Advance start beat by duration for quick entry
-        try:
-            pr_nf_beat.set(f"{beat + dur:.2f}")
-        except Exception:
-            pass
+        _pr_refresh_canvas()
+        pr_nf_beat.set(beat + dur)
         _set_status(pr_status, f"Note {nd['note']} added at beat {beat:.2f}.")
 
     def _pr_edit_note() -> None:
-        """Overwrite the selected note with current form values."""
         tname = _pr_selected_track[0]
-        if not tname or tname not in _pr_tracks:
-            _set_status(pr_status, "Select a track first.")
+        idx = _pr_selected_note_index[0]
+        if not tname or tname not in _pr_tracks or idx is None:
+            _set_status(pr_status, "Select a note first.")
             return
-        sel = pr_note_tree.selection()
-        if not sel:
-            _set_status(pr_status, "Select a note to edit.")
-            return
-        idx = int(sel[0])
         notes = _pr_tracks[tname]["notes"]
         if idx >= len(notes):
             return
-        try:
-            beat = float(pr_nf_beat.get())
-            dur = max(0.05, float(pr_nf_dur.get()))
-        except ValueError:
-            _set_status(pr_status, "Invalid beat or duration.")
-            return
         notes[idx] = {
-            "beat": beat,
+            "beat": _piano_roll_snap_beat(float(pr_nf_beat.get()), _pr_snap_value()),
             "note": pr_nf_note.get(),
-            "duration_beats": dur,
+            "duration_beats": max(0.05, float(pr_nf_dur.get())),
             "velocity": float(pr_nf_vel.get()),
         }
-        notes.sort(key=lambda x: x["beat"])
+        notes.sort(key=lambda item: float(item["beat"]))
         _pr_refresh_note_tree()
-        _set_status(pr_status, "Note updated.")
+        _pr_refresh_canvas()
 
     def _pr_remove_note() -> None:
         tname = _pr_selected_track[0]
-        if not tname or tname not in _pr_tracks:
-            _set_status(pr_status, "Select a track first.")
-            return
-        sel = pr_note_tree.selection()
-        if not sel:
+        idx = _pr_selected_note_index[0]
+        if not tname or tname not in _pr_tracks or idx is None:
             _set_status(pr_status, "Select a note to remove.")
             return
-        idx = int(sel[0])
         notes = _pr_tracks[tname]["notes"]
         if idx < len(notes):
             removed = notes.pop(idx)
+            _pr_selected_note_index[0] = None
             _pr_refresh_note_tree()
-            _set_status(pr_status, f"Removed note {removed['note']} at beat {removed['beat']:.2f}.")
+            _pr_refresh_canvas()
+            _set_status(pr_status, f"Removed note {removed['note']} at beat {float(removed['beat']):.2f}.")
 
-    def _pr_load_note_to_form(_event: object = None) -> None:
-        """Fill form from selected note for editing."""
+    def _pr_select_note_index(idx: int | None) -> None:
+        _pr_selected_note_index[0] = idx
         tname = _pr_selected_track[0]
-        if not tname or tname not in _pr_tracks:
+        if idx is None or not tname or tname not in _pr_tracks:
             return
-        sel = pr_note_tree.selection()
-        if not sel:
-            return
-        idx = int(sel[0])
         notes = _pr_tracks[tname]["notes"]
         if idx >= len(notes):
             return
         nd = notes[idx]
-        pr_nf_beat.set(f"{nd['beat']:.2f}")
-        pr_nf_note.set(nd["note"])
-        pr_nf_dur.set(f"{nd['duration_beats']:.2f}")
+        pr_nf_beat.set(float(nd["beat"]))
+        pr_nf_note.set(str(nd["note"]))
+        pr_nf_dur.set(float(nd["duration_beats"]))
         pr_nf_vel.set(float(nd["velocity"]))
+        if pr_note_tree.exists(str(idx)):
+            pr_note_tree.selection_set(str(idx))
+
+    def _pr_load_note_to_form(_event: object = None) -> None:
+        sel = pr_note_tree.selection()
+        if not sel:
+            return
+        _pr_select_note_index(int(sel[0]))
+        _pr_refresh_canvas()
 
     pr_note_tree.bind("<<TreeviewSelect>>", _pr_load_note_to_form)
+
+    pr_drag_state: dict[str, object] = {"active": False}
+
+    def _pr_pick_note_at(x: float, y: float) -> int | None:
+        item = pr_canvas.find_withtag("current")
+        if item:
+            tags = pr_canvas.gettags(item[0])
+            for tag in tags:
+                if tag.startswith("note:"):
+                    try:
+                        return int(tag.split(":", 1)[1])
+                    except ValueError:
+                        return None
+        return None
+
+    def _pr_canvas_to_note(x: float, y: float) -> tuple[float, str]:
+        beat_width = 24.0
+        lane_height = 18.0
+        beat = _piano_roll_snap_beat(float(pr_canvas.canvasx(x)) / beat_width, _pr_snap_value())
+        lane = int(float(pr_canvas.canvasy(y)) / lane_height)
+        note = _piano_roll_index_to_note(len(_NOTE_NAMES) - lane - 1)
+        return beat, note
+
+    def _pr_on_canvas_press(event: object) -> None:
+        if _pr_selected_track[0] is None:
+            _set_status(pr_status, "Select a track first.")
+            return
+        x = float(getattr(event, "x", 0.0))
+        y = float(getattr(event, "y", 0.0))
+        idx = _pr_pick_note_at(x, y)
+        if idx is None:
+            beat, note = _pr_canvas_to_note(x, y)
+            pr_nf_beat.set(beat)
+            pr_nf_note.set(note)
+            pr_nf_dur.set(max(_pr_snap_value(), float(pr_nf_dur.get())))
+            _pr_add_note()
+            return
+        _pr_select_note_index(idx)
+        tname = _pr_selected_track[0]
+        if not tname or tname not in _pr_tracks:
+            return
+        note = _pr_tracks[tname]["notes"][idx]
+        beat_width = 24.0
+        x1, _, x2, _ = _pr_note_rect(note, beat_width=beat_width, lane_height=18.0)
+        edge_resize = float(pr_canvas.canvasx(x)) >= (x2 - 8.0)
+        pr_drag_state.update(
+            {
+                "active": True,
+                "idx": idx,
+                "mode": "resize" if edge_resize else "move",
+                "start_x": float(pr_canvas.canvasx(x)),
+                "start_y": float(pr_canvas.canvasy(y)),
+                "start_beat": float(note["beat"]),
+                "start_note": str(note["note"]),
+                "start_dur": float(note["duration_beats"]),
+            }
+        )
+        _pr_refresh_canvas()
+
+    def _pr_on_canvas_drag(event: object) -> None:
+        if not bool(pr_drag_state.get("active")):
+            return
+        tname = _pr_selected_track[0]
+        idx = pr_drag_state.get("idx")
+        if not tname or tname not in _pr_tracks or not isinstance(idx, int):
+            return
+        notes = _pr_tracks[tname]["notes"]
+        if idx >= len(notes):
+            return
+        beat_width = 24.0
+        lane_height = 18.0
+        start_x = float(pr_drag_state.get("start_x", 0.0))
+        start_y = float(pr_drag_state.get("start_y", 0.0))
+        dx_beats = (float(pr_canvas.canvasx(float(getattr(event, "x", 0.0)))) - start_x) / beat_width
+        dy_lanes = int((float(pr_canvas.canvasy(float(getattr(event, "y", 0.0)))) - start_y) / lane_height)
+        mode = str(pr_drag_state.get("mode", "move"))
+        if mode == "resize":
+            notes[idx]["duration_beats"] = max(
+                _pr_snap_value(),
+                _piano_roll_snap_beat(float(pr_drag_state.get("start_dur", 1.0)) + dx_beats, _pr_snap_value()),
+            )
+        else:
+            notes[idx]["beat"] = _piano_roll_snap_beat(float(pr_drag_state.get("start_beat", 0.0)) + dx_beats, _pr_snap_value())
+            lane = _piano_roll_note_to_index(str(pr_drag_state.get("start_note", "A4"))) - dy_lanes
+            notes[idx]["note"] = _piano_roll_index_to_note(lane)
+        _pr_select_note_index(idx)
+        _pr_refresh_note_tree()
+        _pr_refresh_canvas()
+
+    def _pr_on_canvas_release(_event: object = None) -> None:
+        if bool(pr_drag_state.get("active")):
+            pr_drag_state["active"] = False
+            tname = _pr_selected_track[0]
+            if tname and tname in _pr_tracks:
+                _pr_tracks[tname]["notes"].sort(key=lambda item: float(item["beat"]))
+                _pr_refresh_note_tree()
+                _pr_refresh_canvas()
+
+    def _pr_on_canvas_delete(event: object) -> None:
+        idx = _pr_pick_note_at(float(getattr(event, "x", 0.0)), float(getattr(event, "y", 0.0)))
+        if idx is None:
+            return
+        _pr_select_note_index(idx)
+        _pr_remove_note()
+
+    pr_canvas.bind("<Button-1>", _pr_on_canvas_press)
+    pr_canvas.bind("<B1-Motion>", _pr_on_canvas_drag)
+    pr_canvas.bind("<ButtonRelease-1>", _pr_on_canvas_release)
+    pr_canvas.bind("<Button-3>", _pr_on_canvas_delete)
+
+    pr_tools = ttk.Frame(pr_right)
+    pr_tools.pack(fill="x", padx=4, pady=2)
+    pr_transpose = tk.IntVar(value=12)
+    pr_nudge = tk.DoubleVar(value=0.25)
+    ttk.Label(pr_tools, text="Transpose").pack(side="left", padx=(0, 2))
+    ttk.Spinbox(pr_tools, from_=-24, to=24, textvariable=pr_transpose, width=5).pack(side="left")
+    ttk.Label(pr_tools, text="Nudge").pack(side="left", padx=(8, 2))
+    ttk.Spinbox(pr_tools, from_=-4.0, to=4.0, increment=0.125, textvariable=pr_nudge, width=6).pack(side="left")
+
+    def _pr_apply_notes_edit(fn: object, status_label: str) -> None:
+        tname = _pr_selected_track[0]
+        if not tname or tname not in _pr_tracks:
+            _set_status(pr_status, "Select a track first.")
+            return
+        notes = _pr_tracks[tname]["notes"]
+        _pr_tracks[tname]["notes"] = fn(notes)
+        _pr_refresh_note_tree()
+        _pr_refresh_canvas()
+        _set_status(pr_status, status_label)
+
+    ttk.Button(
+        pr_tools,
+        text="Quantize",
+        command=lambda: _pr_apply_notes_edit(lambda notes: _piano_roll_quantize_notes(notes, snap=_pr_snap_value()), "Track quantized."),
+    ).pack(side="left", padx=4)
+    ttk.Button(
+        pr_tools,
+        text="Duplicate Bar",
+        command=lambda: _pr_apply_notes_edit(
+            lambda notes: sorted(notes + _piano_roll_duplicate_notes(notes, beat_offset=float(pr_time_sig.get())), key=lambda item: float(item["beat"])),
+            "Bar duplicated.",
+        ),
+    ).pack(side="left", padx=4)
+    ttk.Button(
+        pr_tools,
+        text="Transpose",
+        command=lambda: _pr_apply_notes_edit(lambda notes: _piano_roll_transpose_notes(notes, semitones=int(pr_transpose.get())), "Track transposed."),
+    ).pack(side="left", padx=4)
+    ttk.Button(
+        pr_tools,
+        text="Nudge",
+        command=lambda: _pr_apply_notes_edit(lambda notes: _piano_roll_nudge_notes(notes, beat_delta=float(pr_nudge.get()), snap=_pr_snap_value()), "Track nudged."),
+    ).pack(side="left", padx=4)
+    ttk.Button(
+        pr_tools,
+        text="Humanize",
+        command=lambda: _pr_apply_notes_edit(
+            lambda notes: _piano_roll_humanize_notes(notes, timing_amount=_pr_snap_value() * 0.2, velocity_amount=0.08, seed=_safe_int(music_seed.get(), 0)),
+            "Track humanized.",
+        ),
+    ).pack(side="left", padx=4)
 
     pr_note_btns = ttk.Frame(pr_right)
     pr_note_btns.pack(fill="x", padx=4, pady=4)
     ttk.Button(pr_note_btns, text="Add Note", command=_pr_add_note).pack(side="left", padx=4)
     ttk.Button(pr_note_btns, text="Update Selected", command=_pr_edit_note).pack(side="left", padx=4)
     ttk.Button(pr_note_btns, text="Remove Note", command=_pr_remove_note).pack(side="left", padx=4)
+    ttk.Button(
+        pr_note_btns,
+        text="Preview Note",
+        command=lambda: _play_output_path(
+            _preview_instrument_note(
+                _pr_tracks.get(_pr_selected_track[0] or "", {}).get("instrument", "piano"),
+                pr_nf_note.get(),
+                0.35,
+                Path("piano_roll_note_preview.wav"),
+            ),
+            "Music",
+        ),
+    ).pack(side="left", padx=4)
+    _pr_refresh_canvas()
 
     # -- Save / Load composition JSON --
     pr_json_path = tk.StringVar(value="piano_roll.json")
@@ -1821,10 +2260,20 @@ def launch_studio() -> None:
         pr_time_sig.set(int(data.get("time_signature", 4)))
         _pr_tracks.clear()
         for tname, tcfg in data.get("tracks", {}).items():
-            _pr_tracks[tname] = tcfg
+            _pr_tracks[tname] = {
+                "instrument": str(tcfg.get("instrument", "piano")),
+                "role": str(tcfg.get("role", "harmony")),
+                "volume": float(tcfg.get("volume", 1.0)),
+                "pan": float(tcfg.get("pan", 0.0)),
+                "mute": bool(tcfg.get("mute", False)),
+                "solo": bool(tcfg.get("solo", False)),
+                "notes": [_piano_roll_clone_note(note) for note in tcfg.get("notes", [])],
+            }
         _pr_selected_track[0] = None
+        _pr_selected_note_index[0] = None
         _pr_refresh_track_tree()
         _pr_refresh_note_tree()
+        _pr_refresh_canvas()
         _set_status(pr_status, f"Loaded composition from {path}.")
 
     ttk.Button(pr_io_frame, text="Save JSON", command=_pr_save_json).pack(side="left", padx=4)
