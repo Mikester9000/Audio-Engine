@@ -11,7 +11,7 @@ _NYLON_ATTACK_HIGH_RATIO_MIN = 1.3
 _SOFT_EP_ATTACK_BRIGHTNESS_RATIO_MIN = 1.05
 _SYNTH_PAD_WARMTH_RATIO_MIN = 1.15
 _CRYSTAL_ATTACK_SPARKLE_RATIO_MIN = 1.2
-_LEAD_TO_PAD_PRESENCE_RATIO_MIN = 1.15
+_LEAD_TO_PAD_PRESENCE_RATIO_MIN = 1.6
 
 
 def _rms(signal: np.ndarray) -> float:
@@ -148,9 +148,5 @@ def test_synth_lead_has_more_presence_than_synth_pad():
     lead = InstrumentLibrary.get("synth_lead_bright", SR).render(220.0, 0.8)
     pad = InstrumentLibrary.get("synth_pad", SR).render(220.0, 0.8)
     lead_presence = _band_energy(lead, SR, 900.0, 3600.0)
-    lead_low = _band_energy(lead, SR, 120.0, 600.0)
     pad_presence = _band_energy(pad, SR, 900.0, 3600.0)
-    pad_low = _band_energy(pad, SR, 120.0, 600.0)
-    assert (lead_presence / max(lead_low, 1e-9)) > (
-        pad_presence / max(pad_low, 1e-9)
-    ) * _LEAD_TO_PAD_PRESENCE_RATIO_MIN
+    assert lead_presence > pad_presence * _LEAD_TO_PAD_PRESENCE_RATIO_MIN

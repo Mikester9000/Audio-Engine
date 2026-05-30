@@ -1695,7 +1695,7 @@ _STYLE_INTENT_OVERRIDES: dict[str, _StyleIntent] = {
     "sci_fi_pulse": _StyleIntent(
         family="sci_fi_pulse",
         required_any=("synth_lead_bright", "synth_pad", "crystal_synth"),
-        preferred_bass=("synth_pad", "bass"),
+        preferred_bass=("synth_pad", "synth_bass_punch", "bass"),
         require_percussion=True,
     ),
     "waltz_orchestral": _StyleIntent(
@@ -2157,7 +2157,7 @@ class MusicGenerator:
             return _StyleIntent(
                 family="ambient",
                 required_any=("synth_pad", "crystal_synth", "choir", "strings"),
-                preferred_bass=("synth_pad", "bass", "ff7_bass"),
+                preferred_bass=("synth_pad", "synth_bass_punch", "bass", "ff7_bass"),
                 disallow_percussion=True,
             )
         if "battle" in name or "boss" in name or "epic" in name:
@@ -2173,15 +2173,16 @@ class MusicGenerator:
                     "piano",
                     "flute",
                     "synth_pad",
+                    "synth_lead_bright",
                 ),
-                preferred_bass=("ff7_bass", "bass", "synth_pad"),
+                preferred_bass=("ff7_bass", "bass", "synth_pad", "synth_bass_punch"),
                 require_percussion=bool(sdef.percussion_instrument),
             )
         if "ballad" in name or "menu" in name or "memorial" in name:
             return _StyleIntent(
                 family="ballad",
                 required_any=("piano", "strings", "cello", "flute", "violin_solo"),
-                preferred_bass=("bass", "ff7_bass", "synth_pad"),
+                preferred_bass=("bass", "ff7_bass", "synth_pad", "synth_bass_punch"),
                 disallow_percussion=True,
             )
         required_any = tuple(sorted(set([*sdef.instruments, *sdef.accompaniment]))) or ("strings",)
