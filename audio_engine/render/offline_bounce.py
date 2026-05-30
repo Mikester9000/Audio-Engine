@@ -155,19 +155,21 @@ class OfflineBounce:
         eq.add_band(EQBand(30.0, gain_db=0.0, q=0.707, band_type="high_pass"))
         if profile == "procedural_neutral":
             eq.add_band(EQBand(120.0, gain_db=-0.5, q=0.707, band_type="low_shelf"))
+            # Gentle air boost at 11 kHz – subtle brightness for procedural content
             eq.add_band(EQBand(11000.0, gain_db=+0.5, q=0.707, band_type="high_shelf"))
         elif profile == "youtube":
             eq.add_band(EQBand(120.0, gain_db=-1.0, q=0.707, band_type="low_shelf"))
+            # Air boost at 12 kHz – genuine "air" region for streaming/YouTube masters
             eq.add_band(EQBand(12000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
         elif profile == "vocal_mix":
             # Tighten low-mids to reduce muddiness under vocals
             eq.add_band(EQBand(200.0, gain_db=-2.0, q=0.707, band_type="low_shelf"))
-            # Air boost to add sparkle without harshness
+            # Presence boost at 10 kHz to add sparkle and intelligibility
             eq.add_band(EQBand(10000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
         else:
-            # Low-shelf: gently tighten the low end
+            # "game" and "ost" profiles – low-shelf: gently tighten the low end
             eq.add_band(EQBand(120.0, gain_db=-1.5, q=0.707, band_type="low_shelf"))
-            # Air boost for openness (12 kHz targets the genuine "air" region)
+            # Air boost at 12 kHz for openness and retail-quality clarity
             eq.add_band(EQBand(12000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
         return eq
 
