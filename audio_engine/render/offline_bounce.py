@@ -130,6 +130,7 @@ class OfflineBounce:
         self._bit_depth = bit_depth
         self._profile_width = profile_defaults["width"]
         self._profile_reverb_mix = profile_defaults["reverb_mix"]
+        self._loudness_meter = LoudnessMeter(sample_rate)
 
         # Build the mastering chain
         self._eq = self._build_master_eq(profile) if apply_master_eq else None
@@ -198,7 +199,7 @@ class OfflineBounce:
 
         # 3. Loudness normalisation (EBU R128 K-weighted measurement)
         if self.target_lufs is not None:
-            current_lufs = LoudnessMeter(self.sample_rate).integrated_loudness(sig)
+            current_lufs = self._loudness_meter.integrated_loudness(sig)
             gain_db = self.target_lufs - current_lufs
             # Cap the boost to avoid unrealistic amplification
             gain_db = np.clip(gain_db, -40.0, 20.0)
