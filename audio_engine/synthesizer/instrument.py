@@ -393,25 +393,35 @@ def _choir(sr: int = 44100) -> Instrument:
 @InstrumentLibrary.register("synth_pad")
 def _synth_pad(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        # Band-limited sawtooth supersaw — three detuned voices
-        return (
-            0.34 * osc.bl_sawtooth(freq * _cents_to_ratio(-7.0), dur)
-            + 0.34 * osc.bl_sawtooth(freq, dur)
-            + 0.32 * osc.bl_sawtooth(freq * _cents_to_ratio(7.0), dur)
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        slow_drift = 1.0 + 0.0025 * np.sin(2.0 * np.pi * 0.32 * t)
+        pad_freq = freq * slow_drift
+        phase = 2.0 * np.pi * np.cumsum(pad_freq / sr)
+        saw_main = _bl_saw_from_phase(phase, freq, sr).astype(np.float64)
+        saw_wide = (
+            0.24 * osc.bl_sawtooth(freq * _cents_to_ratio(-5.5), dur).astype(np.float64)
+            + 0.24 * osc.bl_sawtooth(freq * _cents_to_ratio(5.5), dur).astype(np.float64)
         )
+        pwm_lfo = 0.34 + 0.08 * np.sin(2.0 * np.pi * 0.43 * t)
+        pulse = np.where(np.sin(phase) >= np.cos(np.pi * pwm_lfo), 1.0, -1.0).astype(np.float64)
+        sub = np.sin(phase * 0.5).astype(np.float64) * 0.22
+        shimmer = np.sin(phase * 2.0 + 0.35 * np.sin(2.0 * np.pi * 0.21 * t)).astype(np.float64) * 0.08
+        return (0.42 * saw_main + saw_wide + 0.20 * pulse + sub + shimmer).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
-        # Resonant filter sweep from dark to bright over 2 seconds
         n = len(sig)
-        low_start = flt.resonant_low_pass(sig, 350.0, resonance=1.6)
-        low_end = flt.resonant_low_pass(sig, 7000.0, resonance=1.2)
-        sweep_len = min(n, int(2.0 * sr))
+        attack_open = flt.resonant_low_pass(sig, 4200.0, resonance=1.08)
+        sustain_dark = flt.resonant_low_pass(sig, 1650.0, resonance=1.22)
+        sweep_len = min(n, max(1, int(0.75 * sr)))
         alpha = np.ones(n, dtype=np.float32)
         alpha[:sweep_len] = np.linspace(0.0, 1.0, sweep_len, dtype=np.float32)
-        sig = low_start * (1.0 - alpha) + low_end * alpha
-        sig = fx.chorus(sig, rate=0.45, depth=0.009, wet=0.55)
-        return fx.reverb(sig, room_size=0.85, wet=0.44)
+        sig = attack_open * (1.0 - alpha) + sustain_dark * alpha
+        sig = flt.high_pass(sig, 55.0)
+        sig = fx.chorus(sig, rate=0.28, depth=0.0105, wet=0.58)
+        sig = fx.chorus(sig, rate=0.11, depth=0.0045, wet=0.26)
+        return fx.reverb(sig, room_size=0.78, wet=0.36)
 
     return Instrument(
         name="synth_pad",
@@ -545,11 +555,26 @@ def _crystal_synth(sr: int = 44100) -> Instrument:
     """High-frequency bell/crystal pad found in cinematic scores."""
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
-        return osc.fm(freq, freq * 3.5, dur, modulation_index=1.5)
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        carrier = 2.0 * np.pi * np.cumsum(freq / sr)
+        bell_a = np.sin(carrier + 3.8 * np.sin(2.0 * np.pi * freq * 3.93 * t)).astype(np.float64)
+        bell_b = np.sin(carrier * 2.76 + 2.1 * np.sin(2.0 * np.pi * freq * 6.85 * t)).astype(np.float64)
+        glass = np.sin(carrier * 5.41).astype(np.float64) * np.exp(-5.4 * t)
+        body = np.sin(carrier).astype(np.float64) * 0.18
+        return (
+            0.46 * bell_a * np.exp(-2.7 * t)
+            + 0.24 * bell_b * np.exp(-4.2 * t)
+            + 0.18 * glass
+            + body
+        ).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
-        sig = fx.chorus(sig, rate=2.0, depth=0.002, wet=0.3)
-        return fx.reverb(sig, room_size=0.9, wet=0.5)
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 180.0)
+        sig = flt.resonant_low_pass(sig, 7600.0, resonance=0.98)
+        sig = fx.chorus(sig, rate=0.55, depth=0.0025, wet=0.18)
+        return fx.reverb(sig, room_size=0.84, wet=0.34)
 
     return Instrument(
         name="crystal_synth",
@@ -1330,26 +1355,35 @@ def _soft_epiano_ps2(sr: int = 44100) -> Instrument:
 
 @InstrumentLibrary.register("synth_lead_bright")
 def _synth_lead_bright(sr: int = 44100) -> Instrument:
-    """Modern bright synth lead for electronic and sci-fi styles."""
+    """Analog-leaning mono synth lead with 80s-style bite and glide."""
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
         t = np.arange(n, dtype=np.float64) / sr
-        glide = freq * (1.0 + 0.08 * np.exp(-9.0 * t))
-        phase = 2.0 * np.pi * np.cumsum(glide / sr)
-        saw = _bl_saw_from_phase(phase, freq, sr)
-        pulse = np.sign(np.sin(phase * 0.5)).astype(np.float32) * 0.25
+        glide = freq * (1.0 + 0.045 * np.exp(-10.0 * t))
+        vibrato = 1.0 + 0.0035 * np.sin(2.0 * np.pi * 5.6 * t) * np.clip((t - 0.08) / 0.18, 0.0, 1.0)
+        phase = 2.0 * np.pi * np.cumsum((glide * vibrato) / sr)
+        saw = _bl_saw_from_phase(phase, freq, sr).astype(np.float64)
+        pulse_width = 0.20 + 0.06 * np.sin(2.0 * np.pi * 3.2 * t)
+        pulse = np.where(np.sin(phase) >= np.cos(np.pi * pulse_width), 1.0, -1.0).astype(np.float64) * 0.22
+        octave = np.sin(phase * 2.0).astype(np.float64) * 0.14
         air = np.random.default_rng(_SYNTH_LEAD_NOISE_SEED).standard_normal(n).astype(np.float32)
-        air = Filter(sr).band_pass(air, 3000.0, 11000.0) * 0.04
-        return (0.85 * saw + pulse + air).astype(np.float32)
+        air = Filter(sr).band_pass(air, 2800.0, 9800.0).astype(np.float64) * 0.018
+        return (0.72 * saw + pulse + octave + air).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
-        sig = flt.high_pass(sig, 240.0)
-        sig = flt.resonant_low_pass(sig, 4800.0, resonance=1.35)
-        sig = fx.chorus(sig, depth=0.0009, rate=0.75, wet=0.14)
-        sig = fx.compress(sig, threshold=0.56, ratio=3.0, makeup_gain=1.08)
-        return fx.reverb(sig, room_size=0.3, wet=0.1)
+        bright = flt.resonant_low_pass(sig, 5400.0, resonance=1.42)
+        focused = flt.resonant_low_pass(sig, 3000.0, resonance=1.18)
+        n = len(sig)
+        env_len = min(n, max(1, int(0.12 * sr)))
+        alpha = np.ones(n, dtype=np.float32)
+        alpha[:env_len] = np.linspace(0.0, 1.0, env_len, dtype=np.float32)
+        sig = bright * (1.0 - alpha) + focused * alpha
+        sig = flt.high_pass(sig, 180.0)
+        sig = fx.chorus(sig, depth=0.0007, rate=0.42, wet=0.11)
+        sig = fx.compress(sig, threshold=0.58, ratio=2.8, makeup_gain=1.06)
+        return fx.reverb(sig, room_size=0.22, wet=0.08)
 
     return Instrument(
         name="synth_lead_bright",
@@ -1433,25 +1467,33 @@ def _synth_pluck_glass(sr: int = 44100) -> Instrument:
 
 @InstrumentLibrary.register("synth_bass_punch")
 def _synth_bass_punch(sr: int = 44100) -> Instrument:
-    """Punchy synth bass with clean sub for modern electronic low-end."""
+    """Analog-style synth bass with fast pitch drop and filter thump."""
 
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
         t = np.arange(n, dtype=np.float64) / sr
-        phase = 2.0 * np.pi * np.cumsum(freq / sr)
-        sub = np.sin(phase * 0.5).astype(np.float64) * 0.68
-        body = _bl_saw_from_phase(phase, max(35.0, freq), sr).astype(np.float64) * 0.42
-        transient = np.sin(phase * 2.0).astype(np.float64) * np.exp(-22.0 * t) * 0.18
+        pitch_env = 1.0 + 0.09 * np.exp(-24.0 * t)
+        phase = 2.0 * np.pi * np.cumsum((freq * pitch_env) / sr)
+        sub = np.sin(phase * 0.5).astype(np.float64) * 0.62
+        body = _bl_saw_from_phase(phase, max(35.0, freq), sr).astype(np.float64) * 0.30
+        pulse = np.where(np.sin(phase) >= np.cos(np.pi * 0.36), 1.0, -1.0).astype(np.float64) * 0.18
+        transient = np.sin(phase * 2.0).astype(np.float64) * np.exp(-26.0 * t) * 0.11
         grit_noise = np.random.default_rng(_MODERN_BASS_NOISE_SEED).standard_normal(n).astype(np.float32)
-        grit_noise = Filter(sr).band_pass(grit_noise, 700.0, 3200.0).astype(np.float64) * 0.025 * np.exp(-14.0 * t)
-        return (sub + body + transient + grit_noise).astype(np.float32)
+        grit_noise = Filter(sr).band_pass(grit_noise, 650.0, 2400.0).astype(np.float64) * 0.018 * np.exp(-16.0 * t)
+        return (sub + body + pulse + transient + grit_noise).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
         sig = flt.high_pass(sig, 24.0)
-        sig = flt.resonant_low_pass(sig, 2600.0, resonance=1.18)
-        sig = fx.compress(sig, threshold=0.6, ratio=3.4, makeup_gain=1.06)
-        return np.tanh(sig.astype(np.float64) * 1.2).astype(np.float32)
+        open_sig = flt.resonant_low_pass(sig, 1750.0, resonance=1.24)
+        tight_sig = flt.resonant_low_pass(sig, 720.0, resonance=1.05)
+        n = len(sig)
+        env_len = min(n, max(1, int(0.09 * sr)))
+        alpha = np.ones(n, dtype=np.float32)
+        alpha[:env_len] = np.linspace(0.0, 1.0, env_len, dtype=np.float32)
+        sig = open_sig * (1.0 - alpha) + tight_sig * alpha
+        sig = fx.compress(sig, threshold=0.62, ratio=3.2, makeup_gain=1.04)
+        return np.tanh(sig.astype(np.float64) * 1.12).astype(np.float32)
 
     return Instrument(
         name="synth_bass_punch",

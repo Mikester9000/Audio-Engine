@@ -26,6 +26,16 @@ def test_available_style_metadata_exposes_bpm():
     assert metadata["battle"]["bpm"] == 140
 
 
+def test_electronic_styles_use_dedicated_lead_and_bass_synths():
+    metadata = MusicGenerator.available_style_metadata()
+    electronic = metadata["electronic_epic"]
+    synthwave = metadata["synthwave_epic"]
+    assert electronic["instruments"][0] == "synth_lead_bright"
+    assert electronic["bass_instrument"] == "synth_bass_punch"
+    assert synthwave["instruments"][0] == "synth_lead_bright"
+    assert synthwave["bass_instrument"] == "synth_bass_punch"
+
+
 @pytest.mark.parametrize("style", ["battle", "ambient", "menu"])
 def test_generate_returns_sequencer(gen, style):
     seq = gen.generate(style=style, bars=2)
