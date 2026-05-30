@@ -98,8 +98,12 @@ def _download_model(repo_id: str, target: Path) -> None:
         "local_dir_use_symlinks": False,
     }
     signature = inspect.signature(snapshot_download)
+    accepts_var_kwargs = any(
+        parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in signature.parameters.values()
+    )
     for key, value in optional_kwargs.items():
-        if key in signature.parameters and value is not None:
+        if (accepts_var_kwargs or key in signature.parameters) and value is not None:
             base_kwargs[key] = value
 
     last_exc: Exception | None = None
