@@ -266,46 +266,76 @@ def _piano(sr: int = 44100) -> Instrument:
     def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
         n = max(1, int(dur * sr))
         t = np.arange(n, dtype=np.float64) / sr
-        # Three detuned string model per note (typical piano unison behavior).
-        detunes_cents = (-2.3, 0.0, 2.5)
-        detune_weights = (0.31, 0.42, 0.27)
-        partials = ((1.0, 1.0), (2.01, 0.45), (3.03, 0.24), (4.08, 0.14), (5.17, 0.08), (6.32, 0.045))
+        register = min(1.0, max(0.0, (freq - 110.0) / 880.0))
+        # Bass notes often use single / double stringing while upper notes use
+        # wider unison spread, so adapt the detune set to the played register.
+        if freq < 140.0:
+            detunes_cents = (-0.8, 0.0)
+            detune_weights = (0.48, 0.52)
+        elif freq < 320.0:
+            detunes_cents = (-1.2, 0.0, 1.5)
+            detune_weights = (0.34, 0.39, 0.27)
+        else:
+            detunes_cents = (-2.6, 0.0, 3.1)
+            detune_weights = (0.30, 0.41, 0.29)
+
+        partials = (
+            (1.0, 1.00),
+            (2.01, 0.53),
+            (3.05, 0.30),
+            (4.12, 0.18),
+            (5.24, 0.11),
+            (6.45, 0.07),
+            (7.70, 0.04),
+        )
         string_sum = np.zeros(n, dtype=np.float64)
         for cents, weight in zip(detunes_cents, detune_weights):
             f = freq * _cents_to_ratio(cents)
             partial_sig = np.zeros(n, dtype=np.float64)
             for ratio, amp in partials:
-                decay = np.exp(-(2.3 + ratio * 0.55) * t)
-                partial_sig += amp * np.sin(2.0 * np.pi * f * ratio * t) * decay
+                stretched_ratio = ratio * (1.0 + 0.00055 * ratio * ratio * (0.5 + register))
+                partial_decay = (1.55 + ratio * (0.35 + 0.10 * register)) / max(0.45, dur + 0.15)
+                decay = np.exp(-partial_decay * t)
+                partial_sig += amp * np.sin(2.0 * np.pi * f * stretched_ratio * t) * decay
             string_sum += weight * partial_sig
 
-        # Hammer noise + key click transient for recognizable piano attack.
-        hammer = np.random.default_rng(_STRINGS_BOW_NOISE_SEED).standard_normal(n).astype(np.float64)
-        hammer = Filter(sr).band_pass(hammer.astype(np.float32), 900.0, 7500.0).astype(np.float64)
-        hammer *= np.exp(-70.0 * t) * 0.14
-        click_len = max(1, int(0.004 * sr))
+        # Hammer noise + thump transient for recognizable piano attack.
+        hammer_rng = np.random.default_rng(_STRINGS_BOW_NOISE_SEED)
+        hammer = hammer_rng.standard_normal(n).astype(np.float64)
+        hammer = Filter(sr).band_pass(hammer.astype(np.float32), 750.0, 8200.0).astype(np.float64)
+        hammer *= np.exp(-(58.0 + 14.0 * register) * t) * (0.15 + 0.03 * register)
+        click_len = max(1, int(0.0045 * sr))
         key_click = np.zeros(n, dtype=np.float64)
-        key_click[:click_len] = 0.8 * np.exp(-np.linspace(0.0, 9.0, click_len))
+        key_click[:click_len] = (0.55 + 0.12 * register) * np.exp(-np.linspace(0.0, 10.0, click_len))
 
-        # Mild soundboard resonance to retain PS2-era sampled-body character.
+        # Soundboard + sympathetic resonances give more body and sustain.
         resonance = (
-            0.08 * np.sin(2.0 * np.pi * (freq * 0.5) * t)
-            + 0.05 * np.sin(2.0 * np.pi * (freq * 1.5) * t)
-        ) * np.exp(-4.2 * t)
+            0.10 * np.sin(2.0 * np.pi * (freq * 0.5) * t)
+            + 0.06 * np.sin(2.0 * np.pi * (freq * 1.5) * t)
+            + 0.03 * np.sin(2.0 * np.pi * (freq * 2.0) * t)
+        ) * np.exp(-(3.4 - 0.8 * register) * t)
+        sympathetic = (
+            0.045 * np.sin(2.0 * np.pi * (freq * 2.0) * t)
+            + 0.028 * np.sin(2.0 * np.pi * (freq * 3.0) * t)
+            + 0.018 * np.sin(2.0 * np.pi * (freq * 4.0) * t)
+        ) * np.exp(-(4.0 + 1.2 * register) * t)
+        low_bloom = 0.06 * np.sin(2.0 * np.pi * max(28.0, freq * 0.25) * t) * np.exp(-2.4 * t)
 
-        return (string_sum + hammer + key_click + resonance).astype(np.float32)
+        return (string_sum + hammer + key_click + resonance + sympathetic + low_bloom).astype(np.float32)
 
     def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
         flt = Filter(sr)
         sig = flt.high_pass(sig, 38.0)
-        sig = flt.warm_low_pass(sig, 6200.0)
-        sig = fx.compress(sig, threshold=0.62, ratio=2.2, makeup_gain=1.03)
-        return fx.reverb(sig, room_size=0.28, wet=0.12)
+        sig = flt.warm_low_pass(sig, 7200.0)
+        sig = flt.resonant_low_pass(sig, 5400.0, resonance=0.96)
+        sig = np.tanh(sig.astype(np.float64) * 1.18).astype(np.float32)
+        sig = fx.compress(sig, threshold=0.58, ratio=2.6, makeup_gain=1.06)
+        return fx.reverb(sig, room_size=0.34, wet=0.15)
 
     return Instrument(
         name="piano",
         oscillator_fn=osc_fn,
-        envelope=Envelope(attack=0.001, decay=0.30, sustain=0.0, release=0.25, sample_rate=sr),
+        envelope=Envelope(attack=0.001, decay=0.42, sustain=0.0, release=0.34, sample_rate=sr),
         post_process=post,
         volume=0.8,
         sample_rate=sr,

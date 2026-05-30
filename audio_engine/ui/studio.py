@@ -69,6 +69,7 @@ def _build_preview_catalog(
     sfx_output: Path,
     voice_output: Path,
     examples_root: Path,
+    extra_music_outputs: list[Path] | None = None,
 ) -> dict[str, list[Path]]:
     catalog: dict[str, list[Path]] = {
         "Music": [],
@@ -76,8 +77,14 @@ def _build_preview_catalog(
         "Vocal": [],
         "Examples": [],
     }
-    if music_output.exists():
-        catalog["Music"].append(music_output)
+
+    def _append_unique_path(paths: list[Path], candidate: Path) -> None:
+        if candidate.exists() and candidate not in paths:
+            paths.append(candidate)
+
+    _append_unique_path(catalog["Music"], music_output)
+    for extra_path in extra_music_outputs or []:
+        _append_unique_path(catalog["Music"], extra_path)
     if sfx_output.exists():
         catalog["SFX"].append(sfx_output)
     if voice_output.exists():
@@ -294,6 +301,39 @@ _PR_TRACK_TEMPLATES: dict[str, list[dict[str, object]]] = {
     ],
 }
 
+_PIECE_SONG_RECIPES: dict[str, dict[str, object]] = {
+    "FF8 Ballad Full Song": {
+        "style": "ff8_ballad",
+        "backend": "synth_orchestral",
+        "profile": "ost",
+        "duration": 120.0,
+        "with_vocals": True,
+        "vocal_preset": "soprano",
+        "sections": ["intro", "verse", "pre_chorus", "chorus", "verse", "pre_chorus", "chorus", "bridge", "chorus", "outro"],
+        "output_stem": "ff8_ballad_full_song",
+    },
+    "JRPG Adventure Loop": {
+        "style": "town",
+        "backend": "procedural",
+        "profile": "game",
+        "duration": 96.0,
+        "with_vocals": False,
+        "vocal_preset": "soprano",
+        "sections": ["intro", "verse", "chorus", "verse", "chorus", "outro"],
+        "output_stem": "jrpg_adventure_loop",
+    },
+    "Boss Battle Suite": {
+        "style": "ff7_boss",
+        "backend": "full_orchestral",
+        "profile": "ost",
+        "duration": 110.0,
+        "with_vocals": True,
+        "vocal_preset": "choir_ah",
+        "sections": ["intro", "verse", "chorus", "bridge", "chorus", "chorus", "outro"],
+        "output_stem": "boss_battle_suite",
+    },
+}
+
 
 def _piano_roll_snap_beat(beat: float, snap: float) -> float:
     snap_value = max(0.0, float(snap))
@@ -386,6 +426,21 @@ def _piano_roll_humanize_notes(
         clone["velocity"] = min(1.0, max(0.0, float(clone["velocity"]) + vel_shift))
         humanized.append(clone)
     return sorted(humanized, key=lambda item: float(item["beat"]))
+
+
+def _clone_piano_roll_tracks(tracks: dict[str, dict[str, object]]) -> dict[str, dict[str, object]]:
+    cloned: dict[str, dict[str, object]] = {}
+    for track_name, config in tracks.items():
+        cloned[track_name] = {
+            "instrument": str(config.get("instrument", "piano")),
+            "role": str(config.get("role", "harmony")),
+            "volume": float(config.get("volume", 1.0)),
+            "pan": float(config.get("pan", 0.0)),
+            "mute": bool(config.get("mute", False)),
+            "solo": bool(config.get("solo", False)),
+            "notes": [_piano_roll_clone_note(note) for note in config.get("notes", [])],
+        }
+    return cloned
 
 
 def _compose_piece_to_file(
@@ -1422,24 +1477,38 @@ def launch_studio() -> None:
     pc_format = tk.StringVar(value="wav")
     ttk.Combobox(piece_tab, textvariable=pc_format, values=["wav", "ogg"], state="readonly", width=6).grid(row=5, column=3, sticky="ew", padx=8, pady=6)
 
-    # Section builder (listbox + add/remove/move buttons)
-    ttk.Separator(piece_tab, orient="horizontal").grid(row=6, column=0, columnspan=4, sticky="ew", padx=8, pady=4)
-    ttk.Label(piece_tab, text="— Sections —", font=("TkDefaultFont", 9, "bold")).grid(row=7, column=0, columnspan=4, pady=2)
+    ttk.Label(piece_tab, text="Song recipe").grid(row=6, column=0, sticky="w", padx=8, pady=6)
+    pc_recipe = tk.StringVar(value="FF8 Ballad Full Song")
+    ttk.Combobox(
+        piece_tab,
+        textvariable=pc_recipe,
+        values=list(_PIECE_SONG_RECIPES.keys()),
+        state="readonly",
+    ).grid(row=6, column=1, columnspan=2, sticky="ew", padx=8, pady=6)
 
-    ttk.Label(piece_tab, text="Available").grid(row=8, column=0, sticky="w", padx=8, pady=2)
-    ttk.Label(piece_tab, text="Piece order").grid(row=8, column=2, sticky="w", padx=8, pady=2)
+    # Section builder (listbox + add/remove/move buttons)
+    ttk.Separator(piece_tab, orient="horizontal").grid(row=7, column=0, columnspan=4, sticky="ew", padx=8, pady=4)
+    ttk.Label(piece_tab, text="— Sections —", font=("TkDefaultFont", 9, "bold")).grid(row=8, column=0, columnspan=4, pady=2)
+
+    ttk.Label(piece_tab, text="Available").grid(row=9, column=0, sticky="w", padx=8, pady=2)
+    ttk.Label(piece_tab, text="Piece order").grid(row=9, column=2, sticky="w", padx=8, pady=2)
 
     pc_avail_lb = tk.Listbox(piece_tab, height=7, exportselection=False)
     for s in _PC_SECTION_TYPES:
         pc_avail_lb.insert("end", s)
-    pc_avail_lb.grid(row=9, column=0, rowspan=4, sticky="nsew", padx=8, pady=4)
+    pc_avail_lb.grid(row=10, column=0, rowspan=4, sticky="nsew", padx=8, pady=4)
 
     pc_order_lb = tk.Listbox(piece_tab, height=7, exportselection=False)
     for s in _pc_section_list:
         pc_order_lb.insert("end", s)
-    pc_order_lb.grid(row=9, column=2, rowspan=4, sticky="nsew", padx=8, pady=4)
+    pc_order_lb.grid(row=10, column=2, rowspan=4, sticky="nsew", padx=8, pady=4)
     piece_tab.columnconfigure(0, weight=1)
     piece_tab.columnconfigure(2, weight=1)
+
+    def _pc_refresh_order_list() -> None:
+        pc_order_lb.delete(0, "end")
+        for section_name in _pc_section_list:
+            pc_order_lb.insert("end", section_name)
 
     def _pc_add_section() -> None:
         sel = pc_avail_lb.curselection()
@@ -1447,50 +1516,91 @@ def launch_studio() -> None:
             return
         sec = pc_avail_lb.get(sel[0])
         _pc_section_list.append(sec)
-        pc_order_lb.insert("end", sec)
+        _pc_refresh_order_list()
 
     def _pc_remove_section() -> None:
         sel = pc_order_lb.curselection()
         if not sel:
             return
         idx = sel[0]
-        pc_order_lb.delete(idx)
         if idx < len(_pc_section_list):
             _pc_section_list.pop(idx)
+        _pc_refresh_order_list()
 
     def _pc_move_up() -> None:
         sel = pc_order_lb.curselection()
         if not sel or sel[0] == 0:
             return
         idx = sel[0]
-        item = pc_order_lb.get(idx)
-        pc_order_lb.delete(idx)
-        pc_order_lb.insert(idx - 1, item)
-        pc_order_lb.selection_set(idx - 1)
         _pc_section_list.insert(idx - 1, _pc_section_list.pop(idx))
+        _pc_refresh_order_list()
+        pc_order_lb.selection_set(idx - 1)
 
     def _pc_move_down() -> None:
         sel = pc_order_lb.curselection()
         if not sel or sel[0] >= pc_order_lb.size() - 1:
             return
         idx = sel[0]
-        item = pc_order_lb.get(idx)
-        pc_order_lb.delete(idx)
-        pc_order_lb.insert(idx + 1, item)
-        pc_order_lb.selection_set(idx + 1)
         _pc_section_list.insert(idx + 1, _pc_section_list.pop(idx))
+        _pc_refresh_order_list()
+        pc_order_lb.selection_set(idx + 1)
+
+    def _pc_duplicate_section() -> None:
+        sel = pc_order_lb.curselection()
+        if not sel:
+            return
+        idx = sel[0]
+        if idx >= len(_pc_section_list):
+            return
+        _pc_section_list.insert(idx + 1, _pc_section_list[idx])
+        _pc_refresh_order_list()
+        pc_order_lb.selection_set(idx + 1)
+
+    def _pc_clear_sections() -> None:
+        _pc_section_list.clear()
+        _pc_refresh_order_list()
+
+    def _pc_apply_recipe() -> None:
+        recipe = _PIECE_SONG_RECIPES.get(pc_recipe.get())
+        if recipe is None:
+            return
+        style_name = str(recipe.get("style", pc_style.get()))
+        if style_name in style_metadata:
+            pc_style.set(style_name)
+        backend_value = str(recipe.get("backend", pc_backend.get()))
+        if backend_value in _available_backends_for_modality("music", sample_rate=44100):
+            pc_backend.set(backend_value)
+        profile_value = str(recipe.get("profile", pc_profile.get()))
+        if profile_value in VALID_PROFILES:
+            pc_profile.set(profile_value)
+        pc_duration.set(str(recipe.get("duration", pc_duration.get())))
+        pc_with_vocals.set(bool(recipe.get("with_vocals", pc_with_vocals.get())))
+        vocal_value = str(recipe.get("vocal_preset", pc_vocal_preset.get()))
+        if vocal_value in _PC_VOCAL_PRESETS:
+            pc_vocal_preset.set(vocal_value)
+        _pc_section_list[:] = [str(item) for item in recipe.get("sections", _pc_section_list)]
+        _pc_refresh_order_list()
+        output_stem = str(recipe.get("output_stem", "piece")).strip() or "piece"
+        pc_out.set(f"{output_stem}.{pc_format.get()}")
+        _set_status(piece_status, f"Loaded song recipe '{pc_recipe.get()}'.")
 
     btn_col = ttk.Frame(piece_tab)
-    btn_col.grid(row=9, column=1, rowspan=4, padx=4, pady=4)
+    btn_col.grid(row=10, column=1, rowspan=4, padx=4, pady=4)
     ttk.Button(btn_col, text="Add →", command=_pc_add_section).pack(fill="x", pady=2)
     ttk.Button(btn_col, text="← Remove", command=_pc_remove_section).pack(fill="x", pady=2)
     ttk.Button(btn_col, text="↑ Up", command=_pc_move_up).pack(fill="x", pady=2)
     ttk.Button(btn_col, text="↓ Down", command=_pc_move_down).pack(fill="x", pady=2)
+    ttk.Button(btn_col, text="Duplicate", command=_pc_duplicate_section).pack(fill="x", pady=2)
+    ttk.Button(btn_col, text="Clear", command=_pc_clear_sections).pack(fill="x", pady=2)
 
-    ttk.Separator(piece_tab, orient="horizontal").grid(row=13, column=0, columnspan=4, sticky="ew", padx=8, pady=4)
+    recipe_btn_row = ttk.Frame(piece_tab)
+    recipe_btn_row.grid(row=14, column=0, columnspan=4, pady=(0, 4))
+    ttk.Button(recipe_btn_row, text="Load Song Recipe", command=_pc_apply_recipe).pack(side="left", padx=8)
+
+    ttk.Separator(piece_tab, orient="horizontal").grid(row=15, column=0, columnspan=4, sticky="ew", padx=8, pady=4)
 
     piece_status = ttk.Label(piece_tab, text="")
-    piece_status.grid(row=15, column=0, columnspan=4, sticky="w", padx=8, pady=8)
+    piece_status.grid(row=17, column=0, columnspan=4, sticky="w", padx=8, pady=8)
 
     def _run_compose_piece() -> Path:
         sections = list(_pc_section_list)
@@ -1536,7 +1646,7 @@ def launch_studio() -> None:
         threading.Thread(target=_worker, daemon=True).start()
 
     btn_row = ttk.Frame(piece_tab)
-    btn_row.grid(row=14, column=0, columnspan=4, pady=8)
+    btn_row.grid(row=16, column=0, columnspan=4, pady=8)
     ttk.Button(btn_row, text="Compose Piece", command=_compose_piece_threaded).pack(side="left", padx=8)
     ttk.Button(
         btn_row,
@@ -2369,6 +2479,29 @@ def launch_studio() -> None:
                 "seed": voice_seed.get(),
                 "outputPath": voice_out.get(),
             },
+            "piece": {
+                "style": pc_style.get(),
+                "backend": pc_backend.get(),
+                "profile": pc_profile.get(),
+                "durationSeconds": max(10.0, _parse_float_field(pc_duration.get() or 90.0, field_name="piece.durationSeconds")),
+                "seed": pc_seed.get(),
+                "withVocals": bool(pc_with_vocals.get()),
+                "vocalPreset": pc_vocal_preset.get(),
+                "outputPath": pc_out.get(),
+                "format": pc_format.get(),
+                "songRecipe": pc_recipe.get(),
+                "sections": list(_pc_section_list),
+            },
+            "pianoRoll": {
+                "bpm": _safe_int(pr_bpm.get(), 120),
+                "timeSignature": int(pr_time_sig.get()),
+                "snap": pr_snap.get(),
+                "profile": pr_profile.get(),
+                "format": pr_format.get(),
+                "outputPath": pr_out.get(),
+                "jsonPath": pr_json_path.get(),
+                "tracks": _clone_piano_roll_tracks(_pr_tracks),
+            },
         }
 
     def _save_preset() -> None:
@@ -2465,6 +2598,58 @@ def launch_studio() -> None:
                 voice_speed.set(voice_speed_value)
                 voice_seed.set(str(voice.get("seed", voice_seed.get())))
                 voice_out.set(str(voice.get("outputPath", voice_out.get())))
+
+            piece = data.get("piece", {})
+            if isinstance(piece, dict):
+                style_value = str(piece.get("style", pc_style.get()))
+                if style_value in MusicGenerator.available_styles():
+                    pc_style.set(style_value)
+                backend_value = str(piece.get("backend", pc_backend.get()))
+                if backend_value in _available_backends_for_modality("music", sample_rate=44100):
+                    pc_backend.set(backend_value)
+                profile_value = str(piece.get("profile", pc_profile.get()))
+                if profile_value in VALID_PROFILES:
+                    pc_profile.set(profile_value)
+                pc_duration.set(str(piece.get("durationSeconds", pc_duration.get())))
+                pc_seed.set(str(piece.get("seed", pc_seed.get())))
+                pc_with_vocals.set(bool(piece.get("withVocals", pc_with_vocals.get())))
+                vocal_value = str(piece.get("vocalPreset", pc_vocal_preset.get()))
+                if vocal_value in _PC_VOCAL_PRESETS:
+                    pc_vocal_preset.set(vocal_value)
+                format_value = str(piece.get("format", pc_format.get())).lower()
+                if format_value in {"wav", "ogg"}:
+                    pc_format.set(format_value)
+                pc_out.set(str(piece.get("outputPath", pc_out.get())))
+                recipe_value = str(piece.get("songRecipe", pc_recipe.get()))
+                if recipe_value in _PIECE_SONG_RECIPES:
+                    pc_recipe.set(recipe_value)
+                _pc_section_list[:] = [str(item) for item in piece.get("sections", _pc_section_list)]
+                _pc_refresh_order_list()
+
+            piano_roll = data.get("pianoRoll", {})
+            if isinstance(piano_roll, dict):
+                pr_bpm.set(str(piano_roll.get("bpm", pr_bpm.get())))
+                pr_time_sig.set(int(piano_roll.get("timeSignature", pr_time_sig.get())))
+                snap_value = str(piano_roll.get("snap", pr_snap.get()))
+                if snap_value in _PR_SNAP_VALUES:
+                    pr_snap.set(snap_value)
+                profile_value = str(piano_roll.get("profile", pr_profile.get()))
+                if profile_value in VALID_PROFILES:
+                    pr_profile.set(profile_value)
+                format_value = str(piano_roll.get("format", pr_format.get())).lower()
+                if format_value in {"wav", "ogg"}:
+                    pr_format.set(format_value)
+                pr_out.set(str(piano_roll.get("outputPath", pr_out.get())))
+                pr_json_path.set(str(piano_roll.get("jsonPath", pr_json_path.get())))
+                _pr_tracks.clear()
+                tracks_value = piano_roll.get("tracks", {})
+                if isinstance(tracks_value, dict):
+                    _pr_tracks.update(_clone_piano_roll_tracks(tracks_value))
+                _pr_selected_track[0] = next(iter(_pr_tracks), None)
+                _pr_selected_note_index[0] = None
+                _pr_refresh_track_tree()
+                _pr_refresh_note_tree()
+                _pr_refresh_canvas()
 
             _set_status(global_status, f"Preset loaded: {path}")
             _refresh_preview_files()
@@ -2579,6 +2764,12 @@ def launch_studio() -> None:
             sfx_output=Path(sfx_out.get()),
             voice_output=Path(voice_out.get()),
             examples_root=Path(examples_root.get()),
+            extra_music_outputs=[
+                Path(pc_out.get()),
+                Path(pr_out.get()),
+                Path(instr_out.get()),
+                Path(synth_out.get()),
+            ],
         )
         if select_category is not None and select_category in preview_catalog:
             preview_category.set(select_category)

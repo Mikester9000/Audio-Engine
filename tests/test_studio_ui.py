@@ -15,12 +15,14 @@ from audio_engine.ui.studio import (
     _build_new_file_template,
     _build_synth_patch,
     _build_synth_patch_ext,
+    _clone_piano_roll_tracks,
     _compose_piece_to_file,
     _discover_wav_files,
     _export_synth_patch,
     _new_file_output_targets,
     _NOTE_FREQS,
     _NOTE_NAMES,
+    _PIECE_SONG_RECIPES,
     _piano_roll_duplicate_notes,
     _piano_roll_humanize_notes,
     _piano_roll_index_to_note,
@@ -103,12 +105,14 @@ def test_discover_wav_files_lists_nested_files(tmp_path: Path):
 
 def test_build_preview_catalog_groups_outputs_and_examples(tmp_path: Path):
     music = tmp_path / "music.wav"
+    piece = tmp_path / "piece.wav"
     sfx = tmp_path / "sfx.wav"
     voice = tmp_path / "voice.wav"
     examples_root = tmp_path / "examples"
     examples_root.mkdir()
     example = examples_root / "example.wav"
     music.write_bytes(b"RIFF")
+    piece.write_bytes(b"RIFF")
     sfx.write_bytes(b"RIFF")
     voice.write_bytes(b"RIFF")
     example.write_bytes(b"RIFF")
@@ -118,9 +122,10 @@ def test_build_preview_catalog_groups_outputs_and_examples(tmp_path: Path):
         sfx_output=sfx,
         voice_output=voice,
         examples_root=examples_root,
+        extra_music_outputs=[piece],
     )
 
-    assert catalog["Music"] == [music]
+    assert catalog["Music"] == [music, piece]
     assert catalog["SFX"] == [sfx]
     assert catalog["Vocal"] == [voice]
     assert catalog["Examples"] == [example]
@@ -149,6 +154,7 @@ def test_studio_source_includes_scrollable_tabs_and_play_latest_controls():
     assert "Play latest" in content
     assert "Canvas workflow: click to place, drag to move/resize, right-click to delete." in content
     assert "Add Starter Tracks" in content
+    assert "Load Song Recipe" in content
     assert "Save as Sample Note" in content
 
 
@@ -182,6 +188,38 @@ def test_piano_roll_humanize_and_duplicate_are_stable():
     humanized = _piano_roll_humanize_notes(notes, timing_amount=0.05, velocity_amount=0.1, seed=42)
     assert 0.0 <= float(humanized[0]["velocity"]) <= 1.0
     assert float(humanized[0]["beat"]) >= 0.0
+
+
+def test_clone_piano_roll_tracks_copies_and_normalizes():
+    source = {
+        "Lead": {
+            "instrument": "piano",
+            "role": "melody",
+            "volume": "0.7",
+            "pan": "0.2",
+            "mute": 0,
+            "solo": 1,
+            "notes": [{"beat": 0, "note": "C4", "duration_beats": 1, "velocity": 0.8}],
+        }
+    }
+
+    cloned = _clone_piano_roll_tracks(source)
+
+    assert cloned["Lead"]["volume"] == 0.7
+    assert cloned["Lead"]["pan"] == 0.2
+    assert cloned["Lead"]["mute"] is False
+    assert cloned["Lead"]["solo"] is True
+    assert cloned["Lead"]["notes"][0]["note"] == "C4"
+    source["Lead"]["notes"][0]["note"] = "D4"
+    assert cloned["Lead"]["notes"][0]["note"] == "C4"
+
+
+def test_piece_song_recipes_cover_full_song_defaults():
+    assert "FF8 Ballad Full Song" in _PIECE_SONG_RECIPES
+    recipe = _PIECE_SONG_RECIPES["FF8 Ballad Full Song"]
+    assert recipe["style"] == "ff8_ballad"
+    assert recipe["with_vocals"] is True
+    assert "chorus" in recipe["sections"]
 
 
 def test_piano_roll_snap_beat():
