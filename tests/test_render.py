@@ -47,8 +47,11 @@ class TestOfflineBounce:
         from audio_engine.qa import LoudnessMeter
 
         bounce = OfflineBounce(SR, target_lufs=-16.0, apply_master_eq=False, apply_compression=False)
-        # Create a 5-second signal that is very quiet
-        quiet = np.ones(SR * 5, dtype=np.float32) * 0.001
+        # Create a 5-second 1 kHz sine at very low amplitude (-60 dBFS).
+        # A proper tone is needed here because the K-weighted LUFS measurement
+        # applies a 38 Hz high-pass that would silence a DC/constant signal.
+        t = np.arange(SR * 5) / SR
+        quiet = (0.001 * np.sin(2.0 * np.pi * 1000.0 * t)).astype(np.float32)
         stereo = _stereo(quiet)
         out = bounce.process(stereo)
         # After boost, loudness should be closer to -16 LUFS

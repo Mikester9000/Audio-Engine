@@ -27,6 +27,7 @@ from audio_engine.dsp.dither import dither
 from audio_engine.dsp.reverb import apply_reverb
 from audio_engine.dsp.stereo import apply_mid_side_width
 from audio_engine.export.audio_exporter import AudioExporter
+from audio_engine.qa.loudness_meter import LoudnessMeter
 
 __all__ = ["OfflineBounce", "VALID_PROFILES"]
 _VALID_PROFILES = {"game", "ost", "youtube", "vocal_mix", "procedural_neutral"}
@@ -154,20 +155,20 @@ class OfflineBounce:
         eq.add_band(EQBand(30.0, gain_db=0.0, q=0.707, band_type="high_pass"))
         if profile == "procedural_neutral":
             eq.add_band(EQBand(120.0, gain_db=-0.5, q=0.707, band_type="low_shelf"))
-            eq.add_band(EQBand(9000.0, gain_db=+0.5, q=0.707, band_type="high_shelf"))
+            eq.add_band(EQBand(11000.0, gain_db=+0.5, q=0.707, band_type="high_shelf"))
         elif profile == "youtube":
             eq.add_band(EQBand(120.0, gain_db=-1.0, q=0.707, band_type="low_shelf"))
-            eq.add_band(EQBand(8000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
+            eq.add_band(EQBand(12000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
         elif profile == "vocal_mix":
             # Tighten low-mids to reduce muddiness under vocals
             eq.add_band(EQBand(200.0, gain_db=-2.0, q=0.707, band_type="low_shelf"))
             # Air boost to add sparkle without harshness
-            eq.add_band(EQBand(8000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
+            eq.add_band(EQBand(10000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
         else:
             # Low-shelf: gently tighten the low end
             eq.add_band(EQBand(120.0, gain_db=-1.5, q=0.707, band_type="low_shelf"))
-            # Presence/air boost for clarity
-            eq.add_band(EQBand(10000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
+            # Air boost for openness (12 kHz targets the genuine "air" region)
+            eq.add_band(EQBand(12000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
         return eq
 
     def process(self, audio: np.ndarray) -> np.ndarray:
@@ -193,9 +194,9 @@ class OfflineBounce:
         if self._compressor is not None:
             sig = self._compressor.process(sig)
 
-        # 3. Loudness normalisation
+        # 3. Loudness normalisation (EBU R128 K-weighted measurement)
         if self.target_lufs is not None:
-            current_lufs = _lufs_loudness(sig, self.sample_rate)
+            current_lufs = LoudnessMeter(self.sample_rate).integrated_loudness(sig)
             gain_db = self.target_lufs - current_lufs
             # Cap the boost to avoid unrealistic amplification
             gain_db = np.clip(gain_db, -40.0, 20.0)
