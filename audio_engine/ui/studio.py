@@ -334,6 +334,79 @@ _PIECE_SONG_RECIPES: dict[str, dict[str, object]] = {
     },
 }
 
+_STUDIO_WORKFLOW_PRESETS: dict[str, dict[str, dict[str, object]]] = {
+    "Video Game Production": {
+        "music": {
+            "style": "battle",
+            "prompt": "loopable jrpg battle theme for gameplay",
+            "backend": "procedural",
+            "profile": "game",
+            "bars": 16,
+            "region": "ruins",
+            "adaptiveIntensity": True,
+            "format": "ogg",
+        },
+        "sfx": {
+            "category": "footstep",
+            "durationSeconds": 0.25,
+        },
+        "piece": {
+            "style": "ff7_boss",
+            "backend": "full_orchestral",
+            "profile": "ost",
+            "durationSeconds": 96.0,
+            "withVocals": False,
+            "vocalPreset": "choir_ah",
+            "format": "ogg",
+            "songRecipe": "Boss Battle Suite",
+        },
+        "studio": {
+            "baseName": "game_audio_pack",
+        },
+    },
+    "Professional Music Production": {
+        "music": {
+            "style": "ff8_ballad",
+            "prompt": "commercial release quality emotional orchestral ballad",
+            "backend": "full_orchestral",
+            "profile": "ost",
+            "bars": 32,
+            "region": "",
+            "adaptiveIntensity": False,
+            "format": "wav",
+        },
+        "sfx": {
+            "category": "ui_click",
+            "durationSeconds": 0.12,
+        },
+        "piece": {
+            "style": "ff8_ballad",
+            "backend": "full_orchestral",
+            "profile": "youtube",
+            "durationSeconds": 180.0,
+            "withVocals": True,
+            "vocalPreset": "soprano",
+            "format": "wav",
+            "songRecipe": "FF8 Ballad Full Song",
+        },
+        "studio": {
+            "baseName": "pro_music_release",
+        },
+    },
+}
+
+
+def _studio_workflow_preset(goal: str) -> dict[str, dict[str, object]]:
+    selected = _STUDIO_WORKFLOW_PRESETS.get(goal)
+    if selected is None:
+        selected = _STUDIO_WORKFLOW_PRESETS["Video Game Production"]
+    return {
+        "music": dict(selected["music"]),
+        "sfx": dict(selected["sfx"]),
+        "piece": dict(selected["piece"]),
+        "studio": dict(selected["studio"]),
+    }
+
 
 def _piano_roll_snap_beat(beat: float, snap: float) -> float:
     snap_value = max(0.0, float(snap))
@@ -787,6 +860,7 @@ def launch_studio() -> None:
     new_project_name = tk.StringVar(value="new_audio_asset")
     output_dir = tk.StringVar(value="output")
     output_base_name = tk.StringVar(value="new_asset")
+    workflow_goal = tk.StringVar(value="Video Game Production")
     examples_root = tk.StringVar(value="assets/examples")
     sample_root = tk.StringVar(value=_DEFAULT_SAMPLE_ROOT)
     sample_base_backend = tk.StringVar(value="synth_orchestral")
@@ -812,6 +886,13 @@ def launch_studio() -> None:
         state="readonly",
         width=18,
     ).grid(row=2, column=3, sticky="w", padx=4)
+    ttk.Label(control_bar, text="Workflow goal").grid(row=3, column=0, sticky="w", padx=4)
+    ttk.Combobox(
+        control_bar,
+        textvariable=workflow_goal,
+        values=list(_STUDIO_WORKFLOW_PRESETS),
+        state="readonly",
+    ).grid(row=3, column=1, sticky="ew", padx=4)
     global_status = ttk.Label(control_bar, text="")
     global_status.grid(row=4, column=0, columnspan=12, sticky="w", padx=4, pady=(4, 0))
     control_bar.columnconfigure(1, weight=1)
@@ -2438,6 +2519,7 @@ def launch_studio() -> None:
                 "examplesRoot": examples_root.get(),
                 "sampleRoot": sample_root.get(),
                 "sampleBaseBackend": sample_base_backend.get(),
+                "workflowGoal": workflow_goal.get(),
                 "newFilePath": new_file_path.get(),
                 "newProjectName": new_project_name.get(),
                 "outputDir": output_dir.get(),
@@ -2523,6 +2605,9 @@ def launch_studio() -> None:
                 sample_base = str(studio.get("sampleBaseBackend", sample_base_backend.get()))
                 if sample_base in {"synth_orchestral", "ps1", "full_orchestral", "procedural"}:
                     sample_base_backend.set(sample_base)
+                workflow_value = str(studio.get("workflowGoal", workflow_goal.get()))
+                if workflow_value in _STUDIO_WORKFLOW_PRESETS:
+                    workflow_goal.set(workflow_value)
                 new_file_path.set(str(studio.get("newFilePath", new_file_path.get())))
                 new_project_name.set(str(studio.get("newProjectName", new_project_name.get())))
                 output_dir.set(str(studio.get("outputDir", output_dir.get())))
@@ -2687,6 +2772,71 @@ def launch_studio() -> None:
         except Exception as exc:  # pragma: no cover - UI path
             _set_status(global_status, f"New file template failed — {exc}")
 
+    def _apply_workflow_goal() -> None:
+        try:
+            preset = _studio_workflow_preset(workflow_goal.get())
+            music = preset["music"]
+            sfx = preset["sfx"]
+            piece = preset["piece"]
+            studio = preset["studio"]
+
+            style_value = str(music.get("style", music_style.get()))
+            if style_value in MusicGenerator.available_styles():
+                music_style.set(style_value)
+                _refresh_bpm()
+            prompt_value = str(music.get("prompt", music_prompt.get()))
+            music_prompt.set(prompt_value)
+            music_backend_value = str(music.get("backend", music_backend.get()))
+            if music_backend_value in _available_backends_for_modality("music", sample_rate=44100):
+                music_backend.set(music_backend_value)
+            music_profile_value = str(music.get("profile", music_profile.get()))
+            if music_profile_value in VALID_PROFILES:
+                music_profile.set(music_profile_value)
+            music_region_value = str(music.get("region", music_region.get()))
+            if music_region_value in {"", "plains", "forest", "coast", "ruins", "arid"}:
+                music_region.set(music_region_value)
+            music_format_value = str(music.get("format", music_format.get())).lower()
+            if music_format_value in {"wav", "ogg"}:
+                music_format.set(music_format_value)
+            custom_arrangement.set(False)
+            bars_var.set(max(4, _safe_int(str(music.get("bars", bars_var.get())), int(bars_var.get()))))
+            music_adaptive_intensity.set(bool(music.get("adaptiveIntensity", music_adaptive_intensity.get())))
+
+            sfx_value = str(sfx.get("category", sfx_type.get()))
+            if sfx_value in available_sfx_types():
+                sfx_type.set(sfx_value)
+            sfx_duration.set(max(0.05, _parse_float_field(sfx.get("durationSeconds", sfx_duration.get()), field_name="sfx.durationSeconds")))
+
+            piece_style = str(piece.get("style", pc_style.get()))
+            if piece_style in MusicGenerator.available_styles():
+                pc_style.set(piece_style)
+            piece_backend = str(piece.get("backend", pc_backend.get()))
+            if piece_backend in _available_backends_for_modality("music", sample_rate=44100):
+                pc_backend.set(piece_backend)
+            piece_profile = str(piece.get("profile", pc_profile.get()))
+            if piece_profile in VALID_PROFILES:
+                pc_profile.set(piece_profile)
+            pc_duration.set(str(max(10.0, _parse_float_field(piece.get("durationSeconds", pc_duration.get()), field_name="piece.durationSeconds"))))
+            pc_with_vocals.set(bool(piece.get("withVocals", pc_with_vocals.get())))
+            piece_vocal = str(piece.get("vocalPreset", pc_vocal_preset.get()))
+            if piece_vocal in _PC_VOCAL_PRESETS:
+                pc_vocal_preset.set(piece_vocal)
+            piece_format = str(piece.get("format", pc_format.get())).lower()
+            if piece_format in {"wav", "ogg"}:
+                pc_format.set(piece_format)
+            piece_recipe = str(piece.get("songRecipe", pc_recipe.get()))
+            if piece_recipe in _PIECE_SONG_RECIPES:
+                pc_recipe.set(piece_recipe)
+
+            base_name = str(studio.get("baseName", output_base_name.get())).strip()
+            if base_name:
+                output_base_name.set(base_name)
+            _apply_new_file_targets()
+            pc_out.set(str(Path(output_dir.get()) / f"{output_base_name.get().strip() or 'new_asset'}_piece.{pc_format.get()}"))
+            _set_status(global_status, f"Applied workflow goal: {workflow_goal.get()}")
+        except Exception as exc:  # pragma: no cover - UI path
+            _set_status(global_status, f"Workflow goal apply failed — {exc}")
+
     def _generate_all() -> None:
         nonlocal last_failed_action
         failures: list[str] = []
@@ -2811,6 +2961,7 @@ def launch_studio() -> None:
     ttk.Button(control_bar, text="Refresh Preview Files", command=_refresh_preview_files).grid(row=1, column=3, padx=4)
     ttk.Button(control_bar, text="New File Targets", command=_apply_new_file_targets).grid(row=1, column=4, padx=4)
     ttk.Button(control_bar, text="Write New File JSON", command=_write_new_file).grid(row=1, column=5, padx=4)
+    ttk.Button(control_bar, text="Apply Workflow Goal", command=_apply_workflow_goal).grid(row=3, column=2, padx=4, sticky="w")
 
     ttk.Button(preview_frame, text="Play", command=_play_selected).grid(row=0, column=4, padx=6, pady=6)
     ttk.Button(preview_frame, text="Stop", command=_stop_selected).grid(row=0, column=5, padx=6, pady=6)

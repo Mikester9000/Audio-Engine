@@ -37,6 +37,7 @@ from audio_engine.ui.studio import (
     _preview_instrument_note,
     _read_studio_preset,
     _save_preview_note_sample,
+    _studio_workflow_preset,
     _SYNTH_FILTER_TYPES,
     _SYNTH_WAVEFORMS,
     _write_new_file_template,
@@ -152,6 +153,8 @@ def test_studio_source_includes_scrollable_tabs_and_play_latest_controls():
     content = Path(studio_module.__file__).read_text(encoding="utf-8")
     assert "_make_scrollable_tab" in content
     assert "Play latest" in content
+    assert "Workflow goal" in content
+    assert "Apply Workflow Goal" in content
     assert "Canvas workflow: click to place, drag to move/resize, right-click to delete." in content
     assert "Add Starter Tracks" in content
     assert "Load Song Recipe" in content
@@ -220,6 +223,27 @@ def test_piece_song_recipes_cover_full_song_defaults():
     assert recipe["style"] == "ff8_ballad"
     assert recipe["with_vocals"] is True
     assert "chorus" in recipe["sections"]
+
+
+def test_studio_workflow_preset_targets_game_audio():
+    preset = _studio_workflow_preset("Video Game Production")
+    assert preset["music"]["format"] == "ogg"
+    assert preset["music"]["profile"] == "game"
+    assert preset["sfx"]["category"] == "footstep"
+    assert preset["piece"]["withVocals"] is False
+
+
+def test_studio_workflow_preset_targets_professional_music():
+    preset = _studio_workflow_preset("Professional Music Production")
+    assert preset["music"]["format"] == "wav"
+    assert preset["music"]["backend"] == "full_orchestral"
+    assert preset["piece"]["withVocals"] is True
+    assert preset["piece"]["profile"] == "youtube"
+
+
+def test_studio_workflow_preset_unknown_goal_uses_game_fallback():
+    preset = _studio_workflow_preset("missing-goal")
+    assert preset["studio"]["baseName"] == "game_audio_pack"
 
 
 def test_piano_roll_snap_beat():
