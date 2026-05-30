@@ -14,11 +14,12 @@ from typing import Protocol
 
 from audio_engine.ai.backend import BackendRegistry
 from audio_engine.ai.generator import MusicGenerator
+from audio_engine.ai.piece_composer import PieceComposer, SECTION_TEMPLATES
 from audio_engine.ai.sfx_gen import SFXGen
 from audio_engine.ai.sfx_synth import available_sfx_types
 from audio_engine.ai.voice_gen import VoiceGen
 from audio_engine.ai.voice_synth import VOICE_PRESETS
-from audio_engine.render.offline_bounce import VALID_PROFILES
+from audio_engine.render.offline_bounce import VALID_PROFILES, OfflineBounce
 from audio_engine.synthesizer.instrument import InstrumentLibrary
 
 _DEFAULT_SAMPLE_ROOT = "samples"
@@ -227,8 +228,214 @@ def _set_status(label: _StatusLabel, text: str) -> None:
     label.update_idletasks()
 
 
+def _attach_value_label(
+    parent: object,
+    variable: object,
+    *,
+    row: int,
+    col: int = 2,
+    fmt: str = "{:.2f}",
+    width: int = 7,
+) -> None:
+    """Place a live read-only label beside a slider showing its current value."""
+    import tkinter as tk
+    from tkinter import ttk
+
+    val_str = tk.StringVar(value=fmt.format(variable.get()))  # type: ignore[attr-defined]
+    lbl = ttk.Label(parent, textvariable=val_str, width=width, anchor="w")
+    lbl.grid(row=row, column=col, sticky="w", padx=(2, 8))
+
+    def _update(*_args: object) -> None:
+        try:
+            val_str.set(fmt.format(variable.get()))  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    variable.trace_add("write", _update)  # type: ignore[attr-defined]
+
+
+def _browse_output_path(path_var: object, *, title: str = "Save As", filetypes: list | None = None) -> None:
+    """Open a Save As dialog and write the chosen path into path_var."""
+    from tkinter import filedialog
+
+    if filetypes is None:
+        filetypes = [("WAV files", "*.wav"), ("OGG files", "*.ogg"), ("All files", "*.*")]
+    chosen = filedialog.asksaveasfilename(title=title, filetypes=filetypes)
+    if chosen:
+        path_var.set(chosen)  # type: ignore[attr-defined]
+
+
 _SYNTH_WAVEFORMS = ["sine", "square", "sawtooth", "triangle", "noise", "bl_sawtooth", "bl_square"]
 _SYNTH_FILTER_TYPES = ["none", "lowpass", "highpass", "bandpass"]
+_PC_SECTION_TYPES = list(SECTION_TEMPLATES.keys())  # available section names for Piece Composer
+_PC_VOCAL_PRESETS = ["soprano", "alto", "tenor", "choir_ah"]
+
+# Musical note name → frequency (Hz) for instrument browser / synth preview
+_NOTE_FREQS: dict[str, float] = {
+    "C2": 65.41, "D2": 73.42, "E2": 82.41, "F2": 87.31, "G2": 98.00, "A2": 110.00, "B2": 123.47,
+    "C3": 130.81, "D3": 146.83, "E3": 164.81, "F3": 174.61, "G3": 196.00, "A3": 220.00, "B3": 246.94,
+    "C4": 261.63, "D4": 293.66, "E4": 329.63, "F4": 349.23, "G4": 392.00, "A4": 440.00, "B4": 493.88,
+    "C5": 523.25, "D5": 587.33, "E5": 659.25, "F5": 698.46, "G5": 784.00, "A5": 880.00, "B5": 987.77,
+}
+_NOTE_NAMES = list(_NOTE_FREQS.keys())
+
+
+def _compose_piece_to_file(
+    *,
+    style: str,
+    sections: list[str],
+    with_vocals: bool,
+    duration: float,
+    backend_name: str,
+    vocal_preset: str,
+    seed: int,
+    output_path: Path,
+    mastering_profile: str,
+    samples_dir: str,
+    sample_base_backend: str,
+    fmt: str,
+) -> Path:
+    """Generate a full multi-section musical piece and write it to *output_path*."""
+    backend_kwargs: dict[str, object] | None = None
+    if backend_name == "sample":
+        backend_kwargs = {
+            "samples_dir": samples_dir or _DEFAULT_SAMPLE_ROOT,
+            "base_backend": sample_base_backend,
+        }
+    composer = PieceComposer(
+        sample_rate=44100,
+        seed=seed,
+        backend=backend_name,
+        vocal_preset=vocal_preset,
+        backend_kwargs=backend_kwargs,
+    )
+    audio = composer.compose(
+        style=style,
+        sections=sections,
+        with_vocals=with_vocals,
+        duration=duration,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    bouncer = OfflineBounce(sample_rate=44100, profile=mastering_profile)
+    return bouncer.process_and_export(audio, output_path, fmt=fmt)
+
+
+def _preview_instrument_note(
+    instrument_name: str,
+    note: str,
+    duration: float,
+    output_path: Path,
+    *,
+    sample_rate: int = 44100,
+) -> Path:
+    """Render a single instrument note and write it as a WAV file."""
+    from audio_engine.export.audio_exporter import AudioExporter
+
+    freq = _NOTE_FREQS.get(note, 440.0)
+    instr = InstrumentLibrary.get(instrument_name, sample_rate=sample_rate)
+    audio = instr.render(freq, duration)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    exporter = AudioExporter(sample_rate=sample_rate)
+    return exporter.export(audio, output_path, fmt="wav")
+
+
+def _build_synth_patch_ext(
+    *,
+    waveform: str,
+    frequency: float,
+    duration: float,
+    amplitude: float,
+    attack: float,
+    decay: float,
+    sustain: float,
+    release: float,
+    filter_type: str,
+    filter_cutoff: float,
+    filter_q: float,
+    detune_cents: float = 0.0,
+    waveform2: str = "none",
+    osc2_mix: float = 0.0,
+    osc2_octave: int = 0,
+    lfo_rate: float = 0.0,
+    lfo_depth: float = 0.0,
+    lfo_target: str = "pitch",
+    sample_rate: int = 44100,
+) -> "np.ndarray":
+    """Extended synth patch builder with detune, dual oscillator and LFO.
+
+    Returns a mono float32 NumPy array normalised to the range [-1, 1].
+    """
+    import numpy as np
+    from audio_engine.synthesizer.oscillator import Oscillator
+    from audio_engine.synthesizer.envelope import Envelope
+    from audio_engine.synthesizer.filter import Filter
+
+    detune_ratio = 2.0 ** (detune_cents / 1200.0)
+    freq1 = frequency * detune_ratio
+
+    osc = Oscillator(sample_rate=sample_rate)
+
+    def _render_wave(wf: str, freq: float, amp: float) -> "np.ndarray":
+        wave_fn = getattr(osc, wf, None)
+        if wave_fn is None:
+            raise ValueError(f"Unknown waveform: {wf!r}")
+        if wf == "noise":
+            return osc.noise(duration, amp)
+        return wave_fn(freq, duration, amp)
+
+    # Primary oscillator
+    sig = _render_wave(waveform, freq1, amplitude)
+
+    # Secondary oscillator (mix in if enabled)
+    if waveform2 != "none" and osc2_mix > 0.0:
+        freq2 = frequency * (2.0 ** osc2_octave)
+        sig2 = _render_wave(waveform2, freq2, amplitude)
+        sig = sig * (1.0 - osc2_mix) + sig2 * osc2_mix
+
+    # LFO modulation
+    n_samples = len(sig)
+    if lfo_rate > 0.0 and lfo_depth > 0.0:
+        t = np.linspace(0.0, duration, n_samples, endpoint=False)
+        lfo = np.sin(2.0 * np.pi * lfo_rate * t) * lfo_depth
+        if lfo_target == "amplitude":
+            sig = sig * (1.0 + lfo)
+        elif lfo_target == "filter":
+            # Modulate cutoff; handled below after filter section
+            pass  # applied after filter build
+
+    # ADSR envelope
+    env = Envelope(
+        attack=attack,
+        decay=decay,
+        sustain=max(0.0, min(1.0, sustain)),
+        release=release,
+        sample_rate=sample_rate,
+    )
+    shaped = env.apply(sig, duration)
+
+    # Filter (with optional LFO on cutoff)
+    if filter_type != "none":
+        cutoff_base = max(20.0, min(filter_cutoff, sample_rate / 2.0 - 1.0))
+        filt = Filter(sample_rate=sample_rate)
+        if lfo_rate > 0.0 and lfo_depth > 0.0 and lfo_target == "filter":
+            # Apply a single static filter at the LFO-modulated midpoint cutoff
+            t_mid = duration / 2.0
+            lfo_mid = np.sin(2.0 * np.pi * lfo_rate * t_mid) * lfo_depth
+            cutoff_base = max(20.0, min(cutoff_base * (1.0 + lfo_mid), sample_rate / 2.0 - 1.0))
+        if filter_type == "lowpass":
+            shaped = filt.low_pass(shaped, cutoff_base)
+        elif filter_type == "highpass":
+            shaped = filt.high_pass(shaped, cutoff_base)
+        elif filter_type == "bandpass":
+            band_low = max(20.0, cutoff_base * 0.5)
+            band_high = min(sample_rate / 2.0 - 1.0, cutoff_base * 2.0)
+            shaped = filt.band_pass(shaped, band_low, band_high)
+
+    peak = float(np.max(np.abs(shaped)))
+    if peak > 1e-9:
+        shaped = shaped / peak * min(amplitude, 1.0)
+
+    return shaped.astype(np.float32)
 
 
 def _build_synth_patch(
@@ -303,13 +510,81 @@ def _export_synth_patch(audio: "np.ndarray", output_path: Path, *, sample_rate: 
     return exporter.export(audio, output_path, fmt="wav")
 
 
+# ---------------------------------------------------------------------------
+# Piano Roll data types — used by the Piano Roll tab and its render helper
+# ---------------------------------------------------------------------------
+
+def _render_piano_roll_to_file(
+    tracks_data: dict[str, dict],
+    *,
+    bpm: float,
+    time_signature: int,
+    output_path: Path,
+    mastering_profile: str,
+    fmt: str,
+    sample_rate: int = 44100,
+) -> Path:
+    """Render a multi-track piano roll composition to an audio file.
+
+    Parameters
+    ----------
+    tracks_data:
+        Mapping of track name → track config dict with keys:
+        ``instrument`` (str), ``pan`` (float), ``volume`` (float),
+        ``role`` (str), ``notes`` (list of note dicts with keys
+        ``beat``, ``note``, ``duration_beats``, ``velocity``).
+    bpm:
+        Beats per minute.
+    time_signature:
+        Beats per bar.
+    output_path:
+        Destination file path.
+    mastering_profile:
+        Mastering profile name (passed to :class:`OfflineBounce`).
+    fmt:
+        Output format ``"wav"`` or ``"ogg"``.
+    sample_rate:
+        Audio sample rate.
+    """
+    from audio_engine.composer.sequencer import Sequencer
+
+    seq = Sequencer(bpm=bpm, time_signature=time_signature, sample_rate=sample_rate)
+    beat_dur = 60.0 / bpm
+
+    for track_name, tcfg in tracks_data.items():
+        instrument = InstrumentLibrary.get(str(tcfg.get("instrument", "piano")), sample_rate=sample_rate)
+        seq.add_track(
+            name=track_name,
+            instrument=instrument,
+            pan=float(tcfg.get("pan", 0.0)),
+            volume=float(tcfg.get("volume", 1.0)),
+            role=str(tcfg.get("role", "harmony")),
+        )
+        for nd in tcfg.get("notes", []):
+            note_name = str(nd.get("note", "A4"))
+            freq = _NOTE_FREQS.get(note_name, 440.0)
+            onset_sec = float(nd.get("beat", 0.0)) * beat_dur
+            dur_sec = max(0.05, float(nd.get("duration_beats", 1.0)) * beat_dur)
+            velocity = float(nd.get("velocity", 1.0))
+            seq.add_note(track_name, freq, onset_sec, dur_sec, velocity)
+
+    audio = seq.render()
+    # Guard against empty render (no notes at all) — produce 0.5 s of silence
+    import numpy as _np
+    if audio.size == 0:
+        audio = _np.zeros((int(sample_rate * 0.5), 2), dtype=_np.float32)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    bouncer = OfflineBounce(sample_rate=sample_rate, profile=mastering_profile)
+    return bouncer.process_and_export(audio, output_path, fmt=fmt)
+
+
 def launch_studio() -> None:
     import tkinter as tk
     from tkinter import filedialog, ttk
 
     root = tk.Tk()
     root.title("Audio Engine Studio")
-    root.geometry("980x720")
+    root.geometry("1100x800")
     style_metadata = MusicGenerator.available_style_metadata()
     last_failed_action: str | None = None
     playback_handle: _PlaybackHandle | None = None
@@ -355,20 +630,62 @@ def launch_studio() -> None:
     notebook = ttk.Notebook(root)
     notebook.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
-    music_tab = ttk.Frame(notebook)
-    sfx_tab = ttk.Frame(notebook)
-    voice_tab = ttk.Frame(notebook)
-    synth_tab = ttk.Frame(notebook)
-    notebook.add(music_tab, text="Music")
-    notebook.add(sfx_tab, text="SFX")
-    notebook.add(voice_tab, text="Voice")
-    notebook.add(synth_tab, text="Synth Workbench")
+    def _make_scrollable_tab(label: str) -> ttk.Frame:
+        outer = ttk.Frame(notebook)
+        canvas = tk.Canvas(outer, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(outer, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        inner = ttk.Frame(canvas)
+        window_id = canvas.create_window((0, 0), window=inner, anchor="nw")
+
+        def _on_inner_configure(_event: object | None = None) -> None:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _on_canvas_configure(event: object) -> None:
+            width = getattr(event, "width", None)
+            if width is not None:
+                canvas.itemconfigure(window_id, width=width)
+
+        def _on_mousewheel(event: object) -> None:
+            delta = int(getattr(event, "delta", 0))
+            if delta:
+                canvas.yview_scroll(int(-delta / 120), "units")
+            else:
+                button = getattr(event, "num", None)
+                if button == 4:
+                    canvas.yview_scroll(-1, "units")
+                elif button == 5:
+                    canvas.yview_scroll(1, "units")
+
+        inner.bind("<Configure>", _on_inner_configure)
+        canvas.bind("<Configure>", _on_canvas_configure)
+        canvas.bind("<MouseWheel>", _on_mousewheel)
+        canvas.bind("<Button-4>", _on_mousewheel)
+        canvas.bind("<Button-5>", _on_mousewheel)
+        notebook.add(outer, text=label)
+        return inner
+
+    music_tab = _make_scrollable_tab("Music")
+    sfx_tab = _make_scrollable_tab("SFX")
+    voice_tab = _make_scrollable_tab("Voice")
+    synth_tab = _make_scrollable_tab("Synth Workbench")
+    piece_tab = _make_scrollable_tab("Piece Composer")
+    instr_tab = _make_scrollable_tab("Instruments")
+    piano_roll_outer = ttk.Frame(notebook)
+    notebook.add(piano_roll_outer, text="Piano Roll")
 
     # Music tab
     ttk.Label(music_tab, text="Style").grid(row=0, column=0, sticky="w", padx=8, pady=6)
     music_style = tk.StringVar(value="battle")
     style_box = ttk.Combobox(music_tab, textvariable=music_style, values=MusicGenerator.available_styles(), state="readonly")
     style_box.grid(row=0, column=1, sticky="ew", padx=8, pady=6)
+
+    # Style info panel — shows BPM, scale, and instruments for the selected style
+    style_info_var = tk.StringVar(value="")
+    style_info_lbl = ttk.Label(music_tab, textvariable=style_info_var, justify="left", foreground="#555555")
+    style_info_lbl.grid(row=0, column=2, rowspan=4, sticky="nw", padx=(0, 8), pady=6)
 
     ttk.Label(music_tab, text="Backend").grid(row=1, column=0, sticky="w", padx=8, pady=6)
     music_backend = tk.StringVar(value="procedural")
@@ -405,6 +722,11 @@ def launch_studio() -> None:
     ttk.Label(music_tab, text="Output path").grid(row=6, column=0, sticky="w", padx=8, pady=6)
     music_out = tk.StringVar(value="music.wav")
     ttk.Entry(music_tab, textvariable=music_out).grid(row=6, column=1, sticky="ew", padx=8, pady=6)
+    ttk.Button(
+        music_tab,
+        text="Browse…",
+        command=lambda: _browse_output_path(music_out, title="Save Music As"),
+    ).grid(row=6, column=2, padx=(2, 8), pady=6)
 
     ttk.Label(music_tab, text="Prompt override").grid(row=7, column=0, sticky="w", padx=8, pady=6)
     music_prompt = tk.StringVar(value="")
@@ -459,13 +781,22 @@ def launch_studio() -> None:
     ttk.Combobox(music_tab, textvariable=custom_percussion, values=["", *instrument_choices], state="readonly").grid(row=18, column=1, sticky="ew", padx=8, pady=6)
 
     music_status = ttk.Label(music_tab, text="")
-    music_status.grid(row=20, column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    music_status.grid(row=20, column=0, columnspan=3, sticky="w", padx=8, pady=8)
 
     def _refresh_bpm(*_args: object) -> None:
         style = music_style.get()
-        bpm_var.set(str(int(style_metadata.get(style, style_metadata["battle"])["bpm"])))
+        meta = style_metadata.get(style, style_metadata["battle"])
+        bpm_var.set(str(int(meta["bpm"])))
+        scale = meta.get("scale_name", "")
+        root = meta.get("root", "")
+        instrs = ", ".join(meta.get("instruments", []))
+        style_info_var.set(
+            f"BPM: {int(meta['bpm'])}  Key: {root} {scale}\nLeads: {instrs}"
+        )
 
     style_box.bind("<<ComboboxSelected>>", _refresh_bpm)
+    _refresh_bpm()  # populate style info on startup
+    music_tab.columnconfigure(1, weight=1)
 
     def _run_music_generation() -> Path:
         seed = _safe_int(music_seed.get(), 0)
@@ -563,7 +894,12 @@ def launch_studio() -> None:
             _set_status(music_status, f"Error: {exc}")
             _set_status(global_status, f"Music failed — {exc}")
 
-    ttk.Button(music_tab, text="Generate", command=_generate_music).grid(row=19, column=0, columnspan=2, pady=8)
+    ttk.Button(music_tab, text="Generate", command=_generate_music).grid(row=19, column=0, sticky="ew", padx=8, pady=8)
+    ttk.Button(
+        music_tab,
+        text="Play latest",
+        command=lambda: _play_output_path(Path(music_out.get()), "Music"),
+    ).grid(row=19, column=1, sticky="ew", padx=8, pady=8)
 
     # SFX tab
     ttk.Label(sfx_tab, text="Category").grid(row=0, column=0, sticky="w", padx=8, pady=6)
@@ -582,6 +918,7 @@ def launch_studio() -> None:
     ttk.Label(sfx_tab, text="Duration (s)").grid(row=2, column=0, sticky="w", padx=8, pady=6)
     sfx_duration = tk.DoubleVar(value=0.8)
     ttk.Scale(sfx_tab, from_=0.05, to=4.0, variable=sfx_duration, orient="horizontal").grid(row=2, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(sfx_tab, sfx_duration, row=2, fmt="{:.2f}s")
 
     ttk.Label(sfx_tab, text="Pitch override (Hz)").grid(row=3, column=0, sticky="w", padx=8, pady=6)
     sfx_pitch = tk.StringVar(value="")
@@ -594,9 +931,16 @@ def launch_studio() -> None:
     ttk.Label(sfx_tab, text="Output path").grid(row=5, column=0, sticky="w", padx=8, pady=6)
     sfx_out = tk.StringVar(value="sfx.wav")
     ttk.Entry(sfx_tab, textvariable=sfx_out).grid(row=5, column=1, sticky="ew", padx=8, pady=6)
+    ttk.Button(
+        sfx_tab,
+        text="Browse…",
+        command=lambda: _browse_output_path(sfx_out, title="Save SFX As"),
+    ).grid(row=5, column=2, padx=(2, 8), pady=6)
 
     sfx_status = ttk.Label(sfx_tab, text="")
-    sfx_status.grid(row=7, column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    sfx_status.grid(row=7, column=0, columnspan=3, sticky="w", padx=8, pady=8)
+    sfx_tab.columnconfigure(1, weight=1)
+
 
     def _run_sfx_generation() -> Path:
         seed = _safe_int(sfx_seed.get(), 0)
@@ -636,7 +980,12 @@ def launch_studio() -> None:
             _set_status(sfx_status, f"Error: {exc}")
             _set_status(global_status, f"SFX failed — {exc}")
 
-    ttk.Button(sfx_tab, text="Generate", command=_generate_sfx).grid(row=6, column=0, columnspan=2, pady=8)
+    ttk.Button(sfx_tab, text="Generate", command=_generate_sfx).grid(row=6, column=0, sticky="ew", padx=8, pady=8)
+    ttk.Button(
+        sfx_tab,
+        text="Play latest",
+        command=lambda: _play_output_path(Path(sfx_out.get()), "SFX"),
+    ).grid(row=6, column=1, sticky="ew", padx=8, pady=8)
 
     # Voice tab
     ttk.Label(voice_tab, text="Text").grid(row=0, column=0, sticky="nw", padx=8, pady=6)
@@ -660,6 +1009,7 @@ def launch_studio() -> None:
     ttk.Label(voice_tab, text="Speed").grid(row=3, column=0, sticky="w", padx=8, pady=6)
     voice_speed = tk.DoubleVar(value=1.0)
     ttk.Scale(voice_tab, from_=0.6, to=2.0, variable=voice_speed, orient="horizontal").grid(row=3, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(voice_tab, voice_speed, row=3, fmt="{:.2f}x")
 
     ttk.Label(voice_tab, text="Seed").grid(row=4, column=0, sticky="w", padx=8, pady=6)
     voice_seed = tk.StringVar(value="0")
@@ -668,9 +1018,15 @@ def launch_studio() -> None:
     ttk.Label(voice_tab, text="Output path").grid(row=5, column=0, sticky="w", padx=8, pady=6)
     voice_out = tk.StringVar(value="voice.wav")
     ttk.Entry(voice_tab, textvariable=voice_out).grid(row=5, column=1, sticky="ew", padx=8, pady=6)
+    ttk.Button(
+        voice_tab,
+        text="Browse…",
+        command=lambda: _browse_output_path(voice_out, title="Save Voice As"),
+    ).grid(row=5, column=2, padx=(2, 8), pady=6)
 
     voice_status = ttk.Label(voice_tab, text="")
-    voice_status.grid(row=7, column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    voice_status.grid(row=7, column=0, columnspan=3, sticky="w", padx=8, pady=8)
+    voice_tab.columnconfigure(1, weight=1)
 
     def _run_voice_generation() -> Path:
         seed = _safe_int(voice_seed.get(), 0)
@@ -710,7 +1066,12 @@ def launch_studio() -> None:
             _set_status(voice_status, f"Error: {exc}")
             _set_status(global_status, f"Voice failed — {exc}")
 
-    ttk.Button(voice_tab, text="Generate", command=_generate_voice).grid(row=6, column=0, columnspan=2, pady=8)
+    ttk.Button(voice_tab, text="Generate", command=_generate_voice).grid(row=6, column=0, sticky="ew", padx=8, pady=8)
+    ttk.Button(
+        voice_tab,
+        text="Play latest",
+        command=lambda: _play_output_path(Path(voice_out.get()), "Vocal"),
+    ).grid(row=6, column=1, sticky="ew", padx=8, pady=8)
 
     # ---------------------------------------------------------------------------
     # Synth Workbench tab — manual waveform/ADSR/filter/WAV creation without AI
@@ -737,28 +1098,33 @@ def launch_studio() -> None:
     ttk.Label(synth_tab, text="Amplitude (0–1)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_amp = tk.DoubleVar(value=0.8)
     ttk.Scale(synth_tab, from_=0.0, to=1.0, variable=synth_amp, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_amp, row=_sw_counter[0] - 1)
 
-    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
-    ttk.Label(synth_tab, text="— ADSR Envelope —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=2, pady=2)
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=3, sticky="ew", padx=8, pady=4)
+    ttk.Label(synth_tab, text="— ADSR Envelope —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=3, pady=2)
 
     ttk.Label(synth_tab, text="Attack (s)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_attack = tk.DoubleVar(value=0.01)
     ttk.Scale(synth_tab, from_=0.0, to=2.0, variable=synth_attack, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_attack, row=_sw_counter[0] - 1)
 
     ttk.Label(synth_tab, text="Decay (s)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_decay = tk.DoubleVar(value=0.1)
     ttk.Scale(synth_tab, from_=0.0, to=2.0, variable=synth_decay, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_decay, row=_sw_counter[0] - 1)
 
     ttk.Label(synth_tab, text="Sustain (0–1)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_sustain = tk.DoubleVar(value=0.7)
     ttk.Scale(synth_tab, from_=0.0, to=1.0, variable=synth_sustain, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_sustain, row=_sw_counter[0] - 1)
 
     ttk.Label(synth_tab, text="Release (s)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_release = tk.DoubleVar(value=0.3)
     ttk.Scale(synth_tab, from_=0.0, to=2.0, variable=synth_release, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_release, row=_sw_counter[0] - 1)
 
-    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
-    ttk.Label(synth_tab, text="— Filter —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=2, pady=2)
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=3, sticky="ew", padx=8, pady=4)
+    ttk.Label(synth_tab, text="— Filter —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=3, pady=2)
 
     ttk.Label(synth_tab, text="Filter type").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_filter_type = tk.StringVar(value="none")
@@ -768,14 +1134,57 @@ def launch_studio() -> None:
     synth_cutoff = tk.StringVar(value="2000.0")
     ttk.Entry(synth_tab, textvariable=synth_cutoff).grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
 
-    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=2, sticky="ew", padx=8, pady=4)
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=3, sticky="ew", padx=8, pady=4)
+    ttk.Label(synth_tab, text="— Oscillator 2 —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=3, pady=2)
+
+    ttk.Label(synth_tab, text="Waveform 2").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_waveform2 = tk.StringVar(value="none")
+    ttk.Combobox(synth_tab, textvariable=synth_waveform2, values=["none", *_SYNTH_WAVEFORMS], state="readonly").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(synth_tab, text="Osc 2 mix (0–1)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_osc2_mix = tk.DoubleVar(value=0.0)
+    ttk.Scale(synth_tab, from_=0.0, to=1.0, variable=synth_osc2_mix, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_osc2_mix, row=_sw_counter[0] - 1)
+
+    ttk.Label(synth_tab, text="Osc 2 octave").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_osc2_octave = tk.IntVar(value=0)
+    ttk.Spinbox(synth_tab, from_=-2, to=2, textvariable=synth_osc2_octave, width=6).grid(row=_sw_counter[0] - 1, column=1, sticky="w", padx=8, pady=6)
+
+    ttk.Label(synth_tab, text="Detune (cents)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_detune = tk.DoubleVar(value=0.0)
+    ttk.Scale(synth_tab, from_=-50.0, to=50.0, variable=synth_detune, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_detune, row=_sw_counter[0] - 1, fmt="{:+.1f}¢")
+
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=3, sticky="ew", padx=8, pady=4)
+    ttk.Label(synth_tab, text="— LFO —", font=("TkDefaultFont", 9, "bold")).grid(row=_sw_counter[0] - 1, column=0, columnspan=3, pady=2)
+
+    ttk.Label(synth_tab, text="LFO rate (Hz)").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_lfo_rate = tk.DoubleVar(value=0.0)
+    ttk.Scale(synth_tab, from_=0.0, to=20.0, variable=synth_lfo_rate, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_lfo_rate, row=_sw_counter[0] - 1, fmt="{:.1f}Hz")
+
+    ttk.Label(synth_tab, text="LFO depth").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_lfo_depth = tk.DoubleVar(value=0.0)
+    ttk.Scale(synth_tab, from_=0.0, to=1.0, variable=synth_lfo_depth, orient="horizontal").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    _attach_value_label(synth_tab, synth_lfo_depth, row=_sw_counter[0] - 1)
+
+    ttk.Label(synth_tab, text="LFO target").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
+    synth_lfo_target = tk.StringVar(value="pitch")
+    ttk.Combobox(synth_tab, textvariable=synth_lfo_target, values=["pitch", "amplitude", "filter"], state="readonly").grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Separator(synth_tab, orient="horizontal").grid(row=_sw_row(), column=0, columnspan=3, sticky="ew", padx=8, pady=4)
 
     ttk.Label(synth_tab, text="Output path").grid(row=_sw_row(), column=0, sticky="w", padx=8, pady=6)
     synth_out = tk.StringVar(value="synth_patch.wav")
     ttk.Entry(synth_tab, textvariable=synth_out).grid(row=_sw_counter[0] - 1, column=1, sticky="ew", padx=8, pady=6)
+    ttk.Button(
+        synth_tab,
+        text="Browse…",
+        command=lambda: _browse_output_path(synth_out, title="Save Synth Patch As"),
+    ).grid(row=_sw_counter[0] - 1, column=2, padx=(2, 8), pady=6)
 
     synth_status = ttk.Label(synth_tab, text="")
-    synth_status.grid(row=_sw_row(), column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    synth_status.grid(row=_sw_row(), column=0, columnspan=3, sticky="w", padx=8, pady=8)
 
     synth_tab.columnconfigure(1, weight=1)
 
@@ -793,7 +1202,7 @@ def launch_studio() -> None:
         except ValueError:
             cutoff = 2000.0
         out_path = Path(synth_out.get())
-        audio = _build_synth_patch(
+        audio = _build_synth_patch_ext(
             waveform=synth_waveform.get(),
             frequency=freq,
             duration=dur,
@@ -805,6 +1214,13 @@ def launch_studio() -> None:
             filter_type=synth_filter_type.get(),
             filter_cutoff=cutoff,
             filter_q=1.0,
+            detune_cents=float(synth_detune.get()),
+            waveform2=synth_waveform2.get(),
+            osc2_mix=float(synth_osc2_mix.get()),
+            osc2_octave=int(synth_osc2_octave.get()),
+            lfo_rate=float(synth_lfo_rate.get()),
+            lfo_depth=float(synth_lfo_depth.get()),
+            lfo_target=synth_lfo_target.get(),
         )
         return _export_synth_patch(audio, out_path)
 
@@ -820,6 +1236,642 @@ def launch_studio() -> None:
             _set_status(global_status, f"Synth workbench failed — {exc}")
 
     ttk.Button(synth_tab, text="Generate WAV", command=_generate_synth_patch).grid(row=_sw_row(), column=0, columnspan=2, pady=8)
+
+    # ---------------------------------------------------------------------------
+    # Piece Composer tab — create full multi-section musical pieces
+    # ---------------------------------------------------------------------------
+    _pc_section_list: list[str] = ["intro", "verse", "chorus", "bridge", "chorus", "outro"]
+
+    # Style
+    ttk.Label(piece_tab, text="Style").grid(row=0, column=0, sticky="w", padx=8, pady=6)
+    pc_style = tk.StringVar(value="ff8_ballad")
+    ttk.Combobox(piece_tab, textvariable=pc_style, values=MusicGenerator.available_styles(), state="readonly").grid(row=0, column=1, columnspan=3, sticky="ew", padx=8, pady=6)
+
+    # Backend
+    ttk.Label(piece_tab, text="Backend").grid(row=1, column=0, sticky="w", padx=8, pady=6)
+    pc_backend = tk.StringVar(value="synth_orchestral")
+    ttk.Combobox(
+        piece_tab,
+        textvariable=pc_backend,
+        values=_available_backends_for_modality("music", sample_rate=44100),
+        state="readonly",
+    ).grid(row=1, column=1, columnspan=3, sticky="ew", padx=8, pady=6)
+
+    # Mastering profile
+    ttk.Label(piece_tab, text="Mastering profile").grid(row=2, column=0, sticky="w", padx=8, pady=6)
+    pc_profile = tk.StringVar(value="ost")
+    ttk.Combobox(piece_tab, textvariable=pc_profile, values=VALID_PROFILES, state="readonly").grid(row=2, column=1, columnspan=3, sticky="ew", padx=8, pady=6)
+
+    # Duration
+    ttk.Label(piece_tab, text="Duration (s)").grid(row=3, column=0, sticky="w", padx=8, pady=6)
+    pc_duration = tk.StringVar(value="90")
+    ttk.Entry(piece_tab, textvariable=pc_duration).grid(row=3, column=1, sticky="ew", padx=8, pady=6)
+
+    # Seed
+    ttk.Label(piece_tab, text="Seed").grid(row=3, column=2, sticky="w", padx=8, pady=6)
+    pc_seed = tk.StringVar(value="0")
+    ttk.Entry(piece_tab, textvariable=pc_seed, width=8).grid(row=3, column=3, sticky="ew", padx=8, pady=6)
+
+    # Vocals
+    pc_with_vocals = tk.BooleanVar(value=True)
+    ttk.Checkbutton(piece_tab, text="With vocals", variable=pc_with_vocals).grid(row=4, column=0, columnspan=2, sticky="w", padx=8, pady=4)
+
+    ttk.Label(piece_tab, text="Vocal preset").grid(row=4, column=2, sticky="w", padx=8, pady=6)
+    pc_vocal_preset = tk.StringVar(value="soprano")
+    ttk.Combobox(piece_tab, textvariable=pc_vocal_preset, values=_PC_VOCAL_PRESETS, state="readonly", width=12).grid(row=4, column=3, sticky="ew", padx=8, pady=6)
+
+    # Output path and format
+    ttk.Label(piece_tab, text="Output path").grid(row=5, column=0, sticky="w", padx=8, pady=6)
+    pc_out = tk.StringVar(value="piece.wav")
+    ttk.Entry(piece_tab, textvariable=pc_out).grid(row=5, column=1, columnspan=2, sticky="ew", padx=8, pady=6)
+    pc_format = tk.StringVar(value="wav")
+    ttk.Combobox(piece_tab, textvariable=pc_format, values=["wav", "ogg"], state="readonly", width=6).grid(row=5, column=3, sticky="ew", padx=8, pady=6)
+
+    # Section builder (listbox + add/remove/move buttons)
+    ttk.Separator(piece_tab, orient="horizontal").grid(row=6, column=0, columnspan=4, sticky="ew", padx=8, pady=4)
+    ttk.Label(piece_tab, text="— Sections —", font=("TkDefaultFont", 9, "bold")).grid(row=7, column=0, columnspan=4, pady=2)
+
+    ttk.Label(piece_tab, text="Available").grid(row=8, column=0, sticky="w", padx=8, pady=2)
+    ttk.Label(piece_tab, text="Piece order").grid(row=8, column=2, sticky="w", padx=8, pady=2)
+
+    pc_avail_lb = tk.Listbox(piece_tab, height=7, exportselection=False)
+    for s in _PC_SECTION_TYPES:
+        pc_avail_lb.insert("end", s)
+    pc_avail_lb.grid(row=9, column=0, rowspan=4, sticky="nsew", padx=8, pady=4)
+
+    pc_order_lb = tk.Listbox(piece_tab, height=7, exportselection=False)
+    for s in _pc_section_list:
+        pc_order_lb.insert("end", s)
+    pc_order_lb.grid(row=9, column=2, rowspan=4, sticky="nsew", padx=8, pady=4)
+    piece_tab.columnconfigure(0, weight=1)
+    piece_tab.columnconfigure(2, weight=1)
+
+    def _pc_add_section() -> None:
+        sel = pc_avail_lb.curselection()
+        if not sel:
+            return
+        sec = pc_avail_lb.get(sel[0])
+        _pc_section_list.append(sec)
+        pc_order_lb.insert("end", sec)
+
+    def _pc_remove_section() -> None:
+        sel = pc_order_lb.curselection()
+        if not sel:
+            return
+        idx = sel[0]
+        pc_order_lb.delete(idx)
+        if idx < len(_pc_section_list):
+            _pc_section_list.pop(idx)
+
+    def _pc_move_up() -> None:
+        sel = pc_order_lb.curselection()
+        if not sel or sel[0] == 0:
+            return
+        idx = sel[0]
+        item = pc_order_lb.get(idx)
+        pc_order_lb.delete(idx)
+        pc_order_lb.insert(idx - 1, item)
+        pc_order_lb.selection_set(idx - 1)
+        _pc_section_list.insert(idx - 1, _pc_section_list.pop(idx))
+
+    def _pc_move_down() -> None:
+        sel = pc_order_lb.curselection()
+        if not sel or sel[0] >= pc_order_lb.size() - 1:
+            return
+        idx = sel[0]
+        item = pc_order_lb.get(idx)
+        pc_order_lb.delete(idx)
+        pc_order_lb.insert(idx + 1, item)
+        pc_order_lb.selection_set(idx + 1)
+        _pc_section_list.insert(idx + 1, _pc_section_list.pop(idx))
+
+    btn_col = ttk.Frame(piece_tab)
+    btn_col.grid(row=9, column=1, rowspan=4, padx=4, pady=4)
+    ttk.Button(btn_col, text="Add →", command=_pc_add_section).pack(fill="x", pady=2)
+    ttk.Button(btn_col, text="← Remove", command=_pc_remove_section).pack(fill="x", pady=2)
+    ttk.Button(btn_col, text="↑ Up", command=_pc_move_up).pack(fill="x", pady=2)
+    ttk.Button(btn_col, text="↓ Down", command=_pc_move_down).pack(fill="x", pady=2)
+
+    ttk.Separator(piece_tab, orient="horizontal").grid(row=13, column=0, columnspan=4, sticky="ew", padx=8, pady=4)
+
+    piece_status = ttk.Label(piece_tab, text="")
+    piece_status.grid(row=15, column=0, columnspan=4, sticky="w", padx=8, pady=8)
+
+    def _run_compose_piece() -> Path:
+        sections = list(_pc_section_list)
+        if not sections:
+            raise ValueError("Add at least one section before composing.")
+        try:
+            dur = float(pc_duration.get())
+        except ValueError:
+            dur = 90.0
+        dur = max(10.0, dur)
+        seed = _safe_int(pc_seed.get(), 0)
+        out_path = Path(pc_out.get())
+        fmt = pc_format.get()
+        return _compose_piece_to_file(
+            style=pc_style.get(),
+            sections=sections,
+            with_vocals=bool(pc_with_vocals.get()),
+            duration=dur,
+            backend_name=pc_backend.get(),
+            vocal_preset=pc_vocal_preset.get(),
+            seed=seed,
+            output_path=out_path,
+            mastering_profile=pc_profile.get(),
+            samples_dir=sample_root.get().strip(),
+            sample_base_backend=sample_base_backend.get(),
+            fmt=fmt,
+        )
+
+    def _compose_piece_threaded() -> None:
+        _set_status(piece_status, "Composing piece — this may take a while...")
+        _set_status(global_status, "Piece Composer running...")
+
+        def _worker() -> None:
+            try:
+                out_path = _run_compose_piece()
+                piece_status.configure(text=f"Done — saved to {out_path}")
+                global_status.configure(text="Piece Composer complete.")
+                _refresh_preview_files(select_category="Music")
+            except Exception as exc:  # pragma: no cover - UI path
+                piece_status.configure(text=f"Error: {exc}")
+                global_status.configure(text=f"Piece Composer failed — {exc}")
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    btn_row = ttk.Frame(piece_tab)
+    btn_row.grid(row=14, column=0, columnspan=4, pady=8)
+    ttk.Button(btn_row, text="Compose Piece", command=_compose_piece_threaded).pack(side="left", padx=8)
+    ttk.Button(
+        btn_row,
+        text="Play latest",
+        command=lambda: _play_output_path(Path(pc_out.get()), "Music"),
+    ).pack(side="left", padx=8)
+
+    # ---------------------------------------------------------------------------
+    # Instrument Browser tab — preview every registered instrument
+    # ---------------------------------------------------------------------------
+    all_instruments = sorted(InstrumentLibrary.available())
+
+    ttk.Label(instr_tab, text="Instrument").grid(row=0, column=0, sticky="w", padx=8, pady=6)
+    instr_choice = tk.StringVar(value=all_instruments[0] if all_instruments else "strings")
+    ttk.Combobox(instr_tab, textvariable=instr_choice, values=all_instruments, state="readonly").grid(row=0, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(instr_tab, text="Note").grid(row=1, column=0, sticky="w", padx=8, pady=6)
+    instr_note = tk.StringVar(value="A4")
+    ttk.Combobox(instr_tab, textvariable=instr_note, values=_NOTE_NAMES, state="readonly", width=6).grid(row=1, column=1, sticky="w", padx=8, pady=6)
+
+    ttk.Label(instr_tab, text="Duration (s)").grid(row=2, column=0, sticky="w", padx=8, pady=6)
+    instr_dur = tk.DoubleVar(value=1.5)
+    ttk.Scale(instr_tab, from_=0.1, to=5.0, variable=instr_dur, orient="horizontal").grid(row=2, column=1, sticky="ew", padx=8, pady=6)
+
+    ttk.Label(instr_tab, text="Output path").grid(row=3, column=0, sticky="w", padx=8, pady=6)
+    instr_out = tk.StringVar(value="instrument_preview.wav")
+    ttk.Entry(instr_tab, textvariable=instr_out).grid(row=3, column=1, sticky="ew", padx=8, pady=6)
+
+    instr_status = ttk.Label(instr_tab, text="")
+    instr_status.grid(row=5, column=0, columnspan=2, sticky="w", padx=8, pady=8)
+    instr_tab.columnconfigure(1, weight=1)
+
+    # Scrollable instrument info panel
+    ttk.Separator(instr_tab, orient="horizontal").grid(row=6, column=0, columnspan=2, sticky="ew", padx=8, pady=4)
+    ttk.Label(instr_tab, text="Registered instruments", font=("TkDefaultFont", 9, "bold")).grid(row=7, column=0, columnspan=2, pady=2)
+    instr_listbox = tk.Listbox(instr_tab, height=10, selectmode="browse")
+    for name in all_instruments:
+        instr_listbox.insert("end", name)
+    instr_listbox.grid(row=8, column=0, columnspan=2, sticky="nsew", padx=8, pady=4)
+    instr_tab.rowconfigure(8, weight=1)
+
+    def _on_instr_listbox_select(_event: object = None) -> None:
+        sel = instr_listbox.curselection()
+        if sel:
+            instr_choice.set(instr_listbox.get(sel[0]))
+
+    instr_listbox.bind("<<ListboxSelect>>", _on_instr_listbox_select)
+
+    def _run_instr_preview() -> Path:
+        name = instr_choice.get()
+        note = instr_note.get()
+        dur = max(0.1, float(instr_dur.get()))
+        out_path = Path(instr_out.get())
+        return _preview_instrument_note(name, note, dur, out_path)
+
+    def _generate_instr_preview() -> None:
+        try:
+            _set_status(instr_status, "Rendering instrument note...")
+            out_path = _run_instr_preview()
+            _set_status(instr_status, f"Done — saved to {out_path}")
+            _set_status(global_status, "Instrument preview saved.")
+            _refresh_preview_files()
+        except Exception as exc:  # pragma: no cover - UI path
+            _set_status(instr_status, f"Error: {exc}")
+            _set_status(global_status, f"Instrument preview failed — {exc}")
+
+    btn_row_instr = ttk.Frame(instr_tab)
+    btn_row_instr.grid(row=4, column=0, columnspan=2, pady=4)
+    ttk.Button(btn_row_instr, text="Preview Note", command=_generate_instr_preview).pack(side="left", padx=8)
+    ttk.Button(
+        btn_row_instr,
+        text="Play latest",
+        command=lambda: _play_output_path(Path(instr_out.get()), "Music"),
+    ).pack(side="left", padx=8)
+
+    # ---------------------------------------------------------------------------
+    # Piano Roll tab — manual note-by-note multi-track composition
+    # ---------------------------------------------------------------------------
+    # Internal state: tracks_data is the live data model
+    # {track_name: {"instrument": str, "pan": float, "volume": float,
+    #               "role": str, "notes": [{"beat": float, "note": str,
+    #               "duration_beats": float, "velocity": float}, ...]}}
+    _pr_tracks: dict[str, dict] = {}
+    _pr_selected_track: list[str | None] = [None]  # mutable cell
+
+    _TRACK_ROLES = ["melody", "counter", "harmony", "bass", "texture", "percussion"]
+
+    # -- Top controls bar --
+    pr_top = ttk.Frame(piano_roll_outer)
+    pr_top.pack(fill="x", padx=8, pady=6)
+
+    ttk.Label(pr_top, text="BPM").grid(row=0, column=0, sticky="w", padx=4)
+    pr_bpm = tk.StringVar(value="120")
+    ttk.Entry(pr_top, textvariable=pr_bpm, width=6).grid(row=0, column=1, sticky="w", padx=4)
+
+    ttk.Label(pr_top, text="Time sig").grid(row=0, column=2, sticky="w", padx=4)
+    pr_time_sig = tk.IntVar(value=4)
+    ttk.Spinbox(pr_top, from_=2, to=12, textvariable=pr_time_sig, width=4).grid(row=0, column=3, sticky="w", padx=4)
+
+    ttk.Label(pr_top, text="Profile").grid(row=0, column=4, sticky="w", padx=4)
+    pr_profile = tk.StringVar(value="ost")
+    ttk.Combobox(pr_top, textvariable=pr_profile, values=VALID_PROFILES, state="readonly", width=10).grid(row=0, column=5, sticky="w", padx=4)
+
+    ttk.Label(pr_top, text="Format").grid(row=0, column=6, sticky="w", padx=4)
+    pr_format = tk.StringVar(value="wav")
+    ttk.Combobox(pr_top, textvariable=pr_format, values=["wav", "ogg"], state="readonly", width=6).grid(row=0, column=7, sticky="w", padx=4)
+
+    ttk.Label(pr_top, text="Output").grid(row=0, column=8, sticky="w", padx=4)
+    pr_out = tk.StringVar(value="piano_roll.wav")
+    ttk.Entry(pr_top, textvariable=pr_out, width=22).grid(row=0, column=9, sticky="ew", padx=4)
+    pr_top.columnconfigure(9, weight=1)
+
+    pr_status = ttk.Label(piano_roll_outer, text="Ready — add tracks and notes, then Render.")
+    pr_status.pack(fill="x", padx=8, pady=2)
+
+    # -- Main split: tracks (left) | notes (right) --
+    pr_pane = ttk.PanedWindow(piano_roll_outer, orient="horizontal")
+    pr_pane.pack(fill="both", expand=True, padx=8, pady=4)
+
+    # -- Left: Track list panel --
+    pr_left = ttk.LabelFrame(pr_pane, text="Tracks")
+    pr_pane.add(pr_left, weight=1)
+
+    pr_track_tree = ttk.Treeview(
+        pr_left,
+        columns=("instrument", "role", "vol", "pan"),
+        show="headings",
+        selectmode="browse",
+        height=12,
+    )
+    for col, hdr, w in [
+        ("instrument", "Instrument", 120),
+        ("role", "Role", 80),
+        ("vol", "Vol", 50),
+        ("pan", "Pan", 50),
+    ]:
+        pr_track_tree.heading(col, text=hdr)
+        pr_track_tree.column(col, width=w, anchor="center")
+    pr_track_tree.pack(fill="both", expand=True, padx=4, pady=4)
+
+    # Track form (inline, below the tree)
+    pr_track_form = ttk.LabelFrame(pr_left, text="Add / Edit Track")
+    pr_track_form.pack(fill="x", padx=4, pady=4)
+
+    ttk.Label(pr_track_form, text="Name").grid(row=0, column=0, sticky="w", padx=4, pady=3)
+    pr_tf_name = tk.StringVar(value="Lead")
+    ttk.Entry(pr_track_form, textvariable=pr_tf_name, width=12).grid(row=0, column=1, sticky="ew", padx=4, pady=3)
+
+    ttk.Label(pr_track_form, text="Instrument").grid(row=0, column=2, sticky="w", padx=4, pady=3)
+    pr_tf_instr = tk.StringVar(value="piano")
+    ttk.Combobox(pr_track_form, textvariable=pr_tf_instr, values=sorted(InstrumentLibrary.available()), state="readonly", width=14).grid(row=0, column=3, sticky="ew", padx=4, pady=3)
+
+    ttk.Label(pr_track_form, text="Role").grid(row=1, column=0, sticky="w", padx=4, pady=3)
+    pr_tf_role = tk.StringVar(value="melody")
+    ttk.Combobox(pr_track_form, textvariable=pr_tf_role, values=_TRACK_ROLES, state="readonly", width=12).grid(row=1, column=1, sticky="ew", padx=4, pady=3)
+
+    ttk.Label(pr_track_form, text="Volume").grid(row=1, column=2, sticky="w", padx=4, pady=3)
+    pr_tf_vol = tk.DoubleVar(value=1.0)
+    ttk.Scale(pr_track_form, from_=0.0, to=1.0, variable=pr_tf_vol, orient="horizontal", length=80).grid(row=1, column=3, sticky="ew", padx=4, pady=3)
+
+    ttk.Label(pr_track_form, text="Pan").grid(row=2, column=0, sticky="w", padx=4, pady=3)
+    pr_tf_pan = tk.DoubleVar(value=0.0)
+    ttk.Scale(pr_track_form, from_=-1.0, to=1.0, variable=pr_tf_pan, orient="horizontal", length=80).grid(row=2, column=1, sticky="ew", padx=4, pady=3)
+    pr_track_form.columnconfigure(3, weight=1)
+
+    def _pr_refresh_track_tree() -> None:
+        pr_track_tree.delete(*pr_track_tree.get_children())
+        for tname, tcfg in _pr_tracks.items():
+            pr_track_tree.insert(
+                "",
+                "end",
+                iid=tname,
+                text=tname,
+                values=(
+                    tcfg.get("instrument", ""),
+                    tcfg.get("role", ""),
+                    f"{tcfg.get('volume', 1.0):.2f}",
+                    f"{tcfg.get('pan', 0.0):+.2f}",
+                ),
+            )
+        # Re-tag the selected track name as heading in tree
+        pr_track_tree.heading("#0", text="Track")
+        pr_track_tree["show"] = "headings"
+
+    def _pr_add_track() -> None:
+        name = pr_tf_name.get().strip()
+        if not name:
+            _set_status(pr_status, "Track name cannot be empty.")
+            return
+        _pr_tracks[name] = {
+            "instrument": pr_tf_instr.get(),
+            "role": pr_tf_role.get(),
+            "volume": float(pr_tf_vol.get()),
+            "pan": float(pr_tf_pan.get()),
+            "notes": [],
+        }
+        _pr_refresh_track_tree()
+        _pr_refresh_note_tree()
+        _set_status(pr_status, f"Track '{name}' added.")
+
+    def _pr_remove_track() -> None:
+        sel = pr_track_tree.selection()
+        if not sel:
+            _set_status(pr_status, "Select a track to remove.")
+            return
+        name = sel[0]
+        _pr_tracks.pop(name, None)
+        if _pr_selected_track[0] == name:
+            _pr_selected_track[0] = None
+        _pr_refresh_track_tree()
+        _pr_refresh_note_tree()
+        _set_status(pr_status, f"Track '{name}' removed.")
+
+    def _pr_on_track_select(_event: object = None) -> None:
+        sel = pr_track_tree.selection()
+        if sel:
+            _pr_selected_track[0] = sel[0]
+            _pr_refresh_note_tree()
+
+    pr_track_tree.bind("<<TreeviewSelect>>", _pr_on_track_select)
+
+    pr_track_btns = ttk.Frame(pr_left)
+    pr_track_btns.pack(fill="x", padx=4, pady=4)
+    ttk.Button(pr_track_btns, text="Add Track", command=_pr_add_track).pack(side="left", padx=4)
+    ttk.Button(pr_track_btns, text="Remove Track", command=_pr_remove_track).pack(side="left", padx=4)
+
+    # -- Right: Note editor panel --
+    pr_right = ttk.LabelFrame(pr_pane, text="Notes")
+    pr_pane.add(pr_right, weight=2)
+
+    pr_note_tree = ttk.Treeview(
+        pr_right,
+        columns=("beat", "note", "dur", "vel"),
+        show="headings",
+        selectmode="browse",
+        height=12,
+    )
+    for col, hdr, w in [
+        ("beat", "Start beat", 80),
+        ("note", "Note", 60),
+        ("dur", "Duration (beats)", 120),
+        ("vel", "Velocity", 70),
+    ]:
+        pr_note_tree.heading(col, text=hdr)
+        pr_note_tree.column(col, width=w, anchor="center")
+    pr_note_tree.pack(fill="both", expand=True, padx=4, pady=4)
+
+    def _pr_refresh_note_tree() -> None:
+        pr_note_tree.delete(*pr_note_tree.get_children())
+        tname = _pr_selected_track[0]
+        if tname is None or tname not in _pr_tracks:
+            return
+        for i, nd in enumerate(_pr_tracks[tname]["notes"]):
+            pr_note_tree.insert(
+                "",
+                "end",
+                iid=str(i),
+                values=(
+                    f"{nd['beat']:.2f}",
+                    nd["note"],
+                    f"{nd['duration_beats']:.2f}",
+                    f"{nd['velocity']:.2f}",
+                ),
+            )
+
+    # Note add/edit form
+    pr_note_form = ttk.LabelFrame(pr_right, text="Add / Edit Note")
+    pr_note_form.pack(fill="x", padx=4, pady=4)
+
+    ttk.Label(pr_note_form, text="Start beat").grid(row=0, column=0, sticky="w", padx=4, pady=3)
+    pr_nf_beat = tk.StringVar(value="0.0")
+    ttk.Entry(pr_note_form, textvariable=pr_nf_beat, width=8).grid(row=0, column=1, sticky="ew", padx=4, pady=3)
+
+    ttk.Label(pr_note_form, text="Note").grid(row=0, column=2, sticky="w", padx=4, pady=3)
+    pr_nf_note = tk.StringVar(value="C4")
+    ttk.Combobox(pr_note_form, textvariable=pr_nf_note, values=_NOTE_NAMES, state="readonly", width=6).grid(row=0, column=3, sticky="ew", padx=4, pady=3)
+
+    ttk.Label(pr_note_form, text="Duration (beats)").grid(row=1, column=0, sticky="w", padx=4, pady=3)
+    pr_nf_dur = tk.StringVar(value="1.0")
+    ttk.Entry(pr_note_form, textvariable=pr_nf_dur, width=8).grid(row=1, column=1, sticky="ew", padx=4, pady=3)
+
+    ttk.Label(pr_note_form, text="Velocity (0–1)").grid(row=1, column=2, sticky="w", padx=4, pady=3)
+    pr_nf_vel = tk.DoubleVar(value=1.0)
+    ttk.Scale(pr_note_form, from_=0.0, to=1.0, variable=pr_nf_vel, orient="horizontal", length=100).grid(row=1, column=3, sticky="ew", padx=4, pady=3)
+    pr_note_form.columnconfigure(1, weight=1)
+    pr_note_form.columnconfigure(3, weight=1)
+
+    def _pr_add_note() -> None:
+        tname = _pr_selected_track[0]
+        if not tname or tname not in _pr_tracks:
+            _set_status(pr_status, "Select a track first.")
+            return
+        try:
+            beat = float(pr_nf_beat.get())
+            dur = max(0.05, float(pr_nf_dur.get()))
+        except ValueError:
+            _set_status(pr_status, "Invalid beat or duration — enter a number.")
+            return
+        nd = {
+            "beat": beat,
+            "note": pr_nf_note.get(),
+            "duration_beats": dur,
+            "velocity": float(pr_nf_vel.get()),
+        }
+        _pr_tracks[tname]["notes"].append(nd)
+        _pr_tracks[tname]["notes"].sort(key=lambda x: x["beat"])
+        _pr_refresh_note_tree()
+        # Advance start beat by duration for quick entry
+        try:
+            pr_nf_beat.set(f"{beat + dur:.2f}")
+        except Exception:
+            pass
+        _set_status(pr_status, f"Note {nd['note']} added at beat {beat:.2f}.")
+
+    def _pr_edit_note() -> None:
+        """Overwrite the selected note with current form values."""
+        tname = _pr_selected_track[0]
+        if not tname or tname not in _pr_tracks:
+            _set_status(pr_status, "Select a track first.")
+            return
+        sel = pr_note_tree.selection()
+        if not sel:
+            _set_status(pr_status, "Select a note to edit.")
+            return
+        idx = int(sel[0])
+        notes = _pr_tracks[tname]["notes"]
+        if idx >= len(notes):
+            return
+        try:
+            beat = float(pr_nf_beat.get())
+            dur = max(0.05, float(pr_nf_dur.get()))
+        except ValueError:
+            _set_status(pr_status, "Invalid beat or duration.")
+            return
+        notes[idx] = {
+            "beat": beat,
+            "note": pr_nf_note.get(),
+            "duration_beats": dur,
+            "velocity": float(pr_nf_vel.get()),
+        }
+        notes.sort(key=lambda x: x["beat"])
+        _pr_refresh_note_tree()
+        _set_status(pr_status, "Note updated.")
+
+    def _pr_remove_note() -> None:
+        tname = _pr_selected_track[0]
+        if not tname or tname not in _pr_tracks:
+            _set_status(pr_status, "Select a track first.")
+            return
+        sel = pr_note_tree.selection()
+        if not sel:
+            _set_status(pr_status, "Select a note to remove.")
+            return
+        idx = int(sel[0])
+        notes = _pr_tracks[tname]["notes"]
+        if idx < len(notes):
+            removed = notes.pop(idx)
+            _pr_refresh_note_tree()
+            _set_status(pr_status, f"Removed note {removed['note']} at beat {removed['beat']:.2f}.")
+
+    def _pr_load_note_to_form(_event: object = None) -> None:
+        """Fill form from selected note for editing."""
+        tname = _pr_selected_track[0]
+        if not tname or tname not in _pr_tracks:
+            return
+        sel = pr_note_tree.selection()
+        if not sel:
+            return
+        idx = int(sel[0])
+        notes = _pr_tracks[tname]["notes"]
+        if idx >= len(notes):
+            return
+        nd = notes[idx]
+        pr_nf_beat.set(f"{nd['beat']:.2f}")
+        pr_nf_note.set(nd["note"])
+        pr_nf_dur.set(f"{nd['duration_beats']:.2f}")
+        pr_nf_vel.set(float(nd["velocity"]))
+
+    pr_note_tree.bind("<<TreeviewSelect>>", _pr_load_note_to_form)
+
+    pr_note_btns = ttk.Frame(pr_right)
+    pr_note_btns.pack(fill="x", padx=4, pady=4)
+    ttk.Button(pr_note_btns, text="Add Note", command=_pr_add_note).pack(side="left", padx=4)
+    ttk.Button(pr_note_btns, text="Update Selected", command=_pr_edit_note).pack(side="left", padx=4)
+    ttk.Button(pr_note_btns, text="Remove Note", command=_pr_remove_note).pack(side="left", padx=4)
+
+    # -- Save / Load composition JSON --
+    pr_json_path = tk.StringVar(value="piano_roll.json")
+    pr_io_frame = ttk.Frame(piano_roll_outer)
+    pr_io_frame.pack(fill="x", padx=8, pady=2)
+
+    ttk.Label(pr_io_frame, text="Composition JSON").pack(side="left", padx=4)
+    ttk.Entry(pr_io_frame, textvariable=pr_json_path, width=30).pack(side="left", padx=4)
+
+    def _pr_save_json() -> None:
+        path = Path(pr_json_path.get())
+        payload = {
+            "bpm": _safe_int(pr_bpm.get(), 120),
+            "time_signature": int(pr_time_sig.get()),
+            "tracks": _pr_tracks,
+        }
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        _set_status(pr_status, f"Saved composition to {path}.")
+
+    def _pr_load_json() -> None:
+        path = Path(pr_json_path.get())
+        if not path.exists():
+            _set_status(pr_status, f"File not found: {path}")
+            return
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            _set_status(pr_status, f"Load failed: {exc}")
+            return
+        pr_bpm.set(str(data.get("bpm", 120)))
+        pr_time_sig.set(int(data.get("time_signature", 4)))
+        _pr_tracks.clear()
+        for tname, tcfg in data.get("tracks", {}).items():
+            _pr_tracks[tname] = tcfg
+        _pr_selected_track[0] = None
+        _pr_refresh_track_tree()
+        _pr_refresh_note_tree()
+        _set_status(pr_status, f"Loaded composition from {path}.")
+
+    ttk.Button(pr_io_frame, text="Save JSON", command=_pr_save_json).pack(side="left", padx=4)
+    ttk.Button(pr_io_frame, text="Load JSON", command=_pr_load_json).pack(side="left", padx=4)
+
+    # -- Render button --
+    pr_render_frame = ttk.Frame(piano_roll_outer)
+    pr_render_frame.pack(fill="x", padx=8, pady=4)
+
+    def _pr_render_threaded() -> None:
+        if not _pr_tracks:
+            _set_status(pr_status, "No tracks — add a track and some notes first.")
+            return
+        total_notes = sum(len(tc["notes"]) for tc in _pr_tracks.values())
+        if total_notes == 0:
+            _set_status(pr_status, "No notes — add notes before rendering.")
+            return
+        _set_status(pr_status, "Rendering piano roll...")
+        _set_status(global_status, "Piano Roll rendering...")
+
+        def _worker() -> None:
+            try:
+                bpm = max(20.0, float(_safe_int(pr_bpm.get(), 120)))
+                out = Path(pr_out.get())
+                result = _render_piano_roll_to_file(
+                    dict(_pr_tracks),
+                    bpm=bpm,
+                    time_signature=int(pr_time_sig.get()),
+                    output_path=out,
+                    mastering_profile=pr_profile.get(),
+                    fmt=pr_format.get(),
+                )
+                pr_status.configure(text=f"Done — saved to {result}")
+                global_status.configure(text="Piano Roll render complete.")
+                _refresh_preview_files(select_category="Music")
+            except Exception as exc:  # pragma: no cover - UI path
+                pr_status.configure(text=f"Render error: {exc}")
+                global_status.configure(text=f"Piano Roll failed — {exc}")
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    ttk.Button(pr_render_frame, text="Render to Audio", command=_pr_render_threaded).pack(side="left", padx=8)
+    ttk.Button(
+        pr_render_frame,
+        text="Play latest",
+        command=lambda: _play_output_path(Path(pr_out.get()), "Music"),
+    ).pack(side="left", padx=8)
 
     def _build_current_preset() -> dict[str, object]:
         return {
@@ -1061,6 +2113,15 @@ def launch_studio() -> None:
         if playback_handle is not None:
             playback_handle.stop()
             playback_handle = None
+
+    def _play_output_path(output_path: Path, category: str) -> None:
+        path = output_path.expanduser()
+        if not path.exists():
+            _set_status(global_status, f"File not found for preview: {path}")
+            return
+        _refresh_preview_files(select_category=category)
+        preview_file.set(str(path))
+        _play_selected()
 
     def _refresh_preview_files(*_args: object, select_category: str | None = None) -> None:
         nonlocal preview_catalog

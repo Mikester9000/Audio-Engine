@@ -39,7 +39,7 @@ Choose a setup mode:
 
 ## Step 3: Launch the Studio GUI
 
-After setup, start the GUI:
+After setup, double-click `run.bat` for the normal Windows flow (it now opens Studio by default), or run:
 
 ```bat
 audio-engine studio
@@ -53,6 +53,9 @@ The **Studio** has four tabs:
 | **SFX** | Generate sound effects by category |
 | **Voice** | Generate voice lines from text |
 | **Synth Workbench** | Manually create any sound from scratch: choose waveform, set ADSR envelope, apply filter, export WAV — no AI required |
+
+Each tab supports vertical scrolling so all controls remain reachable on smaller Windows displays.  
+Music/SFX/Voice tabs also include **Play latest** for quick local preview playback.
 
 ### Synth Workbench
 
@@ -70,7 +73,12 @@ Click **Generate WAV** to create the sound immediately. No AI model needed.
 
 ## Step 4: Double-click `run.bat` (optional)
 
-`run.bat` activates the virtual environment and shows Audio Engine CLI commands.
+`run.bat` activates the virtual environment and launches Studio by default.
+For CLI help use:
+
+```bat
+run.bat --help
+```
 
 After setup has finished once, generation runs fully offline from local files.
 

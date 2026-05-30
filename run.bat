@@ -19,6 +19,33 @@ if errorlevel 1 (
 
 echo Audio Engine is ready in offline mode.
 echo.
+
+if "%~1"=="" goto :launch_studio
+
+if /I "%~1"=="studio" (
+    shift
+    goto :launch_studio
+)
+
+if /I "%~1"=="help" goto :show_help
+if /I "%~1"=="--help" goto :show_help
+if /I "%~1"=="-h" goto :show_help
+
+audio-engine %*
+exit /b %errorlevel%
+
+:launch_studio
+echo Launching Audio Engine Studio...
+audio-engine studio
+if errorlevel 1 (
+    echo.
+    echo WARNING: Studio failed to launch. Showing CLI help instead.
+    audio-engine --help
+    exit /b 1
+)
+exit /b 0
+
+:show_help
 echo Common commands:
 echo   audio-engine list-backends
 echo   audio-engine generate-music --prompt "epic orchestral battle theme" --duration 30 --output battle.wav --backend musicgen

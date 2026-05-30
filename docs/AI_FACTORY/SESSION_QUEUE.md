@@ -299,18 +299,45 @@
 - **Objective:** Keep session-control and continuity docs synchronized after SESSION-046 fixture/test updates.
 - **Notes:** Updated `SESSION_QUEUE.md`, `SESSION_STATE.json`, `CURRENT_SESSION.json`, `SESSION_HISTORY.md`, `CURRENT_STATE.md`, `ACTIVE_WORK.md`, `HANDOFF.md`, and `SUBSYSTEMS/MUSIC.md` for truthful continuity.
 
-## Current next session
+## Recently completed sessions
+
+### SESSION-052 — Kokoro 0.9.4 fix, MusicGen Small backend, Studio ergonomics, Voice synth intelligibility
+
+- **Status:** `completed`
+- **Task type:** `backend + ui + dsp`
+- **Objective:** Fix Kokoro KPipeline API for 0.9.x; add MusicGen Small (300M) as selectable backend; ergonomic Studio GUI pass; improve procedural voice synth intelligibility.
+- **Notes:**
+  - Updated the Kokoro backend for the 0.9.x API/result shape while preserving deterministic fallback behavior.
+  - Added `musicgen-small` as a registered backend/model option and downloader target.
+  - Improved Studio ergonomics with a larger layout, value labels, browse buttons, and music-style guidance.
+  - Reworked `voice_synth.py` for better intelligibility via word-boundary pauses, vowel/consonant shaping, and post-processing cleanup.
 
 ### SESSION-050 — Release-gate alignment checks for style/synth intent
 
-- **Status:** `ready`
+- **Status:** `completed`
 - **Task type:** `qa + orchestration`
 - **Objective:** Integrate style/synth alignment checks into release-gate reporting surfaces and document failure/remediation flow for deterministic factory runs.
-- **Notes:** Wire `MusicGenerator.validate_style_library_alignment()` into a machine-readable QA/release gate output path and add CLI-level smoke coverage.
+- **Notes:**
+  - Added standalone `audio-engine check-style-alignment` CLI command that calls `MusicGenerator.validate_style_library_alignment()`, prints a human-readable summary, writes a machine-readable JSON report, and exits 1 on issues.
+  - Added 5 CLI smoke tests in `tests/test_engine_cli.py` covering pass, fail, stdout JSON, `--output-report`, and nested-dir creation.
+  - Added remediation flow docs and report schema to `docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md`.
+
+## Current next session
 
 ## Remaining planned sessions (post-baseline)
 
 ### Recently completed session context
+
+### SESSION-052 — Kokoro 0.9.4 fix, MusicGen Small backend, Studio ergonomics, Voice synth intelligibility
+
+- **Status:** `completed`
+- **Task type:** `backend + ui + dsp`
+- **Objective:** Fix Kokoro KPipeline API for 0.9.x; add MusicGen Small (300M) as selectable backend; ergonomic Studio GUI pass; improve procedural voice synth intelligibility.
+- **Notes:**
+  - Updated the Kokoro backend for the 0.9.x API/result shape while preserving deterministic fallback behavior.
+  - Added `musicgen-small` as a registered backend/model option and downloader target.
+  - Improved Studio ergonomics with a larger layout, value labels, browse buttons, and music-style guidance.
+  - Reworked `voice_synth.py` for better intelligibility via word-boundary pauses, vowel/consonant shaping, and post-processing cleanup.
 
 ### SESSION-051 — PS2 instrument identity refinement (piano + guitar families)
 

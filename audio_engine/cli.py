@@ -986,6 +986,52 @@ def _cmd_check_licenses(args: argparse.Namespace) -> None:
         raise SystemExit(1)
 
 
+def _cmd_check_style_alignment(args: argparse.Namespace) -> None:
+    """Check style/synth library alignment and emit a machine-readable JSON report."""
+    import json as _json
+    from pathlib import Path as _Path
+    from audio_engine.ai.generator import MusicGenerator
+
+    quiet = args.quiet
+
+    issues = MusicGenerator.validate_style_library_alignment()
+    compliant = len(issues) == 0
+    issue_count = sum(len(v) for v in issues.values())
+
+    report_dict = {
+        "compliant": compliant,
+        "styleCount": len(issues) if not compliant else 0,
+        "issueCount": issue_count,
+        "issues": issues,
+    }
+
+    if not quiet:
+        if compliant:
+            print("Style/synth alignment: all styles pass.")
+        else:
+            print(
+                f"Style/synth alignment FAILED: "
+                f"{len(issues)} style(s), {issue_count} issue(s)"
+            )
+            for style_name, style_issues in sorted(issues.items()):
+                print(f"  {style_name}:")
+                for msg in style_issues:
+                    print(f"    - {msg}")
+
+    if args.output_report:
+        out_path = _Path(args.output_report)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(_json.dumps(report_dict, indent=2), encoding="utf-8")
+        if not quiet:
+            print(f"\nReport written → {out_path}")
+    else:
+        print()
+        print(_json.dumps(report_dict, indent=2))
+
+    if not compliant:
+        raise SystemExit(1)
+
+
 def build_parser() -> argparse.ArgumentParser:
     from audio_engine.render.offline_bounce import VALID_PROFILES
 
@@ -1616,6 +1662,25 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     cl.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Suppress human-readable summary (JSON report is still written/printed).",
+    )
+
+    # --- check-style-alignment ---
+    csa = sub.add_parser(
+        "check-style-alignment",
+        help=(
+            "Check that every style in the music style library has valid synth alignment "
+            "(instruments, tempo, scale). Exits 0 when all styles pass; exits 1 when any "
+            "issue is found. Emits a machine-readable JSON report."
+        ),
+    )
+    csa.add_argument(
+        "--output-report", "-o", default=None,
+        help="Path to write the JSON alignment report (optional; prints to stdout if omitted).",
+    )
+    csa.add_argument(
         "--quiet",
         action="store_true",
         help="Suppress human-readable summary (JSON report is still written/printed).",
@@ -2323,6 +2388,7 @@ def main(argv: list[str] | None = None) -> int:
         "list-backends": _cmd_list_backends,
         "verify-backends": _cmd_verify_backends,
         "check-licenses": _cmd_check_licenses,
+        "check-style-alignment": _cmd_check_style_alignment,
         "studio": _cmd_studio,
         "generate-request-batch": _cmd_generate_request_batch,
         "generate-plan-batch": _cmd_generate_plan_batch,

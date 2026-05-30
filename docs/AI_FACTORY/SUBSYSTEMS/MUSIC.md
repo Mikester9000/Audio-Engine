@@ -18,6 +18,7 @@
 - existing integration mapping for multiple game states in `audio_engine/integration/game_state_map.py`
 - style-intent metadata and executable style/synth alignment validation via `MusicGenerator.validate_style_library_alignment()`
 - release-gate generation now enforces and reports style/synth alignment results in `release_gate_report.json` (`gates.generation.styleAlignment`)
+- standalone `audio-engine check-style-alignment` CLI command: calls `validate_style_library_alignment()`, prints human-readable summary, writes machine-readable JSON report to `--output-report` (or stdout), exits 1 when any issue is found
 - expanded style families: `hybrid_trailer`, `neo_noir`, `festival_folk`, `sci_fi_pulse`, `waltz_orchestral`
 - expanded timbres: `violin_solo`, `trumpet`, `acoustic_guitar`, `synth_lead_bright`
 - expanded PS2-era realism timbres: `legato_strings_ps2`, `nylon_guitar_ps2`, `soft_epiano_ps2`
@@ -27,11 +28,50 @@
 - deterministic vocal post-processing chain remains enabled in `voice_synth` (cleanup/presence/de-ess/saturation/early reflections) so voice realism improvements preserve reproducible outputs
 - FF7/FF8/FF10 presets now incorporate the new PS2-era timbres for broader arrangement variety while preserving deterministic style intent
 
+## Style/synth alignment: check and remediation flow
+
+### Quick check (standalone, no full gate)
+
+```bash
+audio-engine check-style-alignment
+# writes JSON to stdout; exits 0 = all pass, exits 1 = issues found
+
+audio-engine check-style-alignment --output-report reports/style_alignment.json --quiet
+# writes report file, no console output
+```
+
+### Report schema
+
+```json
+{
+  "compliant": true,
+  "styleCount": 0,
+  "issueCount": 0,
+  "issues": {}
+}
+```
+
+When issues are present `compliant` is `false`, `styleCount` is the number of affected styles, `issueCount` is the total number of issue messages, and `issues` is a mapping of style-name → list of issue strings.
+
+### Release-gate integration
+
+`audio-engine run-release-gate` calls `validate_style_library_alignment()` as the first check inside Gate 1 (Generation). If any issues are found, the gate records them in `release_gate_report.json` under `gates.generation.styleAlignment` and halts execution.
+
+### Remediation steps when a style fails alignment
+
+1. Run `audio-engine check-style-alignment` and read the `issues` map to identify the affected style(s).
+2. Open `audio_engine/ai/generator.py` and find the `_StyleDef` entry for the failing style.
+3. For each issue message:
+   - **"instrument '…' not found"** — add the instrument to `audio_engine/synthesizer/instrument.py` or change the style's `instruments` list to use an existing instrument name.
+   - **"tempo out of range"** — adjust the `bpm` field to be within the allowed range for that style category.
+   - **"scale not recognised"** — correct the `scale` field to match a key defined in `_SCALE_INTERVALS`.
+4. Re-run `audio-engine check-style-alignment` to confirm exit 0.
+5. Run `python -m pytest tests/test_generator.py tests/test_release_gate.py` to confirm no regressions.
+
 ## What is missing
 
 - broader style-keyword resolver coverage for every advanced preset family
 - verified non-procedural backend quality benchmarks using real downloaded model weights
-- broader release-gate remediation automation beyond the new style-alignment fail/pass output
 - full release-gate orchestration that consumes dual-path outputs end-to-end (SESSION-041 completed; style-alignment gate reporting now integrated)
 
 ## Backend evaluation notes (SESSION-011 + optional neural scaffolding)

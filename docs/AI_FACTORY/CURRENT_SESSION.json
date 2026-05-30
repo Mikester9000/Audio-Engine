@@ -1,25 +1,31 @@
 {
-  "version": "1.17.0",
-  "lastUpdated": "2026-05-24",
+  "version": "1.19.0",
+  "lastUpdated": "2026-05-29",
   "currentSession": {
-    "id": "SESSION-051",
-    "title": "PS2 instrument identity refinement (piano + guitar families)",
+    "id": "SESSION-052",
+    "title": "Kokoro 0.9.4 fix, MusicGen Small backend, Studio ergonomics, Voice synth intelligibility",
     "status": "completed",
-    "taskType": "synthesis + regression",
-    "objective": "Improve procedural instrument realism so piano and guitar-family timbres sound closer to their names while preserving PS2-era FF8/FF10 character.",
-    "outcome": "Refined piano and guitar-family instrument synthesis/post-processing for stronger timbral identity and added regression tests for instrument-character drift.",
+    "taskType": "backend + ui + dsp",
+    "objective": "Fix Kokoro KPipeline API for 0.9.x; add MusicGen Small (300M) as selectable backend; ergonomic Studio GUI pass; improve procedural voice synth intelligibility.",
+    "outcome": "Kokoro pinned >=0.9.4 with correct KPipeline API; MusicGenSmallBackend added and registered; Studio window enlarged, value labels/Browse buttons on all sliders/paths, style info panel on Music tab; voice_synth.py fully rewritten with word-boundary pauses, per-vowel formants, per-consonant-class synthesis, nasal resonance, plosive aspiration, and de-essing/presence-lift post-processing.",
     "previousSessions": [
+      {
+        "id": "SESSION-050",
+        "title": "Release-gate alignment checks for style/synth intent",
+        "status": "completed",
+        "notes": "Added standalone check-style-alignment CLI command, 5 CLI smoke tests, and remediation flow docs in MUSIC.md."
+      },
+      {
+        "id": "SESSION-051",
+        "title": "PS2 instrument identity refinement (piano + guitar families)",
+        "status": "completed",
+        "notes": "Refined piano and guitar-family instrument synthesis/post-processing for stronger timbral identity and added regression tests for instrument-character drift."
+      },
       {
         "id": "SESSION-049",
         "title": "Studio full-edit workflow + synthesis/theory alignment expansion",
         "status": "completed",
         "notes": "Expanded studio editing/new-file workflow, style coverage, and style/synth alignment validation."
-      },
-      {
-        "id": "SESSION-041",
-        "title": "End-to-end vertical slice release gate automation",
-        "status": "completed",
-        "notes": "Added run-release-gate orchestration and release_gate_report.json generation."
       }
     ],
     "readFirst": [
@@ -29,10 +35,10 @@
       "docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md"
     ],
     "likelyModify": [
-      "audio_engine/synthesizer/instrument.py",
-      "tests/test_instrument.py",
-      "tests/test_ps1_era.py",
+      "audio_engine/cli.py",
+      "tests/test_engine_cli.py",
       "docs/AI_FACTORY/SUBSYSTEMS/MUSIC.md"
     ]
   }
 }
+

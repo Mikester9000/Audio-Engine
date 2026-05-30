@@ -74,15 +74,26 @@ class KokoroBackend(InferenceBackend):
 
             os.environ.setdefault("KOKORO_MODEL_PATH", str(self.model_path))
 
-            audio = None
+            audio: np.ndarray | None = None
+
             if hasattr(kokoro, "KPipeline"):
-                pipeline_cls = kokoro.KPipeline
+                # kokoro 0.9.x API: KPipeline(lang_code=...) → iterable of result objects
+                lang_code = kwargs.get("lang_code", "a")  # 'a' = American English
                 try:
-                    pipeline = pipeline_cls(model_path=str(self.model_path))
+                    pipeline = kokoro.KPipeline(lang_code=lang_code)
                 except TypeError:
-                    pipeline = pipeline_cls()
-                output = pipeline(text=text, voice=voice_preset, speed=speed)
-                audio = self._extract_audio(output)
+                    pipeline = kokoro.KPipeline()
+
+                chunks: list[np.ndarray] = []
+                for result in pipeline(text, voice=voice_preset, speed=speed):
+                    # Each result may be a (graphemes, phonemes, audio) tuple
+                    # or an object with a .audio attribute.
+                    chunk = self._extract_audio(result)
+                    if chunk is not None and chunk.size > 0:
+                        chunks.append(chunk)
+                if chunks:
+                    audio = np.concatenate(chunks, axis=0).astype(np.float32)
+
             elif hasattr(kokoro, "generate"):
                 output = kokoro.generate(
                     text=text,
@@ -92,7 +103,7 @@ class KokoroBackend(InferenceBackend):
                 )
                 audio = self._extract_audio(output)
 
-            if audio is None:
+            if audio is None or audio.size == 0:
                 return self._fallback.generate_voice_audio(text=text, voice_preset=voice_preset, speed=speed, **kwargs)
 
             return self._ensure_mono(audio)
@@ -104,21 +115,28 @@ class KokoroBackend(InferenceBackend):
             return None
         if isinstance(output, np.ndarray):
             return output
+        # kokoro 0.9.x: result is a tuple (graphemes, phonemes, audio)
+        if isinstance(output, tuple) and len(output) == 3:
+            candidate = output[2]
+            if isinstance(candidate, np.ndarray):
+                return candidate
+            if hasattr(candidate, "__array__"):
+                return np.asarray(candidate, dtype=np.float32)
         if isinstance(output, (list, tuple)):
             if output and isinstance(output[-1], np.ndarray):
                 return output[-1]
             if output and hasattr(output[-1], "__array__"):
-                return np.asarray(output[-1])
+                return np.asarray(output[-1], dtype=np.float32)
         if isinstance(output, dict):
             for key in ("audio", "wav", "waveform", "samples"):
                 if key in output:
-                    return np.asarray(output[key])
+                    return np.asarray(output[key], dtype=np.float32)
         if hasattr(output, "audio"):
-            return np.asarray(output.audio)
+            return np.asarray(output.audio, dtype=np.float32)
         if hasattr(output, "wav"):
-            return np.asarray(output.wav)
+            return np.asarray(output.wav, dtype=np.float32)
         if hasattr(output, "waveform"):
-            return np.asarray(output.waveform)
+            return np.asarray(output.waveform, dtype=np.float32)
         return None
 
     def _ensure_mono(self, audio: np.ndarray) -> np.ndarray:
