@@ -69,6 +69,11 @@ class TestPromptParser:
             "low profile stealth infiltration": "stealth",
             "mystery puzzle ruins atmosphere": "mystery",
             "ending credits finale cue": "ending",
+            "festival synth house anthem 124 BPM": "synth_house_modern",
+            "driving warehouse techno 132 BPM": "techno_drive",
+            "uplifting trance lead 136 BPM": "trance_uplift",
+            "neurofunk drum and bass 172 BPM": "drum_and_bass_neuro",
+            "future bass modern synth pop": "future_bass_modern",
         }
         for prompt, expected in styles.items():
             plan = self.parser.parse_music(prompt)

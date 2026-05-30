@@ -33,6 +33,9 @@ _SYNTH_LEAD_NOISE_SEED = 51
 _LEGATO_STRINGS_NOISE_SEED = 71
 _NYLON_GUITAR_NOISE_SEED = 81
 _SOFT_EP_NOISE_SEED = 91
+_SUPERSAW_UNISON_NOISE_SEED = 101
+_PLUCK_SYNTH_NOISE_SEED = 111
+_MODERN_BASS_NOISE_SEED = 121
 
 
 def _cents_to_ratio(cents: float) -> float:
@@ -1354,5 +1357,107 @@ def _synth_lead_bright(sr: int = 44100) -> Instrument:
         envelope=Envelope(attack=0.005, decay=0.08, sustain=0.64, release=0.12, sample_rate=sr),
         post_process=post,
         volume=0.79,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("supersaw_lead")
+def _supersaw_lead(sr: int = 44100) -> Instrument:
+    """Wide supersaw lead for modern house/trance/future-bass hooks."""
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        glide = freq * (1.0 + 0.06 * np.exp(-8.0 * t))
+        detune_cents = (-11.0, -6.0, -2.5, 0.0, 2.5, 6.0, 11.0)
+        weights = (0.11, 0.14, 0.16, 0.2, 0.16, 0.14, 0.09)
+        voices = np.zeros(n, dtype=np.float64)
+        for cents, w in zip(detune_cents, weights):
+            detuned = glide * _cents_to_ratio(cents)
+            phase = 2.0 * np.pi * np.cumsum(detuned / sr)
+            voices += w * _bl_saw_from_phase(phase, max(40.0, freq * _cents_to_ratio(cents)), sr).astype(np.float64)
+        noise = np.random.default_rng(_SUPERSAW_UNISON_NOISE_SEED).standard_normal(n).astype(np.float32)
+        noise = Filter(sr).band_pass(noise, 2500.0, 9800.0).astype(np.float64) * 0.02
+        return (voices + noise).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 160.0)
+        sig = flt.resonant_low_pass(sig, 7200.0, resonance=1.12)
+        sig = fx.chorus(sig, depth=0.0012, rate=0.62, wet=0.22)
+        sig = fx.compress(sig, threshold=0.54, ratio=3.2, makeup_gain=1.1)
+        return fx.reverb(sig, room_size=0.28, wet=0.12)
+
+    return Instrument(
+        name="supersaw_lead",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.004, decay=0.13, sustain=0.7, release=0.16, sample_rate=sr),
+        post_process=post,
+        volume=0.8,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("synth_pluck_glass")
+def _synth_pluck_glass(sr: int = 44100) -> Instrument:
+    """Bright pluck synth for arps and rhythmic synth patterns."""
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        phase = 2.0 * np.pi * np.cumsum(freq / sr)
+        saw = _bl_saw_from_phase(phase, freq, sr).astype(np.float64)
+        square = np.sign(np.sin(phase * 0.5)).astype(np.float64) * 0.18
+        bell = np.sin(phase * 2.0).astype(np.float64) * np.exp(-8.0 * t) * 0.22
+        attack = np.exp(-36.0 * t)
+        click_noise = np.random.default_rng(_PLUCK_SYNTH_NOISE_SEED).standard_normal(n).astype(np.float32)
+        click_noise = Filter(sr).band_pass(click_noise, 1800.0, 10200.0).astype(np.float64) * 0.055 * attack
+        return (0.72 * saw + square + bell + click_noise).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 220.0)
+        sig = flt.resonant_low_pass(sig, 5600.0, resonance=1.22)
+        sig = fx.compress(sig, threshold=0.62, ratio=2.5, makeup_gain=1.06)
+        return fx.reverb(sig, room_size=0.2, wet=0.08)
+
+    return Instrument(
+        name="synth_pluck_glass",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.001, decay=0.1, sustain=0.25, release=0.08, sample_rate=sr),
+        post_process=post,
+        volume=0.78,
+        sample_rate=sr,
+    )
+
+
+@InstrumentLibrary.register("synth_bass_punch")
+def _synth_bass_punch(sr: int = 44100) -> Instrument:
+    """Punchy synth bass with clean sub for modern electronic low-end."""
+
+    def osc_fn(osc: Oscillator, freq: float, dur: float) -> np.ndarray:
+        n = max(1, int(dur * sr))
+        t = np.arange(n, dtype=np.float64) / sr
+        phase = 2.0 * np.pi * np.cumsum(freq / sr)
+        sub = np.sin(phase * 0.5).astype(np.float64) * 0.68
+        body = _bl_saw_from_phase(phase, max(35.0, freq), sr).astype(np.float64) * 0.42
+        transient = np.sin(phase * 2.0).astype(np.float64) * np.exp(-22.0 * t) * 0.18
+        grit_noise = np.random.default_rng(_MODERN_BASS_NOISE_SEED).standard_normal(n).astype(np.float32)
+        grit_noise = Filter(sr).band_pass(grit_noise, 700.0, 3200.0).astype(np.float64) * 0.025 * np.exp(-14.0 * t)
+        return (sub + body + transient + grit_noise).astype(np.float32)
+
+    def post(sig: np.ndarray, fx: Effects) -> np.ndarray:
+        flt = Filter(sr)
+        sig = flt.high_pass(sig, 24.0)
+        sig = flt.resonant_low_pass(sig, 2600.0, resonance=1.18)
+        sig = fx.compress(sig, threshold=0.6, ratio=3.4, makeup_gain=1.06)
+        return np.tanh(sig.astype(np.float64) * 1.2).astype(np.float32)
+
+    return Instrument(
+        name="synth_bass_punch",
+        oscillator_fn=osc_fn,
+        envelope=Envelope(attack=0.0015, decay=0.12, sustain=0.62, release=0.09, sample_rate=sr),
+        post_process=post,
+        volume=0.83,
         sample_rate=sr,
     )

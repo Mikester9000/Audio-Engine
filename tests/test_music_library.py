@@ -65,6 +65,7 @@ ALL_LIBRARY_STYLES = [
     "pop_epic", "pop_ballad_epic",
     "rock_epic", "rock_ballad_epic",
     "electronic_epic", "synthwave_epic",
+    "synth_house_modern", "techno_drive", "trance_uplift", "drum_and_bass_neuro", "future_bass_modern",
     "metal_epic",
     "world_epic", "latin_epic",
     "acoustic_epic", "country_epic",
@@ -80,6 +81,7 @@ GENRE_STYLES = [
     "pop_epic", "pop_ballad_epic",
     "rock_epic", "rock_ballad_epic",
     "electronic_epic", "synthwave_epic",
+    "synth_house_modern", "techno_drive", "trance_uplift", "drum_and_bass_neuro", "future_bass_modern",
     "metal_epic",
     "world_epic", "latin_epic",
     "acoustic_epic", "country_epic",
@@ -858,6 +860,26 @@ class TestStyleForRequestGenres:
     def test_synthwave_request(self):
         style = self._resolve("synthwave retrowave")
         assert style in ["synthwave_epic", "electronic_ambient"]
+
+    def test_house_request(self):
+        style = self._resolve("festival synth house anthem")
+        assert style in ["synth_house_modern", "electronic_epic"]
+
+    def test_techno_request(self):
+        style = self._resolve("driving warehouse techno")
+        assert style in ["techno_drive", "electronic_epic"]
+
+    def test_trance_request(self):
+        style = self._resolve("uplifting trance synth lead")
+        assert style in ["trance_uplift", "synthwave_epic"]
+
+    def test_drum_and_bass_request(self):
+        style = self._resolve("neurofunk drum and bass drop")
+        assert style in ["drum_and_bass_neuro", "electronic_epic"]
+
+    def test_future_bass_request(self):
+        style = self._resolve("future bass modern synth pop")
+        assert style in ["future_bass_modern", "electronic_epic"]
 
     def test_cinematic_request(self):
         style = self._resolve("cinematic orchestral")

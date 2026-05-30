@@ -64,7 +64,21 @@ def test_reproducibility():
     np.testing.assert_array_equal(a1, a2)
 
 
-@pytest.mark.parametrize("style", ["hybrid_trailer", "neo_noir", "festival_folk", "sci_fi_pulse", "waltz_orchestral"])
+@pytest.mark.parametrize(
+    "style",
+    [
+        "hybrid_trailer",
+        "neo_noir",
+        "festival_folk",
+        "sci_fi_pulse",
+        "waltz_orchestral",
+        "synth_house_modern",
+        "techno_drive",
+        "trance_uplift",
+        "drum_and_bass_neuro",
+        "future_bass_modern",
+    ],
+)
 def test_new_styles_generate_audio(style):
     gen = MusicGenerator(sample_rate=SR, seed=7)
     audio = gen.generate_audio(style=style, bars=2)

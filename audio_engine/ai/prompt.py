@@ -157,6 +157,12 @@ _STYLE_KEYWORDS: dict[str, list[str]] = {
     "exploration_coast": ["coast exploration", "shoreline travel", "coastal theme"],
     "exploration_arid": ["arid exploration", "desert travel", "wasteland journey"],
     "transition_sting": ["transition sting", "battle intro sting", "dramatic reveal sting"],
+    # Modern synth/electronic expansion
+    "synth_house_modern": ["synth house", "house", "festival house", "progressive house", "modern house"],
+    "techno_drive": ["techno", "acid techno", "warehouse techno", "driving techno"],
+    "trance_uplift": ["trance", "uplifting trance", "euphoric trance", "anthem trance"],
+    "drum_and_bass_neuro": ["drum and bass", "dnb", "neurofunk", "liquid drum and bass", "breakbeat bass"],
+    "future_bass_modern": ["future bass", "future pop bass", "chopped chords", "modern synth pop"],
 }
 
 _SFX_KEYWORDS: list[str] = [
