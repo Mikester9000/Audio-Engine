@@ -91,7 +91,7 @@ def _download_model(repo_id: str, target: Path) -> None:
         "local_dir": str(target),
     }
     optional_kwargs = {
-        "token": hf_token if hf_token else None,
+        "token": hf_token,
         "resume_download": True,
         "etag_timeout": DOWNLOAD_ETAG_TIMEOUT_SECONDS,
         "max_workers": 4,
