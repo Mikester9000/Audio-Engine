@@ -38,7 +38,7 @@ They are only needed if a specific neural backend is selected at runtime.
 | `torch` | ≥2.0 | BSD-3-Clause | `allow` | Required by transformers-based backends |
 | `torchaudio` | ≥2.0 | BSD-3-Clause | `allow` | Audio utilities for torch backends |
 | `onnxruntime` | ≥1.16 | MIT | `allow` | ONNX inference (future backend) |
-| `kokoro` | ≥0.9 | Apache-2.0 | `allow` | Kokoro TTS backend |
+| `kokoro` | 0.7.x | Apache-2.0 | `allow` | Kokoro TTS backend |
 
 ---
 

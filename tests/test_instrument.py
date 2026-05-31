@@ -9,6 +9,9 @@ SR = 22050
 _LEGATO_BLOOM_RATIO_MIN = 1.15
 _NYLON_ATTACK_HIGH_RATIO_MIN = 1.3
 _SOFT_EP_ATTACK_BRIGHTNESS_RATIO_MIN = 1.05
+_SYNTH_PAD_WARMTH_RATIO_MIN = 1.15
+_CRYSTAL_ATTACK_SPARKLE_RATIO_MIN = 1.2
+_LEAD_TO_PAD_PRESENCE_RATIO_MIN = 1.6
 
 
 def _rms(signal: np.ndarray) -> float:
@@ -121,3 +124,29 @@ def test_soft_epiano_ps2_has_tine_attack_presence():
     assert (attack_presence / max(attack_low, 1e-9)) > (
         tail_presence / max(tail_low, 1e-9)
     ) * _SOFT_EP_ATTACK_BRIGHTNESS_RATIO_MIN
+
+
+def test_synth_pad_has_warm_body_over_high_air():
+    inst = InstrumentLibrary.get("synth_pad", SR)
+    audio = inst.render(220.0, 1.0)
+    body = _band_energy(audio, SR, 140.0, 1600.0)
+    air = _band_energy(audio, SR, 4200.0, 9000.0)
+    assert body > air * _SYNTH_PAD_WARMTH_RATIO_MIN
+
+
+def test_crystal_synth_has_attack_sparkle():
+    inst = InstrumentLibrary.get("crystal_synth", SR)
+    audio = inst.render(523.25, 0.9)
+    attack = audio[: int(0.12 * SR)]
+    tail = audio[int(0.34 * SR) : int(0.56 * SR)]
+    attack_air = _band_energy(attack, SR, 3200.0, 9800.0)
+    tail_air = _band_energy(tail, SR, 3200.0, 9800.0)
+    assert attack_air > tail_air * _CRYSTAL_ATTACK_SPARKLE_RATIO_MIN
+
+
+def test_synth_lead_has_more_presence_than_synth_pad():
+    lead = InstrumentLibrary.get("synth_lead_bright", SR).render(220.0, 0.8)
+    pad = InstrumentLibrary.get("synth_pad", SR).render(220.0, 0.8)
+    lead_presence = _band_energy(lead, SR, 900.0, 3600.0)
+    pad_presence = _band_energy(pad, SR, 900.0, 3600.0)
+    assert lead_presence > pad_presence * _LEAD_TO_PAD_PRESENCE_RATIO_MIN

@@ -45,7 +45,7 @@ After setup, double-click `run.bat` for the normal Windows flow (it now opens St
 audio-engine studio
 ```
 
-The **Studio** has four tabs:
+The **Studio** has dedicated workflow tabs:
 
 | Tab | What it does |
 |---|---|
@@ -53,6 +53,9 @@ The **Studio** has four tabs:
 | **SFX** | Generate sound effects by category |
 | **Voice** | Generate voice lines from text |
 | **Synth Workbench** | Manually create any sound from scratch: choose waveform, set ADSR envelope, apply filter, export WAV — no AI required |
+| **Piece Composer** | Build full multi-section songs from style/section presets |
+| **Instruments** | Preview single notes quickly and save them as sample-note assets |
+| **Piano Roll** | Visual canvas sequencer: click-to-place notes, drag move/resize, right-click delete, snap/quantize tools, starter track templates, mute/solo |
 
 Each tab supports vertical scrolling so all controls remain reachable on smaller Windows displays.  
 Music/SFX/Voice tabs also include **Play latest** for quick local preview playback.

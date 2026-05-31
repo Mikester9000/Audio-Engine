@@ -27,6 +27,7 @@ from audio_engine.dsp.dither import dither
 from audio_engine.dsp.reverb import apply_reverb
 from audio_engine.dsp.stereo import apply_mid_side_width
 from audio_engine.export.audio_exporter import AudioExporter
+from audio_engine.qa.loudness_meter import LoudnessMeter
 
 __all__ = ["OfflineBounce", "VALID_PROFILES"]
 _VALID_PROFILES = {"game", "ost", "youtube", "vocal_mix", "procedural_neutral"}
@@ -129,6 +130,7 @@ class OfflineBounce:
         self._bit_depth = bit_depth
         self._profile_width = profile_defaults["width"]
         self._profile_reverb_mix = profile_defaults["reverb_mix"]
+        self._loudness_meter = LoudnessMeter(sample_rate)
 
         # Build the mastering chain
         self._eq = self._build_master_eq(profile) if apply_master_eq else None
@@ -154,20 +156,22 @@ class OfflineBounce:
         eq.add_band(EQBand(30.0, gain_db=0.0, q=0.707, band_type="high_pass"))
         if profile == "procedural_neutral":
             eq.add_band(EQBand(120.0, gain_db=-0.5, q=0.707, band_type="low_shelf"))
-            eq.add_band(EQBand(9000.0, gain_db=+0.5, q=0.707, band_type="high_shelf"))
+            # Gentle air boost at 11 kHz – subtle brightness for procedural content
+            eq.add_band(EQBand(11000.0, gain_db=+0.5, q=0.707, band_type="high_shelf"))
         elif profile == "youtube":
             eq.add_band(EQBand(120.0, gain_db=-1.0, q=0.707, band_type="low_shelf"))
-            eq.add_band(EQBand(8000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
+            # Air boost at 12 kHz – genuine "air" region for streaming/YouTube masters
+            eq.add_band(EQBand(12000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
         elif profile == "vocal_mix":
             # Tighten low-mids to reduce muddiness under vocals
             eq.add_band(EQBand(200.0, gain_db=-2.0, q=0.707, band_type="low_shelf"))
-            # Air boost to add sparkle without harshness
-            eq.add_band(EQBand(8000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
-        else:
-            # Low-shelf: gently tighten the low end
-            eq.add_band(EQBand(120.0, gain_db=-1.5, q=0.707, band_type="low_shelf"))
-            # Presence/air boost for clarity
+            # Presence boost at 10 kHz to add sparkle and intelligibility
             eq.add_band(EQBand(10000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
+        else:
+            # "game" and "ost" profiles – low-shelf: gently tighten the low end
+            eq.add_band(EQBand(120.0, gain_db=-1.5, q=0.707, band_type="low_shelf"))
+            # Air boost at 12 kHz for openness and retail-quality clarity
+            eq.add_band(EQBand(12000.0, gain_db=+1.5, q=0.707, band_type="high_shelf"))
         return eq
 
     def process(self, audio: np.ndarray) -> np.ndarray:
@@ -193,9 +197,9 @@ class OfflineBounce:
         if self._compressor is not None:
             sig = self._compressor.process(sig)
 
-        # 3. Loudness normalisation
+        # 3. Loudness normalisation (EBU R128 K-weighted measurement)
         if self.target_lufs is not None:
-            current_lufs = _lufs_loudness(sig, self.sample_rate)
+            current_lufs = self._loudness_meter.integrated_loudness(sig)
             gain_db = self.target_lufs - current_lufs
             # Cap the boost to avoid unrealistic amplification
             gain_db = np.clip(gain_db, -40.0, 20.0)

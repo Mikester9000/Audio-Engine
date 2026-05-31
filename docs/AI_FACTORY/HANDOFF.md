@@ -4,9 +4,9 @@
 
 ## Last completed change
 
-SESSION-052: Landed Kokoro 0.9.4 compatibility, MusicGen Small backend support, Studio ergonomics, and voice-synth intelligibility fixes:
+SESSION-052: Landed Kokoro 0.7.x compatibility, MusicGen Small backend support, Studio ergonomics, and voice-synth intelligibility fixes:
 
-- **`audio_engine/ai/backends/kokoro_backend.py`**: Updated the Kokoro integration for the 0.9.x `KPipeline` result shape/API while keeping graceful fallback behavior.
+- **`audio_engine/ai/backends/kokoro_backend.py`**: Updated the Kokoro integration for the 0.7.x API surface while keeping graceful fallback behavior.
 - **`audio_engine/ai/backends/musicgen_backend.py` / `audio_engine/ai/backends/__init__.py` / `tools/download_models.py`**: Added `musicgen-small` model-path support, a dedicated `MusicGenSmallBackend`, and downloader coverage for `facebook/musicgen-small`.
 - **`audio_engine/ui/studio.py`**: Improved Studio ergonomics with a larger window, per-control value labels, browse buttons for path fields, and style metadata guidance in the Music tab.
 - **`audio_engine/ai/voice_synth.py`**: Reworked procedural intelligibility with clearer word boundaries, vowel/consonant shaping, nasal/plosive handling, and post-processing presence control.

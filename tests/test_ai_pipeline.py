@@ -69,6 +69,11 @@ class TestPromptParser:
             "low profile stealth infiltration": "stealth",
             "mystery puzzle ruins atmosphere": "mystery",
             "ending credits finale cue": "ending",
+            "festival synth house anthem 124 BPM": "synth_house_modern",
+            "driving warehouse techno 132 BPM": "techno_drive",
+            "uplifting trance lead 136 BPM": "trance_uplift",
+            "neurofunk drum and bass 172 BPM": "drum_and_bass_neuro",
+            "future bass modern synth pop": "future_bass_modern",
         }
         for prompt, expected in styles.items():
             plan = self.parser.parse_music(prompt)
@@ -367,6 +372,52 @@ class TestOptionalNeuralBackends:
 
         (model_dir / "kokoro-v1_0.onnx").write_text("weights")
         assert backend.is_available() is True
+
+    def test_kokoro_backend_07_generate_tuple_output(self, monkeypatch, tmp_path):
+        model_dir = tmp_path / "kokoro"
+        model_dir.mkdir()
+        (model_dir / "kokoro-v1_0.onnx").write_text("weights")
+
+        class _FakeKokoro:
+            @staticmethod
+            def generate(**_kwargs):
+                return np.ones(128, dtype=np.float32), 22050
+
+        monkeypatch.setitem(sys.modules, "kokoro", _FakeKokoro())
+        monkeypatch.setattr(kokoro_backend, "can_import_module", lambda _: True)
+        monkeypatch.setattr(kokoro_backend, "has_complete_model_snapshot", lambda _: True)
+
+        backend = KokoroBackend(model_path=model_dir, sample_rate=SR, seed=7)
+        audio = backend.generate_voice_audio("Welcome home.", voice_preset="narrator")
+        assert audio.ndim == 1
+        assert len(audio) == 128
+        assert np.isfinite(audio).all()
+
+    def test_kokoro_backend_07_kpipeline_iterable_output(self, monkeypatch, tmp_path):
+        model_dir = tmp_path / "kokoro"
+        model_dir.mkdir()
+        (model_dir / "kokoro-v1_0.onnx").write_text("weights")
+
+        class _FakePipeline:
+            def __init__(self, model_path: str | None = None):
+                self.model_path = model_path
+
+            def __call__(self, **_kwargs):
+                return [
+                    {"audio": np.full(32, 0.25, dtype=np.float32)},
+                    {"audio": np.full(24, 0.5, dtype=np.float32)},
+                ]
+
+        fake_kokoro = types.SimpleNamespace(KPipeline=_FakePipeline)
+        monkeypatch.setitem(sys.modules, "kokoro", fake_kokoro)
+        monkeypatch.setattr(kokoro_backend, "can_import_module", lambda _: True)
+        monkeypatch.setattr(kokoro_backend, "has_complete_model_snapshot", lambda _: True)
+
+        backend = KokoroBackend(model_path=model_dir, sample_rate=SR, seed=7)
+        audio = backend.generate_voice_audio("Iterables should work.", voice_preset="narrator")
+        assert audio.ndim == 1
+        assert len(audio) == 56
+        assert np.max(audio) <= 1.0
 
     def test_musicgen_backend_caches_loaded_model_and_processor(self, monkeypatch, tmp_path):
         model_dir = tmp_path / "musicgen-medium"

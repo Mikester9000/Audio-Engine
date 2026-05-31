@@ -683,8 +683,12 @@ class TestAssetPipelineGenerate:
         mtime_after = existing.stat().st_mtime
         assert mtime_before == mtime_after, "File was regenerated despite skip_existing=True"
 
-    def test_manifest_json_written(self, tmp_path):
+    def test_manifest_json_written(self, tmp_path, monkeypatch):
         """generate_all should write manifest.json."""
+        def fast_generate_music(_pipeline: AssetPipeline, asset: MusicAsset, path: Path) -> None:
+            self._fast_music(asset, path)
+
+        monkeypatch.setattr(AssetPipeline, "_generate_music", fast_generate_music)
         pipeline = AssetPipeline(sample_rate=22050, seed=0)
         pipeline.generate_all(tmp_path)
         manifest_path = tmp_path / "manifest.json"
