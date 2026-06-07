@@ -138,5 +138,5 @@ This checklist is single-file-edit-per-task and optimized for small coding model
 ## Minimal verification checklist
 
 - run targeted tests for touched files
-- run full pytest
-- run asset manifest validation command if available
+- run full test suite: `python -m pytest`
+- validate asset manifests: `python tools/validate-assets.py assets/examples/ --verbose` (and/or `python tools/validate-assets.py assets/ --verbose` when relevant)
