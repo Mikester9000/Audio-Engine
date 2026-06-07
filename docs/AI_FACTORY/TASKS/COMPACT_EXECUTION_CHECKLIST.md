@@ -43,7 +43,7 @@ This checklist is single-file-edit-per-task and optimized for small coding model
   **File to edit (single file):** `audio_engine/ui/studio.py`  
   **Lines/section target:** Control-bar button setup and handlers  
   **Purpose:** Wire UI buttons to persist/restore project state.  
-  **Compact prompt for qwen2.5 coder 0.5 instruct:** “Edit `audio_engine/ui/studio.py`. Add `Save Project`/`Load Project` buttons and handlers using project helpers. Keep missing-key-safe restore behavior and status messages. Return only patch content.”  
+  **Compact prompt for qwen2.5 coder 0.5 instruct:** “Edit `audio_engine/ui/studio.py`. Add `Save Project`/`Load Project` buttons and handlers using project helpers. Gracefully handle missing keys during restore and show status messages. Return only patch content.”  
   **Additional user info:** Depends on T-003 helpers.
 
 - **Task Number:** T-005  
